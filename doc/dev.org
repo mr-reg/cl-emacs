@@ -1,0 +1,62 @@
+Copyright (C) 2024 by Gleb Borodulia
+Author: Gleb Borodulia <mr.reg@mail.ru>
+
+* cffi symbols conflict detection
+#+begin_src sh
+nm -D temacs.so | awk '/^[^ ]/{print substr($0, 20)}'  | sed 's/@.*//g'  > temacs.txt
+for lib in ~/soft/ccl/lx86cl64 /lib/x86_64-linux-gnu/libdl.so.2 /lib/x86_64-linux-gnu/libm.so.6 /lib/x86_64-linux-gnu/libpthread.so.0 /lib/x86_64-linux-gnu/librt.so.1 /lib/x86_64-linux-gnu/libc.so.6 /lib64/ld-linux-x86-64.so.2
+do
+        nm -D $lib
+done  | awk '/^[^ ]/{print substr($0, 20)}'  | sed 's/@.*//g'  > libs.txt
+comm -12 <(sort libs.txt) <(sort temacs.txt)
+#+end_src
+* customization
+#ifndef ALIEN_DEFINITIONS
+#define ALIEN_DEFINITIONS
+#define error rpl_error
+#define init_threads rpl_init_threads
+#endif
+
+* emacs build commands
+#+begin_src sh
+  git clean -f -d -x
+  ./autogen.sh
+  CC=clang CFLAGS="-fPIC -g -gdwarf-4 -rdynamic" ./configure \
+   --without-json \
+   --without-xwidgets \
+   --with-file-notification=inotify \
+   --without-native-compilation \
+   --with-included-regex \
+   --without-xaw3d \
+   --with-modules \
+   --with-dumping=none \
+   --with-cairo \
+   --without-gpm \
+   --with-x-toolkit=no \
+   --without-rsvg
+  cd src
+  make -j8 emacs
+  make -j8 temacs.so
+  make -j8 clean
+#+end_src
+
+* run command
+lx86cl64 --load ../../src/lisp/test.lisp
+
+
+* mutex way
+    pthread_mutex_t lock;
+    pthread_cond_t cond;
+
+
+
+    pthread_mutex_lock(&>lock);
+    /* releasing the mutex and block untill a cond get a signal*/
+    pthread_cond_wait(&cond, &lock);
+    /* execute your code */
+
+    your_condtion = 0;
+
+    /* signaling the producer that we "consumed" the data */
+    pthread_cond_signal(&cond);
+    pthread_mutex_unlock(&lock);

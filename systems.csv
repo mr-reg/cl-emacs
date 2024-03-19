@@ -1,0 +1,16 @@
+asdf-package-system, ghcr.io/ocicl/asdf-package-system@sha256:bafeb9d6e67cb280100080a2382f24558964ecf37029ff904b932c6c7d0e9c33, asdf-package-system-20230809-61776f2/asdf-package-system.asd
+swank, ghcr.io/ocicl/swank@sha256:a280fabc40b8394ab39562846887a335a165118e7765b6721e1b74529791630f, slime-2.28/swank.asd
+uffi, ghcr.io/ocicl/cffi@sha256:b6f93e6cfd73fb3e9dd33474fb81760a5fe3617cc32cff8811d8a3e3769a360d, cffi-20240308-621cb9d/uffi-compat/uffi.asd
+cffi, ghcr.io/ocicl/cffi@sha256:b6f93e6cfd73fb3e9dd33474fb81760a5fe3617cc32cff8811d8a3e3769a360d, cffi-20240308-621cb9d/cffi.asd
+cffi-uffi-compat, ghcr.io/ocicl/cffi@sha256:b6f93e6cfd73fb3e9dd33474fb81760a5fe3617cc32cff8811d8a3e3769a360d, cffi-20240308-621cb9d/cffi-uffi-compat.asd
+cffi-toolchain, ghcr.io/ocicl/cffi@sha256:b6f93e6cfd73fb3e9dd33474fb81760a5fe3617cc32cff8811d8a3e3769a360d, cffi-20240308-621cb9d/cffi-toolchain.asd
+cffi-tests, ghcr.io/ocicl/cffi@sha256:b6f93e6cfd73fb3e9dd33474fb81760a5fe3617cc32cff8811d8a3e3769a360d, cffi-20240308-621cb9d/cffi-tests.asd
+cffi-libffi, ghcr.io/ocicl/cffi@sha256:b6f93e6cfd73fb3e9dd33474fb81760a5fe3617cc32cff8811d8a3e3769a360d, cffi-20240308-621cb9d/cffi-libffi.asd
+cffi-grovel, ghcr.io/ocicl/cffi@sha256:b6f93e6cfd73fb3e9dd33474fb81760a5fe3617cc32cff8811d8a3e3769a360d, cffi-20240308-621cb9d/cffi-grovel.asd
+cffi-examples, ghcr.io/ocicl/cffi@sha256:b6f93e6cfd73fb3e9dd33474fb81760a5fe3617cc32cff8811d8a3e3769a360d, cffi-20240308-621cb9d/cffi-examples.asd
+alexandria, ghcr.io/ocicl/alexandria@sha256:2204779a9711f65532863abc61e9644c2a5a6839c4544516f19d04b699af8a7a, alexandria-20240125-8514d8e/alexandria.asd
+trivial-features, ghcr.io/ocicl/trivial-features@sha256:9da86d54aeabcaeb43e69e0a1d6d04c42d9446f2094c8752d89d4ca6ba1b7cbd, trivial-features-1.0/trivial-features.asd
+trivial-features-tests, ghcr.io/ocicl/trivial-features@sha256:9da86d54aeabcaeb43e69e0a1d6d04c42d9446f2094c8752d89d4ca6ba1b7cbd, trivial-features-1.0/trivial-features-tests.asd
+babel, ghcr.io/ocicl/babel@sha256:beda9fd8bec204f077596f8d91b819dba31444dfec7a670575ca6055a9dbfabb, babel-20240222-5580484/babel.asd
+babel-tests, ghcr.io/ocicl/babel@sha256:beda9fd8bec204f077596f8d91b819dba31444dfec7a670575ca6055a9dbfabb, babel-20240222-5580484/babel-tests.asd
+babel-streams, ghcr.io/ocicl/babel@sha256:beda9fd8bec204f077596f8d91b819dba31444dfec7a670575ca6055a9dbfabb, babel-20240222-5580484/babel-streams.asd

@@ -1,0 +1,6 @@
+* What is this?
+This is port of emacs from C to Common Lisp.
+
+* State
+Development just started
+
