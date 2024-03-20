@@ -14,3 +14,17 @@ trivial-features-tests, ghcr.io/ocicl/trivial-features@sha256:9da86d54aeabcaeb43
 babel, ghcr.io/ocicl/babel@sha256:beda9fd8bec204f077596f8d91b819dba31444dfec7a670575ca6055a9dbfabb, babel-20240222-5580484/babel.asd
 babel-tests, ghcr.io/ocicl/babel@sha256:beda9fd8bec204f077596f8d91b819dba31444dfec7a670575ca6055a9dbfabb, babel-20240222-5580484/babel-tests.asd
 babel-streams, ghcr.io/ocicl/babel@sha256:beda9fd8bec204f077596f8d91b819dba31444dfec7a670575ca6055a9dbfabb, babel-20240222-5580484/babel-streams.asd
+bt-semaphore, ghcr.io/ocicl/bt-semaphore@sha256:9315f11085c3c5cd3fd7352ac09c5a0e38fc33a12a468d2f781301fa3d4b4e98, bt-semaphore-20230809-46b4bf3/bt-semaphore.asd
+bt-semaphore-test, ghcr.io/ocicl/bt-semaphore@sha256:9315f11085c3c5cd3fd7352ac09c5a0e38fc33a12a468d2f781301fa3d4b4e98, bt-semaphore-20230809-46b4bf3/bt-semaphore-test.asd
+bordeaux-threads, ghcr.io/ocicl/bordeaux-threads@sha256:9df017ccbb783949cdaea6c7849d678105e041b784d0fc738220873739c3bfe5, bordeaux-threads-0.9.1/bordeaux-threads.asd
+global-vars, ghcr.io/ocicl/global-vars@sha256:22937c8bd0f635855c2c044b0ae0ab3b438ba5e858192dae462807148547d99a, global-vars-20230809-c749f32/global-vars.asd
+global-vars-test, ghcr.io/ocicl/global-vars@sha256:22937c8bd0f635855c2c044b0ae0ab3b438ba5e858192dae462807148547d99a, global-vars-20230809-c749f32/global-vars-test.asd
+trivial-garbage, ghcr.io/ocicl/trivial-garbage@sha256:fdcc5b6acd3eacb1e9ee305685b72ea270435cf363ea7a9cb1cc3d86a3534ed7, trivial-garbage-20231020-3474f64/trivial-garbage.asd
+verbose, ghcr.io/ocicl/verbose@sha256:ffe2d4b4f1cb56c92677b6b0f42d5fbe3a769e584fcb0ebf67fc072a1b0f9b42, verbose-20231224-fae1b64/verbose.asd
+piping, ghcr.io/ocicl/piping@sha256:02bed37a6e672a83e74f11fb0c8aaecc5882863456e1ab0952bc6229bcd93fd4, piping-20230808-234aa8e/piping.asd
+multilang-documentation-utils, ghcr.io/ocicl/documentation-utils@sha256:b2a1b3f3bcd1a738af85ae2b0168d408c177661eab6d6bbebb254e394d983f54, documentation-utils-20230511-98630dd/multilang-documentation-utils.asd
+documentation-utils, ghcr.io/ocicl/documentation-utils@sha256:b2a1b3f3bcd1a738af85ae2b0168d408c177661eab6d6bbebb254e394d983f54, documentation-utils-20230511-98630dd/documentation-utils.asd
+trivial-indent, ghcr.io/ocicl/trivial-indent@sha256:6fe5b8470816a715113c0f123d41d52fc2782309fd5fc33a494dd887c6c677ce, trivial-indent-20230809-b5d490f/trivial-indent.asd
+local-time, ghcr.io/ocicl/local-time@sha256:3b0f202b13e4765349fe6a97609dc769c8420aff11158129cc00b66beaabf16b, local-time-20230927-88867f8/local-time.asd
+cl-postgres+local-time, ghcr.io/ocicl/local-time@sha256:3b0f202b13e4765349fe6a97609dc769c8420aff11158129cc00b66beaabf16b, local-time-20230927-88867f8/cl-postgres+local-time.asd
+dissect, ghcr.io/ocicl/dissect@sha256:c6af70da31e5184f50e80ff1d6e688a3bd90156c243b76112324910aad13cb45, dissect-20230808-b7bf9b9/dissect.asd

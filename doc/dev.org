@@ -8,6 +8,14 @@ for lib in ~/soft/ccl/lx86cl64 /lib/x86_64-linux-gnu/libdl.so.2 /lib/x86_64-linu
 do
         nm -D $lib
 done  | awk '/^[^ ]/{print substr($0, 20)}'  | sed 's/@.*//g'  > libs.txt
+
+for lib in /usr/local/bin/ecl /usr/local/lib/libecl.so.21.2 /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libgmp.so.10 /lib/x86_64-linux-gnu/libffi.so.8 /lib/x86_64-linux-gnu/libm.so.6 /lib64/ld-linux-x86-64.so.2
+do
+        nm -D $lib
+done  | awk '/^[^ ]/{print substr($0, 20)}'  | sed 's/@.*//g'  > libs.txt
+
+
+
 comm -12 <(sort libs.txt) <(sort temacs.txt)
 #+end_src
 * customization
@@ -33,7 +41,8 @@ comm -12 <(sort libs.txt) <(sort temacs.txt)
    --with-cairo \
    --without-gpm \
    --with-x-toolkit=no \
-   --without-rsvg
+   --without-rsvg \
+   --without-threads
   cd src
   make -j8 emacs
   make -j8 temacs.so
