@@ -51,19 +51,20 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (alien-output-length :long)
   (alien-output-array :pointer))
 
-(cffi:defcfun ("lock_input_mutex" lock-input-mutex) :void)
-(cffi:defcfun ("unlock_input_mutex" unlock-input-mutex) :void)
-(cffi:defcfun ("lock_output_mutex" lock-output-mutex) :void)
-(cffi:defcfun ("unlock_output_mutex" unlock-output-mutex) :void)
-
-(cffi:defcfun ("notify_input_ready" notify-input-ready) :void)
-(cffi:defcfun ("wait_for_input" wait-for-input) :void)
-(cffi:defcfun ("notify_output_ready" notify-output-ready) :void)
-(cffi:defcfun ("wait_for_output" wait-for-output) :void)
+;; (cffi:defcfun ("lock_common_lisp_mutex" lock-common-lisp-mutex) :void)
+;; (cffi:defcfun ("unlock_common_lisp_mutex" unlock-common-lisp-mutex) :void)
+(cffi:defcfun ("lock_emacs_mutex" lock-emacs-mutex) :void)
+(cffi:defcfun ("unlock_emacs_mutex" unlock-emacs-mutex) :void)
+;; (cffi:defcfun ("notify_emacs_cond" notify-emacs-cond) :void)
+;; (cffi:defcfun ("wait_for_emacs_cond" wait-for-emacs-cond) :void)
+;; (cffi:defcfun ("notify_common_lisp_cond" notify-common-lisp-cond) :void)
+;; (cffi:defcfun ("wait_for_common_lisp_cond" wait-for-common-lisp-cond) :void)
 
 (cffi:defcvar ("message_counter" message-counter) :long)
+(cffi:defcvar ("marker" marker) :int)
 (cffi:defcvar ("intercomm_message" intercomm-message) intercomm-session-struct)
 
+(defvar *emacs-thread* nil)
 (defun run-emacs ()
   (let* ((args (list
                 (namestring (truename (concatenate 'string *emacs-source-path* "src/temacs")))
@@ -86,25 +87,27 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
     (cffi:foreign-free argv)
     ))
 (defun intercomm ()
+  (format t "starting intercomm~%")
+  ;; (lock-common-lisp-mutex)
+  ;; (lock-emacs-mutex)
+  ;; (setf common-lisp-active 1) 
+  ;; (notify-emacs-cond)
+  ;; (unlock-emacs-mutex)
+  
   (loop 
-    (format t "lisp: here1~%")
-    (lock-input-mutex)
-    (format t "lisp: starting wait for input~%")
-    (wait-for-input)
-    (format t "lisp: here2~%")
-    (cffi:with-foreign-slots ((message-id) intercomm-message intercomm-session-struct)
-      (format t "lisp: input received ~a~%" message-id)
-      )
-    (format t "lisp: here3~%")
-    (lock-output-mutex)
-    (format t "lisp: here4~%")
-    (notify-output-ready)
-    (format t "lisp: here5~%")
-    (unlock-output-mutex)
-    (format t "lisp: here6~%")
-    (unlock-input-mutex)
-    (format t "lisp: here7~%")
-    ))
+    (lock-emacs-mutex)
+    (if (= marker 1)
+        (progn
+          (cffi:with-foreign-slots ((message-id) intercomm-message intercomm-session-struct)
+            (format t "lisp: input received ~a~%" message-id)
+            )
+          (setq marker 2))
+        (sleep 0.001)
+        )
+    (unlock-emacs-mutex)
+    )
+
+  )
 
 
 (defun print-thread-info ()
@@ -117,10 +120,11 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   nil)
 
 (defun main ()
+  (setq *emacs-thread*
+        (bt:make-thread
+         #'run-emacs :name "emacs"))
   (bt:make-thread
    #'intercomm :name "intercomm")
-  (bt:make-thread
-   #'run-emacs :name "emacs")
 
   ;; (loop for idx from 0 below 10
   ;;       do (format t "~s~%" (cffi:mem-aref exec-name :uchar idx )))
