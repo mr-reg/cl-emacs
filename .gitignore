@@ -1,3 +1,5 @@
 *.spec
 .ccls-cache
 systems
+systems.csv
+cl-emacs.log

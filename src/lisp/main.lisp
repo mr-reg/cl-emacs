@@ -125,18 +125,21 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (defconstant +message-type/stop-server+ 0)
 (defconstant +message-type/s-expr+ 1)
 (defconstant +message-type/error+ 2)
+(defconstant +message-type/deal-yourself+ 3)
 
-(defun process-intercomm-message (input-type input-bytes)
+(defun process-intercomm-message (message-id input-type input-bytes)
   "returns (output-type output-bytes)"
-  (cond
-    ((= input-type +message-type/s-expr+)
-     (let ((s-expr (babel:octets-to-string input-bytes)))
-       (log-debug "we need to eval ~s" s-expr))
-     (values +message-type/s-expr+ "\"done\""))
-    
-    (t (log-error "unsupported input-type ~a" input-type)
-       (values +message-type/error+ "error")))
-  (values +message-type/error+ "somebody forgot to add result")
+  (handler-case
+      (cond
+        ((= input-type +message-type/s-expr+)
+         (let ((s-expr (babel:octets-to-string input-bytes)))
+           (log-trace "#~a we need to eval ~s" message-id s-expr))
+         (values +message-type/s-expr+ "\"done\""))
+        
+        (t (log-error "#~a unsupported input-type ~a" message-id input-type)
+           (values +message-type/error+ "error")))
+    (error ()
+      (values +message-type/deal-yourself+ "don't know what to do")))
   )
 
 (defparameter *intercomm-server-socket* nil)
@@ -160,25 +163,27 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
          ))
   (log-info "intercomm started")
   (unwind-protect
-       (loop
-         for stream-socket = (usocket:socket-accept *intercomm-server-socket* :element-type '(unsigned-byte 8))
-         do (unwind-protect
-                 (let* ((stream (usocket:socket-stream stream-socket))
-                        (input-length (lisp-binary:read-integer 8 stream :signed nil))
-                        (input-type (lisp-binary:read-integer 8 stream :signed nil))
-                        (input-bytes (lisp-binary:read-bytes input-length stream)))
-                   ;; (log-debug "intercomm message received")
-                   (when (= input-type +message-type/stop-server+)
-                     (log-info "received stop-server message")
-                     (return-from run-intercomm-server))
-                   (multiple-value-bind (output-type output-bytes)
-                       (process-intercomm-message input-type input-bytes)
-                     (lisp-binary:write-integer (length output-bytes) 8 stream :signed nil)
-                     (lisp-binary:write-integer output-type 8 stream :signed nil)
-                     (lisp-binary:write-bytes output-bytes stream))
-                   ;; (log-debug "intercomm message completed")
-                   )
-              (usocket:socket-close stream-socket)))
+       (let ((message-id 0))
+         (loop
+           for stream-socket = (usocket:socket-accept *intercomm-server-socket* :element-type '(unsigned-byte 8))
+           do (unwind-protect
+                   (let* ((stream (usocket:socket-stream stream-socket))
+                          (input-length (lisp-binary:read-integer 8 stream :signed nil))
+                          (input-type (lisp-binary:read-integer 8 stream :signed nil))
+                          (input-bytes (lisp-binary:read-bytes input-length stream)))
+                     (incf message-id)
+                     ;; (log-debug "intercomm message received")
+                     (when (= input-type +message-type/stop-server+)
+                       (log-info "received stop-server message")
+                       (return-from run-intercomm-server))
+                     (multiple-value-bind (output-type output-bytes)
+                         (process-intercomm-message message-id input-type input-bytes)
+                       (lisp-binary:write-integer (length output-bytes) 8 stream :signed nil)
+                       (lisp-binary:write-integer output-type 8 stream :signed nil)
+                       (lisp-binary:write-bytes output-bytes stream))
+                     ;; (log-debug "intercomm message completed")
+                     )
+                (usocket:socket-close stream-socket))))
     (usocket:socket-close *intercomm-server-socket*))
   (setq *intercomm-server-socket* nil))
 

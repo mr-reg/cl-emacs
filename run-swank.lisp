@@ -34,12 +34,20 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
    :ignore-inherited-configuration
    (:tree "~/.local/share/ocicl/")))
 
+;; (push (truename "~/.emacs.d/straight/repos/slime/") asdf:*central-registry*)
+
 (asdf:load-system :swank)
+;; (load (truename "~/.emacs.d/straight/repos/slime/swank-loader.lisp"))
+;; (setq swank-loader::*fasl-directory* "/tmp/fasl/")
+;; (swank-loader:init)
+
 (defvar *swank-port* 4008)
 (format t "starting background swank on port ~a" *swank-port*)
+(setf swank-loader:*started-from-emacs* t)
 (swank:create-server :port *swank-port*
                      :style swank:*communication-style*
                      :dont-close t)
 
 (push (truename ".") asdf:*central-registry*)
+(print "run-swank.lisp complete")
 (asdf:load-system :cl-emacs)
