@@ -8,9 +8,13 @@
            #:log-disable))
 (in-package :cl-emacs/log)
 
-(setf org.shirakumo.verbose:*timestamp-format* NIL)
-
+(setf org.shirakumo.verbose:*timestamp-format* '((:hour 2) #\: (:min 2) #\: (:sec 2)))
 (setf (org.shirakumo.verbose:repl-level) :debug)
+(loop for pipeline across (org.shirakumo.verbose::pipeline org.shirakumo.verbose:*global-controller*)
+      do (loop for element across pipeline
+               when (typep element 'org.shirakumo.verbose:repl-faucet)
+                 do (setf (org.shirakumo.verbose:ansi-colors element) nil)))
+
 ;; (setf (org.shirakumo.verbose:repl-level) :trace)
 
 (defparameter *logging-packages* nil)
@@ -36,3 +40,4 @@
   `(org.shirakumo.verbose:log :trace ,(intern (package-name *package*) :keyword) ,@args))
 
 (log-enable :cl-emacs/log)
+(log-enable :common-lisp-user)

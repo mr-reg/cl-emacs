@@ -7,8 +7,11 @@
   :long-name "cl-emacs"
   :depends-on (:cffi
                :uiop
-               :bt-semaphore
+               :babel
+               ;; :bt-semaphore
                :verbose
+               :usocket
+               :lisp-binary
                "cl-emacs/log"
                "cl-emacs/main"
                ))
