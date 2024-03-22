@@ -41,7 +41,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;; (setq swank-loader::*fasl-directory* "/tmp/fasl/")
 ;; (swank-loader:init)
 
-(defvar *swank-port* 4008)
+(defvar *swank-port* 4005)
 (format t "starting background swank on port ~a" *swank-port*)
 (setf swank-loader:*started-from-emacs* t)
 (swank:create-server :port *swank-port*

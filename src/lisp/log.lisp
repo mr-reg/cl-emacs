@@ -5,26 +5,27 @@
            #:log-info
            #:log-trace
            #:log-enable
-           #:log-disable)
+           #:log-disable
+           #:log-reset
+           )
   (:local-nicknames (#:v #:org.shirakumo.verbose)))
 (in-package :cl-emacs/log)
-(setf (v:repl-level) :debug)
-;; (v:level (v::find-place v:*global-controller* 'v::level-filter))
-;; (v:file-level)
+(setf (v:repl-level) :info)
 
-(uiop:delete-file-if-exists "cl-emacs.log")
-(v:define-pipe ()
-  (v:level-filter :name 'repl-level-filter)
-  (v:category-tree-filter :name 'repl-category-filter)
-  ;; (v:repl-faucet :name 'repl-faucet)
-  (v:file-faucet :file "cl-emacs.log")
+(defun log-reset ()
+  (uiop:delete-file-if-exists "cl-emacs.log")
+  (v:define-pipe ()
+    (v:category-tree-filter :name 'repl-category-filter)
+    (v:file-faucet :file "cl-emacs.log")
+    )
+
+  ;; force disable ansi colors in repl
+  (loop for pipeline across (v::pipeline v:*global-controller*)
+        do (loop for element across pipeline
+                 when (typep element 'v:repl-faucet)
+                   do (setf (v:ansi-colors element) nil)))
   )
 
-;; force disable ansi colors in repl
-(loop for pipeline across (v::pipeline v:*global-controller*)
-      do (loop for element across pipeline
-               when (typep element 'v:repl-faucet)
-                 do (setf (v:ansi-colors element) nil)))
 
 ;; (setf (v:repl-level) :trace)
 
@@ -50,8 +51,7 @@
 (defmacro log-trace (&rest args)
   `(v:log :trace ,(intern (package-name *package*) :keyword) ,@args))
 
+(log-reset)
 (log-enable :cl-emacs/log)
 (log-enable :common-lisp-user)
-
-
 

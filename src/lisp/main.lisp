@@ -123,7 +123,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;;   nil)
 
 (defconstant +message-type/stop-server+ 0)
-(defconstant +message-type/s-expr+ 1)
+(defconstant +message-type/notify-s-expr+ 1)
 (defconstant +message-type/error+ 2)
 (defconstant +message-type/deal-yourself+ 3)
 
@@ -131,10 +131,10 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   "returns (output-type output-bytes)"
   (handler-case
       (cond
-        ((= input-type +message-type/s-expr+)
+        ((= input-type +message-type/notify-s-expr+)
          (let ((s-expr (babel:octets-to-string input-bytes)))
            (log-trace "#~a we need to eval ~s" message-id s-expr))
-         (values +message-type/s-expr+ "\"done\""))
+         (values +message-type/notify-s-expr+ "\"done\""))
         
         (t (log-error "#~a unsupported input-type ~a" message-id input-type)
            (values +message-type/error+ "error")))
@@ -151,6 +151,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
      (usocket:socket-shutdown *intercomm-server-socket* :both)
      (usocket:socket-close *intercomm-server-socket*)))
   (setq *intercomm-server-socket* nil)
+  (log-reset)
   (loop
     until *intercomm-server-socket*
     do (handler-case
@@ -184,8 +185,11 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                      ;; (log-debug "intercomm message completed")
                      )
                 (usocket:socket-close stream-socket))))
-    (usocket:socket-close *intercomm-server-socket*))
-  (setq *intercomm-server-socket* nil))
+    (progn
+      (log-info "closing intercomm socket")
+      (usocket:socket-close *intercomm-server-socket*)
+      (setq *intercomm-server-socket* nil)))
+  )
 
 (defun main ()
 
