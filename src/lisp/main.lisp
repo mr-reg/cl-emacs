@@ -20,6 +20,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (uiop:define-package :cl-emacs/main
     (:use :common-lisp :cl-emacs/log)
+  (:export :generate-elisp-block)
   )
 (in-package :cl-emacs/main)
 (log-enable :cl-emacs/main)
@@ -30,102 +31,16 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (t (:default "temacs")))
 
 (defparameter *emacs-source-path* "../emacs/")
-(pushnew (truename (concatenate 'string *emacs-source-path* "src/"))
-         cffi:*foreign-library-directories*
-         :test #'equalp)
+;; (pushnew (truename (concatenate 'string *emacs-source-path* "src/"))
+;;          cffi:*foreign-library-directories*
+;;          :test #'equalp)
 
-(cffi:load-foreign-library 'temacs)
-;; (cffi:defcfun ("emacs_main" emacs-main) :int
-;;   (argc :int)
-;;   (argv :pointer)
-;;   )
+;; (cffi:load-foreign-library 'temacs)
 
-;; (cffi:defcstruct alien-data-struct
-;;   (type :char)
-;;   (int-data :long)
-;;   (char-data :pointer)
-;;   (float-data :double)
-;;   (counters :pointer))
-
-;; (cffi:defcstruct intercomm-session-struct
-;;   (message-id :long)
-;;   (alien-input-length :long)
-;;   (alien-input-array :pointer)
-;;   (alien-output-length :long)
-;;   (alien-output-array :pointer))
-
-;; ;; (cffi:defcfun ("lock_common_lisp_mutex" lock-common-lisp-mutex) :void)
-;; ;; (cffi:defcfun ("unlock_common_lisp_mutex" unlock-common-lisp-mutex) :void)
-;; (cffi:defcfun ("lock_emacs_mutex" lock-emacs-mutex) :void)
-;; (cffi:defcfun ("unlock_emacs_mutex" unlock-emacs-mutex) :void)
-;; ;; (cffi:defcfun ("notify_emacs_cond" notify-emacs-cond) :void)
-;; ;; (cffi:defcfun ("wait_for_emacs_cond" wait-for-emacs-cond) :void)
-;; ;; (cffi:defcfun ("notify_common_lisp_cond" notify-common-lisp-cond) :void)
-;; ;; (cffi:defcfun ("wait_for_common_lisp_cond" wait-for-common-lisp-cond) :void)
-
-;; (cffi:defcvar ("message_counter" message-counter) :long)
-;; (cffi:defcvar ("marker" marker) :int)
-;; (cffi:defcvar ("intercomm_message" intercomm-message) intercomm-session-struct)
-
-;; (defvar *emacs-thread* nil)
-;; (defun run-emacs ()
-;;   (let* ((args (list
-;;                 (namestring (truename (concatenate 'string *emacs-source-path* "src/temacs")))
-;;                 ;; "-nw"
-;;                 ;; "-l" "~/configs/emacs-config-2/init.el"
-;;                 ))
-;;          (argc (length args))
-;;          (argv (cffi:foreign-alloc :pointer :count (1+ argc) :initial-element (cffi:null-pointer)))
-;;          )
-;;     (loop for argi from 0
-;;           for arg in args
-;;           do (let ((c (cffi:foreign-alloc :char :initial-element 0 :count (1+ (length arg)))))
-;;                (cffi:lisp-string-to-foreign arg c (1+ (length arg)))
-;;                (setf (cffi:mem-aref argv :pointer argi) c)))
-;;     (setf (cffi:mem-aref argv :pointer argc) (cffi:null-pointer))
-;;     (log-info "starting emacs")
-;;     (emacs-main argc argv)
-;;     (loop for argi from 0 below argc
-;;           do (cffi:foreign-free (cffi:mem-aref argv :pointer argi))) 
-;;     (cffi:foreign-free argv)
-;;     ))
-;; (defun intercomm ()
-;;   (format t "starting intercomm~%")
-;;   ;; (lock-common-lisp-mutex)
-;;   ;; (lock-emacs-mutex)
-;;   ;; (setf common-lisp-active 1) 
-;;   ;; (notify-emacs-cond)
-;;   ;; (unlock-emacs-mutex)
-
-;;   (loop 
-;;     (lock-emacs-mutex)
-;;     (if (= marker 1)
-;;         (progn
-;;           (cffi:with-foreign-slots ((message-id) intercomm-message intercomm-session-struct)
-;;             (format t "lisp: input received ~a~%" message-id)
-;;             )
-;;           (setq marker 2))
-;;         (sleep 0.001)
-;;         )
-;;     (unlock-emacs-mutex)
-;;     )
-
-;;   )
-
-
-;; (defun print-thread-info ()
-;;   (let* ((curr-thread (bt:current-thread))
-;;          (curr-thread-name (bt:thread-name curr-thread))
-;;          (all-threads (bt:all-threads)))
-;;     (format t "Current thread: ~a~%~%" curr-thread)
-;;     (format t "Current thread name: ~a~%~%" curr-thread-name)
-;;     (format t "All threads:~% ~{~a~%~}~%" all-threads))
-;;   nil)
-
-(defconstant +message-type/stop-server+ 0)
+(defconstant +message-type/stop-server+ 100)
 (defconstant +message-type/notify-s-expr+ 1)
 (defconstant +message-type/error+ 2)
-(defconstant +message-type/deal-yourself+ 3)
+(defconstant +message-type/rpc+ 3)
 
 (defun process-intercomm-message (message-id input-type input-bytes)
   "returns (output-type output-bytes)"
@@ -133,16 +48,24 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (cond
         ((= input-type +message-type/notify-s-expr+)
          (let ((s-expr (babel:octets-to-string input-bytes)))
-           (log-trace "#~a we need to eval ~s" message-id s-expr))
-         (values +message-type/notify-s-expr+ "\"done\""))
-        
-        (t (log-error "#~a unsupported input-type ~a" message-id input-type)
-           (values +message-type/error+ "error")))
-    (error ()
-      (values +message-type/deal-yourself+ "don't know what to do")))
-  )
+           (log-trace "#~a alien message: ~a" message-id s-expr))
+         (values +message-type/notify-s-expr+ (babel:string-to-octets "\"done\"")))
+        ((= input-type +message-type/rpc+)
+         (let ((s-expr (babel:octets-to-string input-bytes))
+               result)
+           (log-trace "#~a rpc: ~a" message-id s-expr)
+           (setq result (cl-emacs/elisp::eval-string s-expr))
+           (log-trace "#~a rpc result: ~s" message-id result)
+           (values +message-type/rpc+ (babel:string-to-octets (format nil "~s" result)))
+           )
+         )        
+        (t (log-error "#~a unsupported message-type ~a" message-id input-type)
+           (values +message-type/error+ (babel:string-to-octets "error"))))
+    (error (e)
+      (break)
+      (values +message-type/error+ (babel:string-to-octets (format nil "~s" e))))))
 
-(defparameter *intercomm-server-socket* nil)
+(defvar *intercomm-server-socket* nil)
 
 (defun run-intercomm-server ()
   (log-debug "run-intercomm-server")
@@ -168,22 +91,25 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
          (loop
            for stream-socket = (usocket:socket-accept *intercomm-server-socket* :element-type '(unsigned-byte 8))
            do (unwind-protect
-                   (let* ((stream (usocket:socket-stream stream-socket))
-                          (input-length (lisp-binary:read-integer 8 stream :signed nil))
-                          (input-type (lisp-binary:read-integer 8 stream :signed nil))
-                          (input-bytes (lisp-binary:read-bytes input-length stream)))
-                     (incf message-id)
-                     ;; (log-debug "intercomm message received")
-                     (when (= input-type +message-type/stop-server+)
-                       (log-info "received stop-server message")
-                       (return-from run-intercomm-server))
-                     (multiple-value-bind (output-type output-bytes)
-                         (process-intercomm-message message-id input-type input-bytes)
-                       (lisp-binary:write-integer (length output-bytes) 8 stream :signed nil)
-                       (lisp-binary:write-integer output-type 8 stream :signed nil)
-                       (lisp-binary:write-bytes output-bytes stream))
-                     ;; (log-debug "intercomm message completed")
-                     )
+                   (handler-case
+                       (let* ((stream (usocket:socket-stream stream-socket))
+                              (input-length (lisp-binary:read-integer 8 stream :signed nil))
+                              (input-type (lisp-binary:read-integer 8 stream :signed nil))
+                              (input-bytes (lisp-binary:read-bytes input-length stream)))
+                         (incf message-id)
+                         ;; (log-debug "intercomm message received")
+                         (when (= input-type +message-type/stop-server+)
+                           (log-info "received stop-server message")
+                           (return-from run-intercomm-server))
+                         (multiple-value-bind (output-type output-bytes)
+                             (process-intercomm-message message-id input-type input-bytes)
+                           (lisp-binary:write-integer (length output-bytes) 8 stream :signed nil)
+                           (lisp-binary:write-integer output-type 8 stream :signed nil)
+                           (lisp-binary:write-bytes output-bytes stream))
+                         ;; (log-debug "intercomm message completed")
+                         )
+                     (end-of-file ()
+                       (log-error "end-of-file detected")))
                 (usocket:socket-close stream-socket))))
     (progn
       (log-info "closing intercomm socket")
@@ -191,9 +117,34 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (setq *intercomm-server-socket* nil)))
   )
 
-(defun main ()
+(defun generate-elisp-block ()
+  (with-output-to-string (stream)
+    (do-external-symbols (symbol :cl-emacs/elisp)
+      (handler-case
+          (let* ((function (symbol-function symbol))
+                 (name (string-downcase (symbol-name symbol)))
+                 (args (mapcar #'string-downcase (ccl:arglist function)))
+                 (docstring (documentation symbol 'function)))
+            (format stream "(defalias '~a #'(lambda (" name)
+            (dolist (arg args)
+              (format stream "~a " arg))
+            (format stream ")~%")
+            (format stream "~s~%" docstring)
+            (format stream "  (common-lisp (list 'cl-emacs/elisp:~a" name)
+            (dolist (arg args)
+              (unless (string= arg "&optional")
+                (format stream " ~a" arg)))
+            (format stream "))))~%")
+            )
+        (undefined-function ()
+          ;; skip non-function exports
+          ))
+      ))
+  )
 
-  (run-intercomm-server)
+(defun main ()
+  (bt:make-thread
+   #'run-intercomm-server)
   (log-debug "main complete")
   )
 ;; (main)

@@ -69,3 +69,8 @@ lx86cl64 --load ../../src/lisp/test.lisp
     /* signaling the producer that we "consumed" the data */
     pthread_cond_signal(&cond);
     pthread_mutex_unlock(&lock);
+* rpc test
+#+begin_src
+(eval (car (read-from-string "(length \"howdy\")")))
+
+#+end_src

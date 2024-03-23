@@ -1,5 +1,5 @@
 (defpackage :cl-emacs/log
-  (:use :common-lisp :cl)  
+  (:use :common-lisp)  
   (:export #:log-debug
            #:log-error
            #:log-info
