@@ -54,16 +54,25 @@ sure DIRNAME in this example doesn't end in a slash, unless it's
 the root directory. "
   (let* ((buffer-default-directory (assoc-value (assoc-value *context* :buffer) :default-directory))
          (invocation-directory (assoc-value *context* :invocation-directory))
-         (default-directory-final (cond
-                                    ((and default-directory (not (str:ends-with-p "/" default-directory)))
-                                     (concatenate 'string default-directory "/"))
-                                    (t (or default-directory
-                                           buffer-default-directory
-                                           invocation-directory
-                                           "/"
-                                           ))))
-         (path (uiop:merge-pathnames* name default-directory-final)))
-    (namestring path)))
+         (default-directory-final (uiop:make-pathname*
+                                   :directory
+                                   (cond
+                                     ((and default-directory (not (str:ends-with-p "/" default-directory)))
+                                      (concatenate 'string default-directory "/"))
+                                     (t (or default-directory
+                                            buffer-default-directory
+                                            invocation-directory
+                                            "/"
+                                            )))))
+         (path (uiop:merge-pathnames* name default-directory-final))
+         absolute-namestring)
+    (handler-case (setq absolute-namestring (namestring (truename path)))
+      (file-error ()
+        (setq absolute-namestring (namestring path))))
+    (when (and (str:ends-with-p "/" absolute-namestring)
+               (not (str:ends-with-p "/"  name)))
+      (setq absolute-namestring (str:substring 0 -1 absolute-namestring)))
+    absolute-namestring))
 
 (export 'test-rpc)
 (defun test-rpc (x &optional y)

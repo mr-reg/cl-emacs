@@ -24,6 +24,7 @@
         do (loop for element across pipeline
                  when (typep element 'v:repl-faucet)
                    do (setf (v:ansi-colors element) nil)))
+  (setf org.shirakumo.verbose:*timestamp-format* NIL)
   )
 
 
