@@ -10,7 +10,6 @@
            )
   (:local-nicknames (#:v #:org.shirakumo.verbose)))
 (in-package :cl-emacs/log)
-(setf (v:repl-level) :info)
 
 (defun log-reset ()
   (uiop:delete-file-if-exists "cl-emacs.log")
@@ -18,6 +17,7 @@
     (v:category-tree-filter :name 'repl-category-filter)
     (v:file-faucet :file "cl-emacs.log")
     )
+  (setf (v:repl-level) :info)
 
   ;; force disable ansi colors in repl
   (loop for pipeline across (v::pipeline v:*global-controller*)

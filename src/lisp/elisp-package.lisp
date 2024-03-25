@@ -27,3 +27,11 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (export '*context*)
 (defvar *context* nil)
+
+#|       
+               IMPORTANT NOTE 
+
+If elisp function argument name has the same name as variable in
+lexical scope, you will have PROBLEMS. So all function arguments
+should have kinda unique name, so I always use prefix arg_
+|#
