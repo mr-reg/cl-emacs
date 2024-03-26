@@ -58,33 +58,46 @@ the root directory.
 "
   (check-string arg/name)
   (check-string-null-bytes arg/name)
+  (labels ((add-slash-to-dir (dir)
+             (concatenate 'string dir "/"))
+           (process-tildes (str)
+             (let* ((env (assoc-value *context* :env))
+                    (home-directory (add-slash-to-dir (or (assoc-value env "HOME" :test #'equalp)
+                                                          (namestring (user-homedir-pathname)))))
+                    (home-dir-regex "^~(?:USER){0,1}(?:/|$)"))
+               (cl-ppcre:regex-replace home-dir-regex str home-directory)))
+           (remove-double-slashes (str)
+             (cl-ppcre:regex-replace-all "\\/\\/" str "/"))
+           (process-single-dots (str)
+             (remove-double-slashes (cl-ppcre:regex-replace-all "\\/\\.(?=(?:\\/|$))" str "/")))
+           (process-double-dots (str)
+             (remove-double-slashes (cl-ppcre:regex-replace-all "\\/[^\\/]*\\/\\.\\.(?=(?:\\/|$))" str "/"))))
+    
+    (setq arg/name (process-tildes arg/name))
 
-  (let* ((env (assoc-value *context* :env))
-         (home-directory (or (assoc-value env "HOME" :test #'equalp) (namestring (user-homedir-pathname))))
-         (home-dir-regex "^~(?:USER){0,1}"))
-    (setq arg/name (cl-ppcre:regex-replace home-dir-regex arg/name home-directory))
-    (setq arg/default-directory (cl-ppcre:regex-replace home-dir-regex arg/default-directory home-directory)))
-  (let* ((buffer (assoc-value *context* :buffer))
-         (buffer-default-directory (assoc-value buffer :default-directory))
-         (invocation-directory (assoc-value *context* :invocation-directory))
-         (default-directory (if (str:starts-with-p "/" arg/name)
-                                ""
-                                (or arg/default-directory
-                                    buffer-default-directory
-                                    invocation-directory
-                                    "/")))
-         result)
-    ;; add slash to the end of directory
-    (setq default-directory (concatenate 'string default-directory "/"))
-    ;; time to join
-    (setq result (concatenate 'string default-directory arg/name))
-    ;; remove extra slashes
-    (setq result (cl-ppcre:regex-replace-all "\\/\\/" result "/"))
-    ;; process single dots
-    (setq result (cl-ppcre:regex-replace-all "\\/\\.(?=(?:\\/|$))" result "/"))
-    (setq result (cl-ppcre:regex-replace-all "\\/\\/" result "/"))
-    ;; process double dots
-    (setq result (cl-ppcre:regex-replace-all "\\/[^\\/]*\\/\\.\\.(?=(?:\\/|$))" result "/"))
-    (setq result (cl-ppcre:regex-replace-all "\\/\\/" result "/"))
-    result))
+    (let* ((buffer (assoc-value *context* :buffer))
+           (buffer-default-directory (assoc-value buffer :default-directory))
+           (invocation-directory (assoc-value *context* :invocation-directory))
+           (default-directory (if (str:starts-with-p "/" arg/name)
+                                  ""
+                                  (or arg/default-directory
+                                      buffer-default-directory
+                                      invocation-directory
+                                      "/")))
+           result)
+      (when (and (not (string= "" default-directory))
+                 (not (str:starts-with-p "~/" default-directory))
+                 (not (str:starts-with-p "/" default-directory))
+                 (str:starts-with-p "/" invocation-directory))
+        (setq default-directory (expand-file-name default-directory invocation-directory)))
+      (setq default-directory (process-tildes
+                               (add-slash-to-dir default-directory)))
+      ;; time to join
+      (setq result (concatenate 'string default-directory arg/name))
+      (setq result (process-double-dots
+                    (process-single-dots
+                     (remove-double-slashes result))))
+      result)
+    )
+  )
 

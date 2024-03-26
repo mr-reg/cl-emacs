@@ -22,6 +22,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (:export #:wrong-type-argument
            #:check-string
            #:check-string-null-bytes
+           #:condition-to-elisp-signal
            #:*context*)
   )
 (in-package :cl-emacs/elisp/internals)
@@ -32,21 +33,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (defclass emacs-signal (error)
   ())
 
-(defmethod print-object ((condition emacs-signal) stream)
-  "(cons 'wrong-type-argument (list 'stringp a))"
-  (format stream "(cons '~a (list" (str:downcase (class-name (class-of condition))))
-  (dolist (slot-def (ccl:class-direct-slots (class-of condition)))
-    (let ((raw (slot-value condition (ccl:slot-definition-name slot-def))))
-      (cond
-        ((or (numberp raw) (stringp raw))
-         (format stream " ~s" raw))
-        ((symbolp raw)
-         (format stream " '~a" (str:downcase raw)))
-        (t (format stream " \"unsupported type ~a\"" (type-of raw)))))
-    )
-  (format stream "))")
 
-  )
 
 (define-condition wrong-type-argument (emacs-signal)
   ((predicate :initarg :predicate
@@ -66,3 +53,18 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
     (error 'wrong-type-argument :predicate 'filenamep :value arg)))
 
 
+(defun condition-to-elisp-signal (condition)
+  "(cons 'wrong-type-argument (list 'stringp a))"
+  (declaim (condition condition))
+  (with-output-to-string (stream)
+    (format stream "(cons '~a (list" (str:downcase (class-name (class-of condition))))
+    (dolist (slot-def (ccl:class-direct-slots (class-of condition)))
+      (let ((raw (slot-value condition (ccl:slot-definition-name slot-def))))
+        (cond
+          ((or (numberp raw) (stringp raw))
+           (format stream " ~s" raw))
+          ((symbolp raw)
+           (format stream " '~a" (str:downcase raw)))
+          (t (format stream " \"unsupported type ~a\"" (type-of raw)))))
+      )
+    (format stream "))")))

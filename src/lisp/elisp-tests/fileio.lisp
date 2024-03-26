@@ -25,7 +25,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (in-suite elisp/fileio)
 
 (test expand-file-name
-  (setf *context* '((:buffer ((:default-directory . "/home/emacs/src/")))))
+  (setf *context* '((:buffer . ((:default-directory . "/home/emacs/src/")))))
   (is (string= "/home/emacs/src/"
                (expand-file-name "./" nil)))
   (is (string= "/home/emacs/src/emacs"
@@ -52,9 +52,22 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                (expand-file-name "~" nil)))
   (is (string= (namestring (user-homedir-pathname))
                (expand-file-name "." "~")))
-  (setf *context* '((:buffer ((:default-directory . "~foo")))))
+  (setf *context* '((:buffer . ((:default-directory . "~foo")))
+                    (:invocation-directory . "/usr/bin")))
   (is (string= "/usr/bin/~foo/bar"
                (expand-file-name "bar")))
+  (setf *context* '((:buffer . ((:default-directory . "/usr/src/")))
+                    (:invocation-directory . "/usr/bin/")))
+  (is (string= "/root/"
+               (expand-file-name "/root/")))
+
+  (setf *context* '((:buffer . ((:default-directory . "~/sub/")))
+                    (:env . (("HOME" . "/root")))))
+  (is (string= "/root/sub/test.file"
+               (expand-file-name "test.file")))
   )
 
+
+(defun run-all-tests ()
+  (run! 'elisp/fileio))
 

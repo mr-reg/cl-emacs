@@ -63,7 +63,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
         (t (log-error "#~a unsupported message-type ~a" message-id input-type)
            (values +message-type/signal+ (babel:string-to-octets "error"))))
     (error (e)
-      (values +message-type/signal+ (babel:string-to-octets (format nil "~a" e))))))
+      (values +message-type/signal+ (babel:string-to-octets
+                                     (cl-emacs/elisp/internals:condition-to-elisp-signal e))))))
 
 (defvar *intercomm-server-socket* nil)
 

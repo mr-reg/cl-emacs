@@ -37,7 +37,7 @@ comm -12 <(sort libs.txt) <(sort temacs.txt)
    --with-included-regex \
    --without-xaw3d \
    --with-modules \
-   --with-dumping=pdumper \
+   --with-dumping=none \
    --with-cairo \
    --without-gpm \
    --with-x-toolkit=no \
