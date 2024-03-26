@@ -47,23 +47,23 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (handler-case
       (cond
         ((= input-type +message-type/notify-s-expr+)
-         (let ((s-expr (babel:octets-to-string input-bytes)))
+         (let ((s-expr (babel:octets-to-string input-bytes :errorp nil)))
            (log-trace "#~a alien message: ~a" message-id s-expr))
          (values +message-type/notify-s-expr+ (babel:string-to-octets "\"done\"")))
         ((= input-type +message-type/rpc+)
-         (let ((s-expr (babel:octets-to-string input-bytes))
+         (let ((s-expr (babel:octets-to-string input-bytes :errorp nil))
                result)
            (log-trace "#~a rpc: ~a" message-id s-expr)
            (setq result (cl-emacs/elisp::eval-string s-expr))
            (log-trace "#~a rpc result: ~s" message-id result)
-           (values +message-type/rpc+ (babel:string-to-octets (format nil "~s" result)))
+           (values +message-type/rpc+ (babel:string-to-octets (format nil "~s" result)  :errorp nil))
            )
          )        
         (t (log-error "#~a unsupported message-type ~a" message-id input-type)
            (values +message-type/error+ (babel:string-to-octets "error"))))
     (error (e)
       (break)
-      (values +message-type/error+ (babel:string-to-octets (format nil "~s" e))))))
+      (values +message-type/error+ (babel:string-to-octets (format nil "~s"(format nil "~s" e))  :errorp nil)))))
 
 (defvar *intercomm-server-socket* nil)
 

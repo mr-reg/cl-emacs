@@ -40,32 +40,48 @@ at the beginning of the file name when they are significant (e.g., UNC
 file names on MS-Windows.)
 
 An initial \"~\" in NAME expands to your home directory.
+
+An initial \"~USER\" in NAME expands to USER's home directory.  If
+USER doesn't exist, \"~USER\" is not expanded.
+
+To do other file name substitutions, see `substitute-in-file-name'.
+
+For technical reasons, this function can return correct but
+non-intuitive results for the root directory; for instance,
+\(expand-file-name \"..\" \"/\") returns \"/..\".  For this reason, use
+\(directory-file-name (file-name-directory dirname)) to traverse a
+filesystem tree, not (expand-file-name \"..\" dirname).  Note: make
+sure DIRNAME in this example doesn't end in a slash, unless it's
+the root directory.
 "
-  (let* ((buffer-default-directory (assoc-value (assoc-value *context* :buffer) :default-directory))
+  (let* ((env (assoc-value *context* :env))
+         (home-directory (or (assoc-value env "HOME" :test #'equalp) (namestring (user-homedir-pathname))))
+         (home-dir-regex "^~(?:USER){0,1}"))
+    (setq arg/name (cl-ppcre:regex-replace home-dir-regex arg/name home-directory))
+    (setq arg/default-directory (cl-ppcre:regex-replace home-dir-regex arg/default-directory home-directory)))
+  (let* ((buffer (assoc-value *context* :buffer))
+         (buffer-default-directory (assoc-value buffer :default-directory))
          (invocation-directory (assoc-value *context* :invocation-directory))
-         (default-directory-final (uiop:make-pathname*
-                                   :directory
-                                   (cond
-                                     ((and arg/default-directory (not (str:ends-with-p "/" arg/default-directory)))
-                                      (concatenate 'string arg/default-directory "/"))
-                                     (t (or arg/default-directory
-                                            buffer-default-directory
-                                            invocation-directory
-                                            "/"
-                                            )))))
-         (path (uiop:merge-pathnames* arg/name default-directory-final))
-         absolute-namestring)
-    (handler-case (setq absolute-namestring (namestring (truename path)))
-      (file-error ()
-        (setq absolute-namestring (namestring path))))
-    (when (and (str:ends-with-p "/" absolute-namestring)
-               (not (str:ends-with-p "/"  arg/name)))
-      (setq absolute-namestring (str:substring 0 -1 absolute-namestring)))
-    (when (str:starts-with-p "~/" absolute-namestring)
-      (setq absolute-namestring (concatenate 'string
-                                             (namestring (user-homedir-pathname))
-                                             (str:substring 2 (length absolute-namestring) absolute-namestring))))
-    absolute-namestring))
+         (default-directory (if (str:starts-with-p "/" arg/name)
+                                ""
+                                (or arg/default-directory
+                                    buffer-default-directory
+                                    invocation-directory
+                                    "/")))
+         result)
+    ;; add slash to the end of directory
+    (setq default-directory (concatenate 'string default-directory "/"))
+    ;; time to join
+    (setq result (concatenate 'string default-directory arg/name))
+    ;; remove extra slashes
+    (setq result (cl-ppcre:regex-replace-all "\\/\\/" result "/"))
+    ;; process single dots
+    (setq result (cl-ppcre:regex-replace-all "\\/\\.(?=(?:\\/|$))" result "/"))
+    (setq result (cl-ppcre:regex-replace-all "\\/\\/" result "/"))
+    ;; process double dots
+    (setq result (cl-ppcre:regex-replace-all "\\/[^\\/]*\\/\\.\\.(?=(?:\\/|$))" result "/"))
+    (setq result (cl-ppcre:regex-replace-all "\\/\\/" result "/"))
+    result))
 
 ;; (export 'test-rpc)
 ;; (defun test-rpc (x &optional y)

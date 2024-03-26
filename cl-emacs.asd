@@ -6,9 +6,12 @@
   :long-name "cl-emacs"
   :depends-on (:cffi
                :closer-mop
+               :cl-ppcre
+               :fiveam
                :flexi-streams
                :lisp-binary
                :moptilities
+               ;; :mstrings
                :osicat
                :trivial-gray-streams
                :quasiquote-2.0

@@ -37,7 +37,7 @@ comm -12 <(sort libs.txt) <(sort temacs.txt)
    --with-included-regex \
    --without-xaw3d \
    --with-modules \
-   --with-dumping=none \
+   --with-dumping=pdumper \
    --with-cairo \
    --without-gpm \
    --with-x-toolkit=no \
@@ -73,4 +73,8 @@ lx86cl64 --load ../../src/lisp/test.lisp
 #+begin_src
 (eval (car (read-from-string "(length \"howdy\")")))
 
+* how to check tests 
+cd ../src/ && make -j8 emacs emacs.pdmp && cd ../test/
+
+find . -name '*.log' -exec grep -Po "...unexpected" {} + | grep -v ' 0 unexpected' 
 #+end_src
