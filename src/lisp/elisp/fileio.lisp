@@ -17,10 +17,12 @@ General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
-(in-package :cl-emacs/elisp)
+(uiop:define-package :cl-emacs/elisp/fileio
+    (:use :common-lisp :alexandria :cl-emacs/log
+     :cl-emacs/elisp/internals)
+  (:export #:expand-file-name))
+(in-package :cl-emacs/elisp/fileio)
 
-;; (CL-EMACS/ELISP:EXPAND-FILE-NAME "zg.zip:g.gz" NIL)
-(export 'expand-file-name)
 (defun expand-file-name (arg/name &optional arg/default-directory)
   "Convert filename NAME to absolute, and canonicalize it.
 Second arg DEFAULT-DIRECTORY is directory to start with if NAME is relative
@@ -54,6 +56,9 @@ filesystem tree, not (expand-file-name \"..\" dirname).  Note: make
 sure DIRNAME in this example doesn't end in a slash, unless it's
 the root directory.
 "
+  (check-string arg/name)
+  (check-string-null-bytes arg/name)
+
   (let* ((env (assoc-value *context* :env))
          (home-directory (or (assoc-value env "HOME" :test #'equalp) (namestring (user-homedir-pathname))))
          (home-dir-regex "^~(?:USER){0,1}"))
@@ -82,9 +87,4 @@ the root directory.
     (setq result (cl-ppcre:regex-replace-all "\\/[^\\/]*\\/\\.\\.(?=(?:\\/|$))" result "/"))
     (setq result (cl-ppcre:regex-replace-all "\\/\\/" result "/"))
     result))
-
-;; (export 'test-rpc)
-;; (defun test-rpc (x &optional y)
-;;   "my docstring"
-;;   (+ x (or y 4)))
 

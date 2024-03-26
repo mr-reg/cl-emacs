@@ -17,21 +17,33 @@ General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
-(uiop:define-package :cl-emacs/elisp
-    (:use :common-lisp :alexandria :cl-emacs/log :common-lisp-user :fiveam))
-(in-package :cl-emacs/elisp)
-(log-enable :cl-emacs/elisp)
+(uiop:define-package :cl-emacs/elisp/internals
+    (:use :common-lisp :cl-emacs/log)
+  (:export #:wrong-type-argument
+           #:check-string
+           #:check-string-null-bytes
+           #:*context*)
+  )
+(in-package :cl-emacs/elisp/internals)
+(log-enable :cl-emacs/elisp/internals)
 
-(defun eval-string (str)
-  (eval  (eval (read-from-string str))))
-
-(export '*context*)
 (defvar *context* nil)
 
-#|       
-               IMPORTANT NOTE 
+(define-condition wrong-type-argument (error)
+  ((predicate :initarg :predicate
+              :type symbol
+              )
+   (value :initarg :value)))
 
-If elisp function argument name has the same name as variable in
-lexical scope, you will have PROBLEMS. So all function arguments
-should have kinda unique name, so I always use prefix arg_
-|#
+
+(defun check-string (arg)
+  (unless (stringp arg)
+    (error 'wrong-type-argument :predicate 'stringp :value arg))
+  )
+
+
+(defun check-string-null-bytes (arg)
+  (when (find #\NULL arg)
+    (error 'wrong-type-argument :predicate 'filenamep :value arg)))
+
+

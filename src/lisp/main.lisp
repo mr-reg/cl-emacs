@@ -21,6 +21,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (uiop:define-package :cl-emacs/main
     (:use :common-lisp :cl-emacs/log)
   (:export :generate-elisp-block)
+  (:import-from :cl-emacs/elisp)
   )
 (in-package :cl-emacs/main)
 (log-enable :cl-emacs/main)

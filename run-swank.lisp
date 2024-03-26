@@ -20,7 +20,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (require :asdf)
 
-(unless (uiop:file-exists-p "cl-emacs.asd")
+(unless (uiop:file-exists-p "run-swank.lisp")
   (error "please run this program from folder with file cl-emacs.asd"))
 
 (unless (probe-file (truename "~/.local/share/ocicl/ocicl-runtime.lisp"))
@@ -48,7 +48,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                      :style swank:*communication-style*
                      :dont-close t)
 
-(push (truename ".") asdf:*central-registry*)
+(push (truename "./src/lisp/") asdf:*central-registry*)
 (print "run-swank.lisp complete")
-(asdf:load-system :cl-emacs)
+;; (asdf:load-system :cl-emacs)
 ;; (cl-emacs/main::main )
