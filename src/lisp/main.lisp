@@ -40,7 +40,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (defconstant +message-type/stop-server+ 100)
 (defconstant +message-type/notify-s-expr+ 1)
-(defconstant +message-type/error+ 2)
+(defconstant +message-type/signal+ 2)
 (defconstant +message-type/rpc+ 3)
 
 (defun process-intercomm-message (message-id input-type input-bytes)
@@ -61,10 +61,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
            )
          )        
         (t (log-error "#~a unsupported message-type ~a" message-id input-type)
-           (values +message-type/error+ (babel:string-to-octets "error"))))
+           (values +message-type/signal+ (babel:string-to-octets "error"))))
     (error (e)
-      (break)
-      (values +message-type/error+ (babel:string-to-octets (format nil "~s"(format nil "~s" e))  :errorp nil)))))
+      (values +message-type/signal+ (babel:string-to-octets (format nil "~a" e))))))
 
 (defvar *intercomm-server-socket* nil)
 

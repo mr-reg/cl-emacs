@@ -78,3 +78,10 @@ cd ../src/ && make -j8 emacs emacs.pdmp && cd ../test/
 
 find . -name '*.log' -exec grep -Po "...unexpected" {} + | grep -v ' 0 unexpected' 
 #+end_src
+* condition check in elisp
+#+begin_src lisp
+(condition-case err
+    (expand-file-name 123)
+  (wrong-type-argument
+   (message "here")))
+#+end_src

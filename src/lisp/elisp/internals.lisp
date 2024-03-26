@@ -29,7 +29,26 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (defvar *context* nil)
 
-(define-condition wrong-type-argument (error)
+(defclass emacs-signal (error)
+  ())
+
+(defmethod print-object ((condition emacs-signal) stream)
+  "(cons 'wrong-type-argument (list 'stringp a))"
+  (format stream "(cons '~a (list" (str:downcase (class-name (class-of condition))))
+  (dolist (slot-def (ccl:class-direct-slots (class-of condition)))
+    (let ((raw (slot-value condition (ccl:slot-definition-name slot-def))))
+      (cond
+        ((or (numberp raw) (stringp raw))
+         (format stream " ~s" raw))
+        ((symbolp raw)
+         (format stream " '~a" (str:downcase raw)))
+        (t (format stream " \"unsupported type ~a\"" (type-of raw)))))
+    )
+  (format stream "))")
+
+  )
+
+(define-condition wrong-type-argument (emacs-signal)
   ((predicate :initarg :predicate
               :type symbol
               )
