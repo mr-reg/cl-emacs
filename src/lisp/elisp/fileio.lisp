@@ -22,7 +22,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
      :cl-emacs/elisp/internals))
 (in-package :cl-emacs/elisp/fileio)
 
-(defun-elisp expand-file-name "expand-file-name" (arg/name &optional arg/default-directory)
+(defun-elisp elisp/expand-file-name (arg/name &optional arg/default-directory)
   "Convert filename NAME to absolute, and canonicalize it.
 Second arg DEFAULT-DIRECTORY is directory to start with if NAME is relative
 \(does not start with slash or tilde); both the directory name and
@@ -88,7 +88,7 @@ the root directory.
                  (not (str:starts-with-p "~/" default-directory))
                  (not (str:starts-with-p "/" default-directory))
                  (str:starts-with-p "/" invocation-directory))
-        (setq default-directory (expand-file-name default-directory invocation-directory)))
+        (setq default-directory (elisp/expand-file-name default-directory invocation-directory)))
       (setq default-directory (process-tildes
                                (add-slash-to-dir default-directory)))
       ;; time to join

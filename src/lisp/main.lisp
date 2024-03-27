@@ -19,9 +19,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
 
 (uiop:define-package :cl-emacs/main
-    (:use :common-lisp :cl-emacs/log)
+    (:use :common-lisp :cl-emacs/log :cl-emacs/elisp)
   (:export :generate-elisp-block)
-  (:import-from :cl-emacs/elisp)
+  (:import-from :common-lisp-user #:quit)
   )
 (in-package :cl-emacs/main)
 (log-enable :cl-emacs/main)
@@ -57,30 +57,19 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
            (log-trace "#~a rpc: ~a" message-id s-expr)
            (setq result (cl-emacs/elisp::eval-string s-expr))
            (log-trace "#~a rpc result: ~s" message-id result)
-           (values +message-type/rpc+ (babel:string-to-octets (serialize-to-elisp result t)  :errorp nil))
+           (values +message-type/rpc+ (babel:string-to-octets (cl-emacs/elisp/internals:serialize-to-elisp result t)  :errorp nil))
            )
          )        
         (t (log-error "#~a unsupported message-type ~a" message-id input-type)
            (values +message-type/signal+ (babel:string-to-octets "error"))))
     (error (e)
-      (log-trace "#~a rpc signal: ~s" message-id e)
+      (log-trace "#~a rpc signal: ~s" message-id (cl-emacs/elisp/internals:condition-to-elisp-signal e))
       (values +message-type/signal+ (babel:string-to-octets
                                      (cl-emacs/elisp/internals:condition-to-elisp-signal e))))))
 
 (defvar *intercomm-server-socket* nil)
 
-(defun serialize-to-elisp (obj &optional toplevel)
-  (cond
-    ((or (numberp obj) (stringp obj))
-     (format nil "~s" obj))
-    ((symbolp obj)
-     (format nil "~a~a" (if toplevel "'" "")
-             (str:downcase (symbol-name obj))))
-    ((consp obj)
-     (format nil "(cons ~a ~a)"
-             (serialize-to-elisp (car obj) toplevel)
-             (serialize-to-elisp (cdr obj) toplevel)))
-    (t (format nil "~s" "unsupported"))))
+
 
 (defun run-intercomm-server ()
   (log-debug "run-intercomm-server")
@@ -100,7 +89,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
            (log-error "address in use")
            (sleep 1))
          ))
-  (log-reset)
   (log-info "intercomm started")
   (unwind-protect
        (let ((message-id 0))
@@ -166,5 +154,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
    #'run-intercomm-server)
   (log-debug "main complete")
   )
+
 ;; (main)
 ;; (cl-emacs/main::test)

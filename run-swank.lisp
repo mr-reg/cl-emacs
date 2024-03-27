@@ -50,5 +50,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (push (truename "./src/lisp/") asdf:*central-registry*)
 (print "run-swank.lisp complete")
-;; (asdf:load-system :cl-emacs)
+(ignore-errors
+ (asdf:load-system :cl-emacs))
 ;; (cl-emacs/main::main )

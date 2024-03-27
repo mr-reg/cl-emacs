@@ -17,16 +17,18 @@ General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
-(uiop:define-package :cl-emacs/elisp/fns
-    (:use :common-lisp :alexandria :cl-emacs/log
-     :cl-emacs/elisp/internals)
-  (:import-from :common-lisp-user
-                #:memq)
+(uiop:define-package :cl-emacs/elisp/globals
+    (:use :common-lisp :cl-emacs/log
+          :cl-emacs/elisp/internals)
+  (:export
+   #:init-globals
+   #:invocation-directory)
   )
-(in-package :cl-emacs/elisp/fns)
+(in-package :cl-emacs/elisp/globals)
+(log-enable :cl-emacs/elisp/globals)
 
-(defun-elisp elisp/memq (arg/elt arg/list)
-    "Return non-nil if ELT is an element of LIST.  Comparison done with `eq'.
-The value is actually the tail of LIST whose car is ELT."
-  ;; memq is macros in common lisp, but in elisp we need function
-  (memq arg/elt arg/list))
+(defvar invocation-directory)
+
+(defun init-globals ()
+  "set emacs globals to nil"
+  (setq invocation-directory nil))

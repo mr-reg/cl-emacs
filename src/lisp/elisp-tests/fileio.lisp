@@ -27,44 +27,44 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (test expand-file-name
   (setf *context* '((:buffer . ((:default-directory . "/home/emacs/src/")))))
   (is (string= "/home/emacs/src/"
-               (expand-file-name "./" nil)))
+               (elisp/expand-file-name "./" nil)))
   (is (string= "/home/emacs/src/emacs"
-               (expand-file-name "emacs" nil)))
+               (elisp/expand-file-name "emacs" nil)))
   (is (string= "/home/emacs/src/my/emacs"
-               (expand-file-name "my/emacs" nil)))
+               (elisp/expand-file-name "my/emacs" nil)))
   (is (string= "/full/path"
-               (expand-file-name "/full/path" nil)))
+               (elisp/expand-file-name "/full/path" nil)))
   (is (string= "/home/emacs/full/path"
-               (expand-file-name "..//full/path" nil)))
+               (elisp/expand-file-name "..//full/path" nil)))
   (is (string= "/some/another/full/path"
-               (expand-file-name "..//full/path" "/some//another/path")))
+               (elisp/expand-file-name "..//full/path" "/some//another/path")))
   (is (string= "/some/another/"
-               (expand-file-name ".." "/some//another/path")))
+               (elisp/expand-file-name ".." "/some//another/path")))
   (is (string= "/some/another/path/"
-               (expand-file-name "." "/some//another/path/")))
+               (elisp/expand-file-name "." "/some//another/path/")))
   (is (string= "/some/another/path/"
-               (expand-file-name "." "/some//another/path/.")))
+               (elisp/expand-file-name "." "/some//another/path/.")))
   (is (string= "/some/another/path/test/"
-               (expand-file-name "test/" "//some//another/path/./")))
+               (elisp/expand-file-name "test/" "//some//another/path/./")))
   (is (string= "/home/emacs/src/zg.zip:g.gz"
-               (expand-file-name "zg.zip:g.gz" nil)))
+               (elisp/expand-file-name "zg.zip:g.gz" nil)))
   (is (string= (namestring (user-homedir-pathname))
-               (expand-file-name "~" nil)))
+               (elisp/expand-file-name "~" nil)))
   (is (string= (namestring (user-homedir-pathname))
-               (expand-file-name "." "~")))
+               (elisp/expand-file-name "." "~")))
   (setf *context* '((:buffer . ((:default-directory . "~foo")))
                     (:invocation-directory . "/usr/bin")))
   (is (string= "/usr/bin/~foo/bar"
-               (expand-file-name "bar")))
+               (elisp/expand-file-name "bar")))
   (setf *context* '((:buffer . ((:default-directory . "/usr/src/")))
                     (:invocation-directory . "/usr/bin/")))
   (is (string= "/root/"
-               (expand-file-name "/root/")))
+               (elisp/expand-file-name "/root/")))
 
   (setf *context* '((:buffer . ((:default-directory . "~/sub/")))
                     (:env . (("HOME" . "/root")))))
   (is (string= "/root/sub/test.file"
-               (expand-file-name "test.file")))
+               (elisp/expand-file-name "test.file")))
   )
 
 

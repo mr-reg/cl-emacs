@@ -21,6 +21,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
     (:use :common-lisp :cl-emacs/log)
   (:use-reexport
    :cl-emacs/elisp/fileio
+   :cl-emacs/elisp/globals
    :cl-emacs/elisp/fns
    ))
 (in-package :cl-emacs/elisp)

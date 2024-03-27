@@ -26,7 +26,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
            #:check-string
            #:check-string-null-bytes
            #:condition-to-elisp-signal
-           #:*context*)
+           #:*context*
+           #:serialize-to-elisp
+           )
   (:import-from :common-lisp-user
                 #:class-direct-slots
                 #:slot-definition-name
@@ -60,36 +62,58 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
     (error 'wrong-type-argument :predicate 'filenamep :value arg)))
 
 
+(defun serialize-to-elisp (obj &optional toplevel)
+  (with-output-to-string (stream)
+    (cond
+      ((or (numberp obj) (stringp obj))
+       (format stream "~s" obj))
+      ((symbolp obj)
+       (when toplevel
+         (format stream "'"))
+       (loop for c across (symbol-name obj)
+             with upcase = nil
+             do (cond
+                  (upcase
+                   (format stream "~a" (str:upcase c))
+                   (setq upcase nil))
+                  ((eq #\_ c)
+                   (setq upcase t))
+                  (t
+                   (format stream "~a" (str:downcase c)))))
+       )
+      ((consp obj)
+       (format stream "(cons ~a ~a)"
+               (serialize-to-elisp (car obj) toplevel)
+               (serialize-to-elisp (cdr obj) toplevel)))
+      (t (format stream "~s" "unsupported")))))
+
 (defun condition-to-elisp-signal (condition)
   "(cons 'wrong-type-argument (list 'stringp a))"
   (declaim (condition condition))
   (with-output-to-string (stream)
-    (format stream "(cons '~a (list" (str:downcase (class-name (class-of condition))))
+    (format stream "(cons ~a (list" (serialize-to-elisp (class-name (class-of condition)) t))
     (dolist (slot-def (class-direct-slots (class-of condition)))
       (let ((raw (slot-value condition (slot-definition-name slot-def))))
-        (cond
-          ((or (numberp raw) (stringp raw))
-           (format stream " ~s" raw))
-          ((symbolp raw)
-           (format stream " '~a" (str:downcase raw)))
-          (t (format stream " \"unsupported type ~a\"" (type-of raw)))))
+        (format stream " ~a" (serialize-to-elisp raw))
+        )
       )
     (format stream "))")))
 
 ;; key = common lisp symbol
 ;; value = elisp string. 
-(defvar *elisp-aliases* (make-hash-table))
+;; (defvar *elisp-aliases* (make-hash-table))
 
-(defmacro defun-elisp (function-name elisp-alias args &body body)
-  (declare (string elisp-alias))
+(defmacro defun-elisp (function-name args &body body)
+  ;; (setf (gethash ',function-name *elisp-aliases*) ,elisp-alias)
+  ;; (declare (string elisp-alias))
   `(progn
-     (setf (gethash ',function-name *elisp-aliases*) ,elisp-alias)
      ,(append (list 'defun function-name args) body)
      (export ',function-name)))
 
 
 (defun get-elisp-alias (symbol)
-  (gethash symbol *elisp-aliases*)
+  (cl-ppcre:regex-replace "^elisp/" (serialize-to-elisp symbol) "")
+  ;; (gethash symbol *elisp-aliases*)
   )
 
 (defmacro eval-intercomm-expr (function-name &rest args)
@@ -100,3 +124,4 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                                     (t x)))
                               args))
   )
+
