@@ -57,18 +57,30 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
            (log-trace "#~a rpc: ~a" message-id s-expr)
            (setq result (cl-emacs/elisp::eval-string s-expr))
            (log-trace "#~a rpc result: ~s" message-id result)
-           (values +message-type/rpc+ (babel:string-to-octets (format nil "~s" result)  :errorp nil))
+           (values +message-type/rpc+ (babel:string-to-octets (serialize-to-elisp result t)  :errorp nil))
            )
          )        
         (t (log-error "#~a unsupported message-type ~a" message-id input-type)
            (values +message-type/signal+ (babel:string-to-octets "error"))))
     (error (e)
-      (break)
       (log-trace "#~a rpc signal: ~s" message-id e)
       (values +message-type/signal+ (babel:string-to-octets
                                      (cl-emacs/elisp/internals:condition-to-elisp-signal e))))))
 
 (defvar *intercomm-server-socket* nil)
+
+(defun serialize-to-elisp (obj &optional toplevel)
+  (cond
+    ((or (numberp obj) (stringp obj))
+     (format nil "~s" obj))
+    ((symbolp obj)
+     (format nil "~a~a" (if toplevel "'" "")
+             (str:downcase (symbol-name obj))))
+    ((consp obj)
+     (format nil "(cons ~a ~a)"
+             (serialize-to-elisp (car obj) toplevel)
+             (serialize-to-elisp (cdr obj) toplevel)))
+    (t (format nil "~s" "unsupported"))))
 
 (defun run-intercomm-server ()
   (log-debug "run-intercomm-server")
@@ -125,6 +137,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (defun generate-elisp-block ()
   (with-output-to-string (stream)
+    (format stream "(progn~%")
     (do-external-symbols (symbol :cl-emacs/elisp)
       (handler-case
           (let* ((function (symbol-function symbol))
@@ -145,9 +158,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
               (format stream "))))~%~%")))
         (undefined-function ()
           ;; skip non-function exports
-          ))
-      ))
-  )
+          )))
+    (format stream ")~%")))
 
 (defun main ()
   (bt:make-thread

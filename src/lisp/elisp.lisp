@@ -35,6 +35,6 @@ should have kinda unique name, so I always use prefix arg_
 |#
 
 (defun eval-string (str)
-  (eval  (eval (read-from-string str))))
+  (eval (read-from-string str)))
 
 
