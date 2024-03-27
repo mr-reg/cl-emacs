@@ -17,24 +17,16 @@ General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
-(uiop:define-package :cl-emacs/elisp
-    (:use :common-lisp :cl-emacs/log)
-  (:use-reexport
-   :cl-emacs/elisp/fileio
-   :cl-emacs/elisp/fns
-   ))
-(in-package :cl-emacs/elisp)
-(log-enable :cl-emacs/elisp)
+(uiop:define-package :cl-emacs/elisp/fns
+    (:use :common-lisp :alexandria :cl-emacs/log
+     :cl-emacs/elisp/internals)
+  (:import-from :common-lisp-user
+                #:memq)
+  )
+(in-package :cl-emacs/elisp/fns)
 
-#|       
-IMPORTANT NOTE 
-
-If elisp function argument name has the same name as variable in
-lexical scope, you will have PROBLEMS. So all function arguments
-should have kinda unique name, so I always use prefix arg_
-|#
-
-(defun eval-string (str)
-  (eval  (eval (read-from-string str))))
-
-
+(defun-elisp memq-elisp "memq2" (arg/elt arg/list)
+  "Return non-nil if ELT is an element of LIST.  Comparison done with `eq'.
+The value is actually the tail of LIST whose car is ELT."
+  ;; memq is macros in common lisp, but in elisp we need function
+  (memq arg/elt arg/list))

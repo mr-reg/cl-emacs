@@ -20,10 +20,17 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (uiop:define-package :cl-emacs/elisp/internals
     (:use :common-lisp :cl-emacs/log)
   (:export #:wrong-type-argument
+           #:defun-elisp
+           #:eval-intercomm-expr
+           #:get-elisp-alias
            #:check-string
            #:check-string-null-bytes
            #:condition-to-elisp-signal
            #:*context*)
+  (:import-from :common-lisp-user
+                #:class-direct-slots
+                #:slot-definition-name
+                )
   )
 (in-package :cl-emacs/elisp/internals)
 (log-enable :cl-emacs/elisp/internals)
@@ -58,8 +65,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (declaim (condition condition))
   (with-output-to-string (stream)
     (format stream "(cons '~a (list" (str:downcase (class-name (class-of condition))))
-    (dolist (slot-def (ccl:class-direct-slots (class-of condition)))
-      (let ((raw (slot-value condition (ccl:slot-definition-name slot-def))))
+    (dolist (slot-def (class-direct-slots (class-of condition)))
+      (let ((raw (slot-value condition (slot-definition-name slot-def))))
         (cond
           ((or (numberp raw) (stringp raw))
            (format stream " ~s" raw))
@@ -68,3 +75,28 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
           (t (format stream " \"unsupported type ~a\"" (type-of raw)))))
       )
     (format stream "))")))
+
+;; key = common lisp symbol
+;; value = elisp string. 
+(defvar *elisp-aliases* (make-hash-table))
+
+(defmacro defun-elisp (function-name elisp-alias args &body body)
+  (declare (string elisp-alias))
+  `(progn
+     (setf (gethash ',function-name *elisp-aliases*) ,elisp-alias)
+     ,(append (list 'defun function-name args) body)
+     (export ',function-name)))
+
+
+(defun get-elisp-alias (symbol)
+  (gethash symbol *elisp-aliases*)
+  )
+
+(defmacro eval-intercomm-expr (function-name &rest args)
+  (cons function-name (mapcar #'(lambda (x)
+                                  (cond
+                                    ((or (symbolp x)
+                                         (listp x)) (list 'quote x) )
+                                    (t x)))
+                              args))
+  )

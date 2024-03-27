@@ -22,6 +22,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (in-package :cl-emacs/elisp-tests)
 (log-enable :cl-emacs/elisp-tests)
 
-(def-suite cl-emacs)
-(defun run-all-tests ()
-  (run! 'cl-emacs))
+;; (def-suite cl-emacs)
+;; (defun run-all-tests ()
+;;   (run! 'cl-emacs))

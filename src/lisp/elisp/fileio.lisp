@@ -19,11 +19,10 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
 (uiop:define-package :cl-emacs/elisp/fileio
     (:use :common-lisp :alexandria :cl-emacs/log
-     :cl-emacs/elisp/internals)
-  (:export #:expand-file-name))
+     :cl-emacs/elisp/internals))
 (in-package :cl-emacs/elisp/fileio)
 
-(defun expand-file-name (arg/name &optional arg/default-directory)
+(defun-elisp expand-file-name "expand-file-name" (arg/name &optional arg/default-directory)
   "Convert filename NAME to absolute, and canonicalize it.
 Second arg DEFAULT-DIRECTORY is directory to start with if NAME is relative
 \(does not start with slash or tilde); both the directory name and
