@@ -18,7 +18,7 @@ You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
 (uiop:define-package :cl-emacs/elisp
-    (:use :common-lisp :cl-emacs/log)
+    (:use :common-lisp :cl-emacs/log :cl-emacs/elisp/internals)
   (:use-reexport
    :cl-emacs/elisp/fileio
    :cl-emacs/elisp/globals
@@ -38,4 +38,7 @@ should have kinda unique name, so I always use prefix arg_
 (defun eval-string (str)
   (eval (read-from-string str)))
 
-
+(with-open-file (stream "../emacs/src/alien-injection.c"
+                        :if-exists :supersede
+                        :direction :output)
+  (format stream "~a" (generate-c-block)))

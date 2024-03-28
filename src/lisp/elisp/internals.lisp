@@ -23,6 +23,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
            #:defun-elisp
            #:eval-intercomm-expr
            #:get-elisp-alias
+           #:generate-c-block
            #:check-string
            #:check-string-null-bytes
            #:condition-to-elisp-signal
@@ -32,6 +33,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (:import-from :common-lisp-user
                 #:class-direct-slots
                 #:slot-definition-name
+                #:function-args
                 )
   )
 (in-package :cl-emacs/elisp/internals)
@@ -112,8 +114,12 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 
 (defun get-elisp-alias (symbol)
-  (cl-ppcre:regex-replace "^elisp/" (serialize-to-elisp symbol) "")
+  (let ((str (serialize-to-elisp symbol)))
+    (cl-ppcre:regex-replace "^elisp/|^arg/" str ""))
   ;; (gethash symbol *elisp-aliases*)
+  )
+(defun get-c-alias (symbol)
+  (str:replace-all "-" "_" (get-elisp-alias symbol))
   )
 
 (defmacro eval-intercomm-expr (function-name &rest args)
@@ -125,3 +131,83 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                               args))
   )
 
+(defun generate-c-block ()
+  (with-output-to-string (stream)
+    (format stream "#ifndef ALIEN_INJECTION~%")
+    (format stream "#define ALIEN_INJECTION~%")
+    (format stream "#include \"lisp.h\"~%")
+    (format stream "#include \"alien-intercomm.h\"~%")
+    (let (c-aliases)
+      (do-external-symbols (symbol :cl-emacs/elisp)
+        (handler-case
+            (let* ((function (symbol-function symbol))
+                   (name (string-downcase (symbol-name symbol)))
+                   (elisp-alias (get-elisp-alias symbol))
+                   (c-alias (get-c-alias symbol))
+                   (args (delete '&optional (ccl:arglist function)))
+                   (docstring (documentation symbol 'function))
+                   (n-req-args) (n-opt-args))
+
+              (multiple-value-setq (n-req-args n-opt-args) (function-args function))
+
+              (format stream "EXFUN (F~a, ~d);~%"
+                      c-alias (+ n-req-args n-opt-args))
+              
+              (format stream "DEFUN (\"~a\", F~a, S~a, ~d, ~d, 0,~%"
+                      elisp-alias c-alias c-alias n-req-args (+ n-req-args n-opt-args))
+              (push c-alias c-aliases)
+              (format stream "       doc: /* ~a */)~%" docstring)
+              (format stream "  (")
+              (let (comma) (dolist (arg args)
+                             (when comma (format stream ", "))
+                             (setq comma t)
+                             (format stream "Lisp_Object ~a" (get-c-alias arg))))
+              (format stream ")~%")
+              (format stream "{~%")
+              (format stream "  Lisp_Object alien_data[] = {")
+              (let (comma) (dolist (arg args)
+                             (when comma (format stream ", "))
+                             (setq comma t)
+                             (format stream "~a" (get-c-alias arg))))
+              (format stream "};~%")
+              (format stream "  return alien_rpc(\"cl-emacs/elisp:~a\", ~d, alien_data);~%" name (length args))
+              (format stream "}~%~%")
+              )
+          (undefined-function ()
+            ;; skip non-function exports
+            )))
+      (format stream "void init_alien_injection (void) {~%")
+      (dolist (c-alias c-aliases)
+        (format stream "  defsubr (&S~a);~%" c-alias))
+      (format stream "}~%")
+      )
+    (format stream "#endif")
+    ))
+
+;; unused
+(defun generate-elisp-block ()
+  (with-output-to-string (stream)
+    (format stream "(progn~%")
+    (do-external-symbols (symbol :cl-emacs/elisp)
+      (handler-case
+          (let* ((function (symbol-function symbol))
+                 (name (string-downcase (symbol-name symbol)))
+                 (alias (cl-emacs/elisp/internals:get-elisp-alias symbol))
+                 (args (mapcar #'string-downcase (ccl:arglist function)))
+                 (docstring (documentation symbol 'function))
+                 )
+            (when alias
+              (format stream "(defalias '~a #'(lambda (" alias)
+              (dolist (arg args)
+                (format stream "~a " arg))
+              (format stream ")~%")
+              (format stream "~s~%" docstring)
+              (format stream "  (common-lisp-apply 'cl-emacs/elisp:~a (list" name)
+              (dolist (arg args)
+                (unless (string= arg "&optional")
+                  (format stream " ~a" arg)))
+              (format stream "))))~%~%")))
+        (undefined-function ()
+          ;; skip non-function exports
+          )))
+    (format stream ")~%")))

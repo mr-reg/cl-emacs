@@ -25,8 +25,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   )
 (in-package :cl-emacs/elisp/fns)
 
-(defun-elisp elisp/memq (arg/elt arg/list)
-    "Return non-nil if ELT is an element of LIST.  Comparison done with `eq'.
+(defun-elisp elisp/memq2 (arg/elt arg/list)
+  "Return non-nil if ELT is an element of LIST.  Comparison done with `eq'.
 The value is actually the tail of LIST whose car is ELT."
   ;; memq is macros in common lisp, but in elisp we need function
   (memq arg/elt arg/list))

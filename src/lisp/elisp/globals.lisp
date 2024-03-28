@@ -21,7 +21,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
     (:use :common-lisp :cl-emacs/log
           :cl-emacs/elisp/internals)
   (:export
-   #:init-globals
    #:invocation-directory)
   )
 (in-package :cl-emacs/elisp/globals)

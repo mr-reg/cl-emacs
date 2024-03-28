@@ -20,7 +20,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (uiop:define-package :cl-emacs/main
     (:use :common-lisp :cl-emacs/log :cl-emacs/elisp)
-  (:export :generate-elisp-block)
   (:import-from :common-lisp-user #:quit)
   )
 (in-package :cl-emacs/main)
@@ -123,31 +122,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (setq *intercomm-server-socket* nil)))
   )
 
-(defun generate-elisp-block ()
-  (with-output-to-string (stream)
-    (format stream "(progn~%")
-    (do-external-symbols (symbol :cl-emacs/elisp)
-      (handler-case
-          (let* ((function (symbol-function symbol))
-                 (name (string-downcase (symbol-name symbol)))
-                 (alias (cl-emacs/elisp/internals:get-elisp-alias symbol))
-                 (args (mapcar #'string-downcase (ccl:arglist function)))
-                 (docstring (documentation symbol 'function)))
-            (when alias
-              (format stream "(defalias '~a #'(lambda (" alias)
-              (dolist (arg args)
-                (format stream "~a " arg))
-              (format stream ")~%")
-              (format stream "~s~%" docstring)
-              (format stream "  (common-lisp-apply 'cl-emacs/elisp:~a (list" name)
-              (dolist (arg args)
-                (unless (string= arg "&optional")
-                  (format stream " ~a" arg)))
-              (format stream "))))~%~%")))
-        (undefined-function ()
-          ;; skip non-function exports
-          )))
-    (format stream ")~%")))
+
 
 (defun main ()
   (bt:make-thread
