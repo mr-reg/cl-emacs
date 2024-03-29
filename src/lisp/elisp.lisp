@@ -23,7 +23,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
    :cl-emacs/elisp/fileio
    :cl-emacs/elisp/globals
    :cl-emacs/elisp/fns
-   ))
+   )
+  (:export #:rpc-apply))
 (in-package :cl-emacs/elisp)
 (log-enable :cl-emacs/elisp)
 
@@ -35,8 +36,11 @@ lexical scope, you will have PROBLEMS. So all function arguments
 should have kinda unique name, so I always use prefix arg_
 |#
 
-(defun eval-string (str)
-  (eval (read-from-string str)))
+(defun rpc-apply (argv)
+  (setq *context* (third argv))
+  (let ((func (string-to-elisp-symbol (first argv)))
+        (func-args (second argv)))
+    (apply (symbol-function func) func-args)))
 
 (with-open-file (stream "../emacs/src/alien-injection.c"
                         :if-exists :supersede

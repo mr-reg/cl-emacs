@@ -60,8 +60,7 @@ the root directory.
   (labels ((add-slash-to-dir (dir)
              (concatenate 'string dir "/"))
            (process-tildes (str)
-             (let* ((env (assoc-value *context* :env))
-                    (home-directory (add-slash-to-dir (or (assoc-value env "HOME" :test #'equalp)
+             (let* ((home-directory (add-slash-to-dir (or (getf *context* :home)
                                                           (namestring (user-homedir-pathname)))))
                     (home-dir-regex "^~(?:USER){0,1}(?:/|$)"))
                (cl-ppcre:regex-replace home-dir-regex str home-directory)))
@@ -74,9 +73,8 @@ the root directory.
     
     (setq arg/name (process-tildes arg/name))
 
-    (let* ((buffer (assoc-value *context* :buffer))
-           (buffer-default-directory (assoc-value buffer :default-directory))
-           (invocation-directory (assoc-value *context* :invocation-directory))
+    (let* ((buffer-default-directory (getf *context* :buffer-default-directory))
+           (invocation-directory (getf *context* :invocation-directory))
            (default-directory (if (str:starts-with-p "/" arg/name)
                                   ""
                                   (or arg/default-directory

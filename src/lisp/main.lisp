@@ -45,26 +45,54 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (defun process-intercomm-message (message-id input-type input-bytes)
   "returns (output-type output-bytes)"
   (handler-case
-      (cond
-        ((= input-type +message-type/notify-s-expr+)
-         (let ((s-expr (babel:octets-to-string input-bytes :errorp nil)))
-           (log-trace "#~a alien message: ~a" message-id s-expr))
-         (values +message-type/notify-s-expr+ (babel:string-to-octets "\"done\"")))
-        ((= input-type +message-type/rpc+)
-         (let ((s-expr (babel:octets-to-string input-bytes :errorp nil))
-               result)
-           (log-trace "#~a rpc: ~a" message-id s-expr)
-           (setq result (cl-emacs/elisp::eval-string s-expr))
-           (log-trace "#~a rpc result: ~s" message-id result)
-           (values +message-type/rpc+ (babel:string-to-octets (cl-emacs/elisp/internals:serialize-to-elisp result t)  :errorp nil))
+      (let* ((stream (flexi-streams:make-in-memory-input-stream input-bytes))
+             (argc (cl-emacs/elisp/internals:read-lisp-binary-object stream))
+             (argv (loop for argi below argc
+                         collect (cl-emacs/elisp/internals:read-lisp-binary-object stream)))
+             (out-stream (flexi-streams:make-in-memory-output-stream :element-type '(unsigned-byte 8))))
+        (cond
+          ((= input-type +message-type/notify-s-expr+)
+           (log-debug "message argc=~a ~s" argc argv)
+           (cl-emacs/elisp/internals:write-lisp-binary-object "ack" out-stream)
+           (values +message-type/notify-s-expr+ (flexi-streams:get-output-stream-sequence out-stream))       
            )
-         )        
-        (t (log-error "#~a unsupported message-type ~a" message-id input-type)
-           (values +message-type/signal+ (babel:string-to-octets "error"))))
+          ((= input-type +message-type/rpc+)
+           (log-debug "rpc argc=~a ~s" argc argv)
+           ;; (unless (= argc 3)
+           ;;   (error "unsupported rpc type"))
+           (let ((result (cl-emacs/elisp:rpc-apply argv)))
+             (log-debug "rpc result ~s" result)
+             (cl-emacs/elisp/internals:write-lisp-binary-object result out-stream))
+           (values +message-type/notify-s-expr+ (flexi-streams:get-output-stream-sequence out-stream))
+           ;; (let ((s-expr (babel:octets-to-string input-bytes :errorp nil))
+           ;;       result)
+           ;;   (log-trace "#~a rpc: ~a" message-id s-expr)
+           ;;   (setq result (cl-emacs/elisp::eval-string s-expr))
+           ;;   (log-trace "#~a rpc result: ~s" message-id result)
+           ;;   (values +message-type/rpc+ (babel:string-to-octets (cl-emacs/elisp/internals:serialize-to-elisp result t)  :errorp nil))
+           ;;   )
+           )        
+          (t (error (format nil "#~a unsupported message-type ~a" message-id input-type))
+             ))
+        )
+    
+    
     (error (e)
-      (log-trace "#~a rpc signal: ~s" message-id (cl-emacs/elisp/internals:condition-to-elisp-signal e))
-      (values +message-type/signal+ (babel:string-to-octets
-                                     (cl-emacs/elisp/internals:condition-to-elisp-signal e))))))
+      (let ((signal (cl-emacs/elisp/internals:condition-to-elisp-signal e))
+            (out-stream (flexi-streams:make-in-memory-output-stream :element-type '(unsigned-byte 8))))
+        (log-debug "signal ~s" signal)
+        (cl-emacs/elisp/internals:write-lisp-binary-object signal out-stream)
+        (values +message-type/signal+ (flexi-streams:get-output-stream-sequence out-stream))
+        )
+      ;; (break)
+      ;; (values +message-type/signal+ (with-output-to-string (stream)
+      ;;                                 (cl-emacs/elisp/internals:write-lisp-binary-object "error" stream)))
+      ;; (log-trace "#~a rpc signal: ~s" message-id (cl-emacs/elisp/internals:condition-to-elisp-signal e))
+      ;; (break)
+      ;; (values +message-type/signal+ (babel:string-to-octets
+      ;;                                (cl-emacs/elisp/internals:condition-to-elisp-signal e)))
+      )
+    ))
 
 (defvar *intercomm-server-socket* nil)
 
@@ -93,29 +121,34 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
        (let ((message-id 0))
          (loop
            for stream-socket = (usocket:socket-accept *intercomm-server-socket* :element-type '(unsigned-byte 8))
-           do (unwind-protect
-                   (progn
-                     (handler-case
-                         (let* ((stream (usocket:socket-stream stream-socket))
-                                (input-length (lisp-binary:read-integer 8 stream :signed nil))
-                                (input-type (lisp-binary:read-integer 8 stream :signed nil))
-                                (input-bytes (lisp-binary:read-bytes input-length stream)))
-                           ;; (incf message-id)
-                           ;; (log-debug "intercomm message received")
-                           (when (= input-type +message-type/stop-server+)
-                             (log-info "received stop-server message")
-                             (return-from run-intercomm-server))
-                           (multiple-value-bind (output-type output-bytes)
-                               (process-intercomm-message message-id
-                                                          input-type input-bytes)
-                             (lisp-binary:write-integer (length output-bytes) 8 stream :signed nil)
-                             (lisp-binary:write-integer output-type 8 stream :signed nil)
-                             (lisp-binary:write-bytes output-bytes stream))
-                           ;; (log-debug "intercomm message completed")
-                           )
-                       (end-of-file ()
-                         (log-error "end-of-file detected"))))
-                (usocket:socket-close stream-socket))))
+           do
+              (restart-case
+                  (unwind-protect
+                       (progn
+                         (handler-case
+                             (let* ((stream (usocket:socket-stream stream-socket))
+                                    (input-length (lisp-binary:read-integer 8 stream :signed nil))
+                                    (input-type (lisp-binary:read-integer 8 stream :signed nil))
+                                    (input-bytes (lisp-binary:read-bytes input-length stream)))
+                               ;; (incf message-id)
+                               ;; (log-debug "intercomm message received")
+                               (when (= input-type +message-type/stop-server+)
+                                 (log-info "received stop-server message")
+                                 (return-from run-intercomm-server))
+                               (multiple-value-bind (output-type output-bytes)
+                                   (process-intercomm-message message-id
+                                                              input-type input-bytes)
+                                 (lisp-binary:write-integer (length output-bytes) 8 stream :signed nil)
+                                 (lisp-binary:write-integer output-type 8 stream :signed nil)
+                                 (lisp-binary:write-bytes output-bytes stream))
+                               ;; (log-debug "intercomm message completed")
+                               )
+                           (end-of-file ()
+                             (log-error "end-of-file detected"))))
+                    (progn
+                      ;; (log-info "closing client socket")
+                      (usocket:socket-close stream-socket)))
+                (just-continue () nil))))
     (progn
       (log-info "closing intercomm socket")
       (usocket:socket-close *intercomm-server-socket*)
