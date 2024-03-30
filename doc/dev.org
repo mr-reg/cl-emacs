@@ -29,7 +29,7 @@ comm -12 <(sort libs.txt) <(sort temacs.txt)
 #+begin_src sh
   git clean -f -d -x
   ./autogen.sh
-  CC=clang CFLAGS="-fPIC -g -gdwarf-4 -rdynamic" ./configure \
+  CC=clang CFLAGS="-fPIC -g -gdwarf-4 -rdynamic -Wno-unused-command-line-argument" ./configure \
    --without-json \
    --without-xwidgets \
    --with-file-notification=inotify \

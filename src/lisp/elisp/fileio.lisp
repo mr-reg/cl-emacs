@@ -22,7 +22,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
      :cl-emacs/elisp/internals))
 (in-package :cl-emacs/elisp/fileio)
 
-(defun-elisp elisp/expand-file-name (arg/name &optional arg/default-directory)
+(defun-elisp elisp/expand-file-name '() (arg/name &optional arg/default-directory)
   "Convert filename NAME to absolute, and canonicalize it.
 Second arg DEFAULT-DIRECTORY is directory to start with if NAME is relative
 \(does not start with slash or tilde); both the directory name and

@@ -20,9 +20,10 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (uiop:define-package :cl-emacs/elisp
     (:use :common-lisp :cl-emacs/log :cl-emacs/elisp/internals)
   (:use-reexport
+   :cl-emacs/elisp/data
    :cl-emacs/elisp/fileio
-   :cl-emacs/elisp/globals
    :cl-emacs/elisp/fns
+   :cl-emacs/elisp/globals
    )
   (:export #:rpc-apply))
 (in-package :cl-emacs/elisp)
