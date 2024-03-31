@@ -22,6 +22,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (:use-reexport
    :cl-emacs/elisp/data
    :cl-emacs/elisp/fileio
+   :cl-emacs/elisp/editfns
    :cl-emacs/elisp/fns
    :cl-emacs/elisp/globals
    )

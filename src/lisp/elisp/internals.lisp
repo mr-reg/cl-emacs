@@ -19,20 +19,22 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
 (uiop:define-package :cl-emacs/elisp/internals
     (:use :common-lisp :cl-emacs/log)
-  (:export #:wrong-type-argument
-           #:defun-elisp
-           #:eval-intercomm-expr
-           #:get-elisp-alias
-           #:generate-c-block
-           #:string-to-elisp-symbol
-           #:check-string
-           #:check-string-null-bytes
-           #:condition-to-elisp-signal
-           #:*context*
-           #:read-lisp-binary-object
-           #:write-lisp-binary-object
-           #:*defun-flags*
-           )
+  (:export
+   #:*context*
+   #:*defun-flags*
+   #:check-string
+   #:check-string-null-bytes
+   #:condition-to-elisp-signal
+   #:defun-elisp
+   #:elisp-symbol-to-string
+   #:eval-intercomm-expr
+   #:generate-c-block
+   #:get-elisp-alias
+   #:read-lisp-binary-object
+   #:string-to-elisp-symbol
+   #:write-lisp-binary-object
+   #:wrong-type-argument
+   )
   (:import-from :common-lisp-user
                 #:class-direct-slots
                 #:slot-definition-name
@@ -130,10 +132,109 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                               args))
   )
 
+(defun generate-elisp-c-fun (stream symbol)
+;;; elisp
+  (let* ((function (symbol-function symbol))
+         (func-name (string-downcase (symbol-name symbol)))
+         (elisp-alias (get-elisp-alias symbol))
+         (c-alias (get-c-alias symbol))
+         (args (delete '&rest (delete '&optional (ccl:arglist function))))
+         (docstring (documentation symbol 'function))
+         n-req-args
+         n-opt-args
+         restp
+         n-total-args)
+    (multiple-value-setq (n-req-args n-opt-args restp) (function-args function))
+    (setq n-total-args (+ n-req-args n-opt-args))
+    (format stream "DEFUN (\"~a\", F~a, S~a, ~d, ~a, 0,~%"
+            elisp-alias c-alias c-alias n-req-args (if restp "MANY" n-total-args))
+
+    (format stream "       doc: /* ~a */)~%" docstring)
+    (format stream "  (")
+    (if restp
+        (format stream "ptrdiff_t argc, Lisp_Object *argv")
+        (loop for argi from 0 below n-total-args
+              for arg in args
+              with comma = nil
+              do (progn
+                   (when comma (format stream ", "))
+                   (setq comma t)
+                   (format stream "Lisp_Object ~a" (get-c-alias arg)))))
+    (format stream ")~%")
+    (format stream "{~%")
+    (unless restp
+      (format stream "  Lisp_Object alien_data[] = {")
+      (loop for argi from 0 below n-total-args
+            for arg in args
+            with comma = nil
+            do (progn
+                 (when comma (format stream ", "))
+                 (setq comma t)
+                 (format stream "~a" (get-c-alias arg))))
+      (format stream "};~%")
+      )
+    (format stream "  return alien_rpc((char*)\"cl-emacs/elisp:~a\"" func-name)
+    (unless restp
+      (format stream ", ~d, alien_data);~%" n-total-args))
+    (when restp
+      (format stream ", argc, argv);~%"))
+    (format stream "}~%~%")))
+
+(defun generate-native-c-fun (stream symbol)
+;;; c-native
+  (let* ((function (symbol-function symbol))
+         (c-alias (get-c-alias symbol))
+         (args (delete '&rest (delete '&optional (ccl:arglist function))))
+         n-req-args
+         n-opt-args
+         restp
+         n-total-args)
+    (multiple-value-setq (n-req-args n-opt-args restp) (function-args function))
+    (unless restp
+      (return-from generate-native-c-fun))
+    (setq n-total-args (+ n-req-args n-opt-args))
+
+    (format stream "Lisp_Object ~a~a~a ("
+            c-alias n-total-args (if restp "n" ""))
+    (loop for argi from 0 below n-total-args
+          for arg in args
+          with comma = nil
+          do (progn
+               (when comma (format stream ", "))
+               (setq comma t)
+               (format stream "Lisp_Object ~a" (get-c-alias arg)))
+          finally (when restp
+                    (when comma (format stream ", "))
+                    (format stream "ptrdiff_t argc, Lisp_Object *argv")))
+    (format stream ")~%")
+    (format stream "{~%")
+    (format stream "  Lisp_Object *alien_data = malloc (sizeof(Lisp_Object) * ~a);~%"
+            (if restp
+                (format nil "(argc + ~d)" n-total-args)
+                n-total-args))
+    (loop for argi from 0 below n-total-args
+          for arg in args
+          do (format stream "  alien_data[~d] = ~a;~%"
+                     argi (get-c-alias arg)))
+    (when restp
+      (format stream "  memcpy(alien_data + ~d, argv, argc * sizeof(Lisp_Object));~%"
+              n-total-args))
+    (format stream "  Lisp_Object result = F~a(~a, alien_data);~%"
+            c-alias
+            (if restp
+                (format nil "(argc + ~d)" n-total-args)
+                n-total-args))
+    (format stream "  free(alien_data);~%")
+    (format stream "  return result;~%")
+    (format stream "}~%~%")
+    ))
+
+
 (defun generate-c-block ()
   (with-output-to-string (stream)
     (format stream "#ifndef ALIEN_INJECTION~%")
     (format stream "#define ALIEN_INJECTION~%")
+    (format stream "#include <stdlib.h>~%")
     (format stream "#include \"lisp.h\"~%")
     (format stream "#include \"alien-intercomm.h\"~%")
     (let (func-c-aliases function-symbols var-symbols)
@@ -148,47 +249,28 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (dolist (symbol function-symbols)
         (let* ((function (symbol-function symbol))
                (c-alias (get-c-alias symbol))
-               (n-req-args) (n-opt-args))
-          (multiple-value-setq (n-req-args n-opt-args) (function-args function))
-          (format stream "EXFUN (F~a, ~d);~%"
-                  c-alias (+ n-req-args n-opt-args))))
+               n-req-args n-opt-args restp)
+          (multiple-value-setq (n-req-args n-opt-args restp) (function-args function))
+          (format stream "EXFUN (F~a, ~a);~%"
+                  c-alias (if restp
+                              "MANY"
+                              (+ n-req-args n-opt-args)))))
       (dolist (symbol var-symbols)
         (let ((c-alias (get-c-alias symbol)))
           (format stream "Lisp_Object V~a = Qnil;~%"
                   c-alias)))
       
       (dolist (symbol function-symbols)
-        (let* ((function (symbol-function symbol))
-               (name (string-downcase (symbol-name symbol)))
-               (elisp-alias (get-elisp-alias symbol))
-               (c-alias (get-c-alias symbol))
-               (args (delete '&optional (ccl:arglist function)))
-               (docstring (documentation symbol 'function))
-               (n-req-args) (n-opt-args)
+        (let* ((c-alias (get-c-alias symbol))
                (flags (gethash symbol *defun-flags*)))
-          (multiple-value-setq (n-req-args n-opt-args) (function-args function))
-          (format stream "DEFUN (\"~a\", F~a, S~a, ~d, ~d, 0,~%"
-                  elisp-alias c-alias c-alias n-req-args (+ n-req-args n-opt-args))
           (unless (find :internal flags)
             (push c-alias func-c-aliases))
-          (format stream "       doc: /* ~a */)~%" docstring)
-          (format stream "  (")
-          (let (comma) (dolist (arg args)
-                         (when comma (format stream ", "))
-                         (setq comma t)
-                         (format stream "Lisp_Object ~a" (get-c-alias arg))))
-          (format stream ")~%")
-          (format stream "{~%")
-          (format stream "  Lisp_Object alien_data[] = {")
-          (let (comma) (dolist (arg args)
-                         (when comma (format stream ", "))
-                         (setq comma t)
-                         (format stream "~a" (get-c-alias arg))))
-          (format stream "};~%")
-          (format stream "  return alien_rpc(\"cl-emacs/elisp:~a\", ~d, alien_data);~%" name (length args))
-          (format stream "}~%~%")
-          )
-        )
+          
+
+          (generate-elisp-c-fun stream symbol)
+          (generate-native-c-fun stream symbol)
+
+          ))
       (format stream "void init_alien_injection (void) {~%")
       (dolist (c-alias func-c-aliases)
         (format stream "  defsubr (&S~a);~%" c-alias))
