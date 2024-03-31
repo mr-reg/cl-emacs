@@ -27,6 +27,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (defun-elisp set-internal '(:internal) (arg/symbol arg/newval arg/where arg/bindflag)
   ""
-  (log-debug "set-internal sym:~a" arg/symbol))
+  ;; (log-debug "set-internal sym:~a" arg/symbol)
+  )
 
 
