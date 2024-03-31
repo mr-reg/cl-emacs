@@ -48,3 +48,7 @@ should have kinda unique name, so I always use prefix arg_
                         :if-exists :supersede
                         :direction :output)
   (format stream "~a" (generate-c-block)))
+(with-open-file (stream "../emacs/src/alien-injection.h"
+                        :if-exists :supersede
+                        :direction :output)
+  (format stream "~a" (generate-h-block)))

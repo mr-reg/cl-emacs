@@ -29,6 +29,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
    #:elisp-symbol-to-string
    #:eval-intercomm-expr
    #:generate-c-block
+   #:generate-h-block
    #:get-elisp-alias
    #:read-lisp-binary-object
    #:string-to-elisp-symbol
@@ -228,13 +229,40 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
     (format stream "  return result;~%")
     (format stream "}~%~%")
     ))
+(defun generate-native-c-header (stream symbol)
+;;; c-native
+  (let* ((function (symbol-function symbol))
+         (c-alias (get-c-alias symbol))
+         (args (delete '&rest (delete '&optional (ccl:arglist function))))
+         n-req-args
+         n-opt-args
+         restp
+         n-total-args)
+    (multiple-value-setq (n-req-args n-opt-args restp) (function-args function))
+    (unless restp
+      (return-from generate-native-c-header))
+    (setq n-total-args (+ n-req-args n-opt-args))
+
+    (format stream "Lisp_Object ~a~a~a ("
+            c-alias n-total-args (if restp "n" ""))
+    (loop for argi from 0 below n-total-args
+          for arg in args
+          with comma = nil
+          do (progn
+               (when comma (format stream ", "))
+               (setq comma t)
+               (format stream "Lisp_Object ~a" (get-c-alias arg)))
+          finally (when restp
+                    (when comma (format stream ", "))
+                    (format stream "ptrdiff_t argc, Lisp_Object *argv")))
+    (format stream ");~%")
+    ))
 
 
 (defun generate-c-block ()
   (with-output-to-string (stream)
-    (format stream "#ifndef ALIEN_INJECTION~%")
-    (format stream "#define ALIEN_INJECTION~%")
     (format stream "#include <stdlib.h>~%")
+    (format stream "#include \"config.h\"~%")
     (format stream "#include \"lisp.h\"~%")
     (format stream "#include \"alien-intercomm.h\"~%")
     (let (func-c-aliases function-symbols var-symbols)
@@ -246,15 +274,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
             (push symbol var-symbols)
             )
           ))
-      (dolist (symbol function-symbols)
-        (let* ((function (symbol-function symbol))
-               (c-alias (get-c-alias symbol))
-               n-req-args n-opt-args restp)
-          (multiple-value-setq (n-req-args n-opt-args restp) (function-args function))
-          (format stream "EXFUN (F~a, ~a);~%"
-                  c-alias (if restp
-                              "MANY"
-                              (+ n-req-args n-opt-args)))))
       (dolist (symbol var-symbols)
         (let ((c-alias (get-c-alias symbol)))
           (format stream "Lisp_Object V~a = Qnil;~%"
@@ -275,6 +294,43 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (dolist (c-alias func-c-aliases)
         (format stream "  defsubr (&S~a);~%" c-alias))
       (format stream "}~%")
+      )
+    ))
+
+(defun generate-h-block ()
+  (with-output-to-string (stream)
+    (format stream "#ifndef ALIEN_INJECTION_H~%")
+    (format stream "#define ALIEN_INJECTION_H~%")
+    (format stream "#include \"lisp.h\"~%")
+    
+    (let (func-c-aliases function-symbols var-symbols)
+      (do-external-symbols (symbol :cl-emacs/elisp)
+        (handler-case
+            (when (symbol-function symbol)
+              (push symbol function-symbols))
+          (undefined-function ()
+            (push symbol var-symbols)
+            )
+          ))
+      (dolist (symbol function-symbols)
+        (let* ((function (symbol-function symbol))
+               (c-alias (get-c-alias symbol))
+               n-req-args n-opt-args restp)
+          (multiple-value-setq (n-req-args n-opt-args restp) (function-args function))
+          (format stream "EXFUN (F~a, ~a);~%"
+                  c-alias (if restp
+                              "MANY"
+                              (+ n-req-args n-opt-args)))))
+      (dolist (symbol function-symbols)
+        (let* ((c-alias (get-c-alias symbol))
+               (flags (gethash symbol *defun-flags*)))
+          (unless (find :internal flags)
+            (push c-alias func-c-aliases))
+
+          (generate-native-c-header stream symbol)
+
+          ))
+      (format stream "void init_alien_injection (void);~%")
       )
     (format stream "#endif")
     ))
