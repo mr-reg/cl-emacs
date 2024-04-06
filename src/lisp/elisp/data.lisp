@@ -25,8 +25,10 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   )
 (in-package :cl-emacs/elisp/data)
 
-(defun-elisp set-internal '(:internal) (arg/symbol arg/newval arg/where arg/bindflag)
+(defun-elisp alien-set-internal '(:internal) (arg/symbol arg/newval arg/where arg/bindflag)
   ""
+  (declare (symbol arg/symbol))
+  (setf (symbol-value arg/symbol) arg/newval)
   ;; (log-debug "set-internal sym:~a" arg/symbol)
   )
 
