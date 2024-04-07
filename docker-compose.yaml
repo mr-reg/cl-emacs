@@ -1,0 +1,20 @@
+services:
+  # rabbit:
+  #   image: rabbitmq:3.13.1-management
+  #   ports: 
+  #     - 5672:5672
+  #     - 15672:15672
+  #   environment:
+  #     - RABBITMQ_DEFAULT_USER=guest
+  #     - RABBITMQ_DEFAULT_PASS=guest
+  swank:
+    image: cl-emacs-swank
+    build:
+      context: .
+      dockerfile: src/docker/cl-emacs-swank.Dockerfile
+    ports:
+      - 4005:4005
+      - 7447:7447
+    volumes: 
+      - ./:/cl-emacs
+    command: ["bash", "-c", "cd /cl-emacs/ && echo '(sleep 1000000000000)' | ./run-swank.sh"]

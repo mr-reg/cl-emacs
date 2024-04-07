@@ -20,6 +20,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (require :asdf)
 
+(defvar *asdf-only* nil)
+(format t "*asdf-only*=~s~%" *asdf-only*)
+
 (unless (uiop:file-exists-p "run-swank.lisp")
   (error "please run this program from folder with file cl-emacs.asd"))
 
@@ -41,15 +44,25 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;; (setq swank-loader::*fasl-directory* "/tmp/fasl/")
 ;; (swank-loader:init)
 
-(defvar *swank-port* 4005)
-(format t "starting background swank on port ~a" *swank-port*)
-(setf swank-loader:*started-from-emacs* t)
-(swank:create-server :port *swank-port*
-                     :style swank:*communication-style*
-                     :dont-close t)
+
+(unless *asdf-only*
+  (defvar *swank-port* 4005)
+  (format t "starting background swank on port ~a" *swank-port*)
+  (setf swank-loader:*started-from-emacs* t)
+  (swank:create-server :port *swank-port*
+                       :style swank:*communication-style*
+                       :interface "0.0.0.0"
+                       :dont-close t)
+  (print "run-swank.lisp complete")
+  )
+
 
 (push (truename "./src/lisp/") asdf:*central-registry*)
-(print "run-swank.lisp complete")
 (ignore-errors
  (asdf:load-system :cl-emacs))
+
+
+(when *asdf-only*
+  (format t "asdf load complete")
+  (quit))
 ;; (cl-emacs/main::main )

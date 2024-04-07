@@ -100,6 +100,18 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (defun run-intercomm-server ()
   (log-debug "run-intercomm-server")
+  (pzmq:with-context (ctx :max-sockets 10)
+    (pzmq:with-socket (requester ctx) (:req :affinity 3 :linger 100)
+      ;; linger is important in case of (keyboard) interrupt;
+      ;; see http://api.zeromq.org/3-3:zmq-ctx-destroy
+      (write-line "Connecting to hello world server...")
+      (pzmq:connect requester server-address)
+      (dotimes (i 10)
+        (format t "Sending Hello ~d...~%" i)
+        (pzmq:send requester "Hello")
+        (write-string "Receiving... ")
+        (write-line (pzmq:recv-string requester)))))
+  
   (when *intercomm-server-socket*
     (ignore-errors
      (usocket:socket-shutdown *intercomm-server-socket* :both)
@@ -156,6 +168,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   )
 
 
+;; (pzmq:connect)
 
 (defun main ()
   (bt:make-thread

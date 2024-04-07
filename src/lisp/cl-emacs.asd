@@ -10,6 +10,7 @@
                          :fiveam
                          :flexi-streams
                          :lisp-binary
+                         :pzmq
                          :serapeum
                          :str
                          :verbose
