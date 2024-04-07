@@ -16,5 +16,5 @@ services:
       - 4005:4005
       - 7447:7447
     volumes: 
-      - ./:/cl-emacs
-    command: ["bash", "-c", "cd /cl-emacs/ && echo '(sleep 1000000000000)' | ./run-swank.sh"]
+      - ${PWD}/:${PWD}/
+    command: ["bash", "-c", "cd ${PWD}/ && echo '(sleep 1000000000000)' | ./run-swank.sh"]
