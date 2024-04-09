@@ -35,6 +35,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                (elisp/styled-format 0 "%s-cdac" 'malayalam)))
   (is (string= "nil-35"
                (elisp/styled-format 0 "%s-%d" "nil" 35)))
+  (is (string= "203. GiB"
+               (elisp/styled-format 0 "%.0f%s%s" 203.43325805664062D0 " " "GiB")))
+  
   )
 
 

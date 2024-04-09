@@ -142,6 +142,10 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (defvar *defun-flags* (make-hash-table))
 
 (defmacro defun-elisp (function-name flags args &body body)
+  "flags: 
+:internal - do not make function visible in elisp 
+:c-native - generate c function interface, only for &restp
+"
   ;; (declare (string elisp-alias))
   `(progn
      ,(append (list 'defun function-name args) body)
@@ -167,7 +171,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                               args))
   )
 
-(defun generate-elisp-c-fun (stream symbol)
+(defun generate-elisp-c-fun (stream symbol)  
 ;;; elisp
   (let* ((function (symbol-function symbol))
          (func-name (string-downcase (symbol-name symbol)))
@@ -308,6 +312,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
             (push symbol var-symbols)
             )
           ))
+
       (dolist (symbol var-symbols)
         (let ((c-alias (get-c-alias symbol)))
           (format stream "Lisp_Object V~a = Qnil;~%"
@@ -318,6 +323,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                (flags (gethash symbol *defun-flags*)))
           (unless (find :internal flags)
             (push c-alias func-c-aliases))
+          (log-info "sym ~s" symbol)
           
 
           (generate-elisp-c-fun stream symbol)
@@ -337,7 +343,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
     (format stream "#define ALIEN_INJECTION_H~%")
     (format stream "#include \"lisp.h\"~%")
     
-    (let (func-c-aliases function-symbols var-symbols)
+    (let (function-symbols var-symbols)
       (do-external-symbols (symbol :cl-emacs/elisp)
         (handler-case
             (when (symbol-function symbol)
@@ -356,14 +362,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                               "MANY"
                               (+ n-req-args n-opt-args)))))
       (dolist (symbol function-symbols)
-        (let* ((c-alias (get-c-alias symbol))
-               (flags (gethash symbol *defun-flags*)))
-          (unless (find :internal flags)
-            (push c-alias func-c-aliases))
-
-          (generate-native-c-header stream symbol)
-
-          ))
+        (generate-native-c-header stream symbol)
+        )
       (format stream "void init_alien_injection (void);~%")
       )
     (format stream "#endif")

@@ -60,6 +60,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
           (t (error (format nil "unsupported message-type ~a" message-type))
              ))
       (error (e)
+        ;; (break)
         (let ((signal (condition-to-elisp-signal e)))
           (log-debug "signal ~s" signal)
           (write-lisp-binary-object +message-type/signal+ out-stream)
@@ -125,9 +126,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;; (pzmq:connect)
 
 (defun main ()
-  ;; (bt:make-thread
-  ;;  #'run-intercomm-server)
-  (run-intercomm-server)
+  (bt:make-thread
+   #'run-intercomm-server)
+  ;; (run-intercomm-server)
   (log-debug "main complete")
   )
 

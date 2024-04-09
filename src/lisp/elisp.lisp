@@ -42,13 +42,17 @@ should have kinda unique name, so I always use prefix arg_
   (setq *context* (third argv))
   (let ((func (string-to-elisp-symbol (first argv)))
         (func-args (second argv)))
-    (apply (symbol-function func) func-args)))
+    ;; (log-info (cons func func-args))
+    ;; (eval (cons func func-args))
+    ;; (log-info (macroexpand (cons func func-args)))
+    (apply (symbol-function func) func-args)
+    ))
 
-(with-open-file (stream "../emacs/src/alien-injection.c"
+(with-open-file (stream "alien-injection.c"
                         :if-exists :supersede
                         :direction :output)
   (format stream "~a" (generate-c-block)))
-(with-open-file (stream "../emacs/src/alien-injection.h"
+(with-open-file (stream "alien-injection.h"
                         :if-exists :supersede
                         :direction :output)
   (format stream "~a" (generate-h-block)))
