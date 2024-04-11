@@ -303,6 +303,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
     (format stream "#include \"config.h\"~%")
     (format stream "#include \"lisp.h\"~%")
     (format stream "#include \"alien-intercomm.h\"~%")
+    (format stream "#include \"alien-injection.h\"~%")
     (let (func-c-aliases function-symbols var-symbols)
       (do-external-symbols (symbol :cl-emacs/elisp)
         (handler-case
@@ -313,10 +314,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
             )
           ))
 
-      (dolist (symbol var-symbols)
-        (let ((c-alias (get-c-alias symbol)))
-          (format stream "Lisp_Object V~a = Qnil;~%"
-                  c-alias)))
       
       (dolist (symbol function-symbols)
         (let* ((c-alias (get-c-alias symbol))
@@ -330,9 +327,24 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
           (generate-native-c-fun stream symbol)
 
           ))
+      (dolist (symbol var-symbols)
+        (format stream "Lisp_Object A~a;~%" (get-c-alias symbol))
+        )
+      (format stream "void visit_alien_roots (struct gc_root_visitor visitor) {~%")
+      (dolist (symbol var-symbols)
+        (format stream "  visitor.visit(&A~a, GC_ROOT_C_SYMBOL, visitor.data);~%" (get-c-alias symbol)))
+      (format stream "}~%")
+
       (format stream "void init_alien_injection (void) {~%")
       (dolist (c-alias func-c-aliases)
         (format stream "  defsubr (&S~a);~%" c-alias))
+      (dolist (symbol var-symbols)
+        (let ((c-alias (get-c-alias symbol)))
+          (format stream "  A~a = Fcons(Qalien_var, intern(\"~a\"));~%"
+                  c-alias (str:downcase (symbol-name symbol)))
+          (format stream "  defvar_lisp_nopro (A~a, \"~a\");~%"
+                  c-alias (str:downcase (symbol-name symbol)))
+          ))
       (format stream "}~%")
       )
     ))
@@ -364,6 +376,10 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (dolist (symbol function-symbols)
         (generate-native-c-header stream symbol)
         )
+      (dolist (symbol var-symbols)
+        (format stream "extern Lisp_Object A~a;~%" (get-c-alias symbol))
+        )
+      (format stream "void visit_alien_roots (struct gc_root_visitor visitor);~%")
       (format stream "void init_alien_injection (void);~%")
       )
     (format stream "#endif")

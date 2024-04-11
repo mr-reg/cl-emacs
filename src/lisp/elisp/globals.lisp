@@ -21,28 +21,30 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
     (:use :common-lisp :cl-emacs/log
           :cl-emacs/elisp/internals)
   (:export
+   #:init-globals
    )
   )
 (in-package :cl-emacs/elisp/globals)
 (log-enable :cl-emacs/elisp/globals)
 
-;; (defvar invocation-directory nil )
-(defvar system-type nil "The value is a symbol indicating the type of operating system you are using.
-Special values:
-  `gnu'          compiled for a GNU Hurd system.
-  `gnu/linux'    compiled for a GNU/Linux system.
-  `gnu/kfreebsd' compiled for a GNU system with a FreeBSD kernel.
-  `darwin'       compiled for Darwin (GNU-Darwin, macOS, ...).
-  `ms-dos'       compiled as an MS-DOS application.
-  `windows-nt'   compiled as a native W32 application.
-  `cygwin'       compiled using the Cygwin library.
-  `haiku'        compiled for a Haiku system.
-Anything else (in Emacs 26, the possibilities are: aix, berkeley-unix,
-hpux, usg-unix-v) indicates some sort of Unix system.")
 
+;; key - var symbol
+;; value - default value
+(defvar *defvar-defaults* (make-hash-table))
 (defun init-globals ()
-  "set emacs globals to nil"
-  (setq system-type nil))
+  "set emacs global-vars to default values"
+  (loop for var-sym being each hash-key of *defvar-defaults*
+        do (setf (symbol-value var-sym) (gethash var-sym *defvar-defaults*))))
+
+(defmacro defvar-elisp (var-name init-value docstring)
+  `(progn
+     (setf (gethash ',var-name *defvar-defaults*) ,init-value)
+     ,(append (list 'defvar var-name init-value docstring))
+     (export ',var-name)))
+
+;; (defvar invocation-directory nil )
+(declaim (fixnum gcs-done))
+(defvar-elisp gcs-done 0 "Accumulated number of garbage collections done.")
 
 (defvar *var-naming-lock* (bt:make-lock "var-naming-lock"))
 (defvar *var-uid* 1)
@@ -60,5 +62,6 @@ hpux, usg-unix-v) indicates some sort of Unix system.")
   (declare (symbol arg/sym))
   (makunbound arg/sym))
 
-(defun-elisp elisp/incf '(:internal :c-native) (arg/var)
-  (incf arg/var))
+(defun-elisp elisp/increment '(:internal :c-native) (arg/sym)
+  (declare (symbol arg/sym))
+  (incf (symbol-value arg/sym)))
