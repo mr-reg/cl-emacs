@@ -34,7 +34,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
    #:read-lisp-binary-object
    #:string-to-elisp-symbol
    #:write-lisp-binary-object
-   #:wrong-type-argument
+   ;; #:wrong-type-argument
    )
   (:import-from :common-lisp-user
                 #:class-direct-slots
@@ -86,22 +86,22 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (defconstant +vector-type/record+ 33)
 (defconstant +vector-type/font+ 34)
 
-(define-condition wrong-type-argument (emacs-signal)
-  ((predicate :initarg :predicate
-              :type symbol
-              )
-   (value :initarg :value)))
+;; (define-condition wrong-type-argument (emacs-signal)
+;;   ((predicate :initarg :predicate
+;;               :type symbol
+;;               )
+;;    (value :initarg :value)))
 
 
-(defun check-string (arg)
-  (unless (stringp arg)
-    (error 'wrong-type-argument :predicate 'stringp :value arg))
-  )
+;; (defun check-string (arg)
+;;   (unless (stringp arg)
+;;     (error 'wrong-type-argument :predicate 'stringp :value arg))
+;;   )
 
 
-(defun check-string-null-bytes (arg)
-  (when (find #\NULL arg)
-    (error 'wrong-type-argument :predicate 'filenamep :value arg)))
+;; (defun check-string-null-bytes (arg)
+;;   (when (find #\NULL arg)
+;;     (error 'wrong-type-argument :predicate 'filenamep :value arg)))
 
 
 ;; (defun serialize-to-elisp (obj &optional toplevel)
@@ -145,6 +145,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   "flags: 
 :internal - do not make function visible in elisp 
 :c-native - generate c function interface, only for &restp
+:rpc-debug - show debug RPC log
 "
   ;; (declare (string elisp-alias))
   `(progn
@@ -338,13 +339,16 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (format stream "void init_alien_injection (void) {~%")
       (dolist (c-alias func-c-aliases)
         (format stream "  defsubr (&S~a);~%" c-alias))
-      (dolist (symbol var-symbols)
-        (let ((c-alias (get-c-alias symbol)))
-          (format stream "  A~a = Fcons(Qalien_var, intern(\"~a\"));~%"
-                  c-alias (str:downcase (symbol-name symbol)))
-          (format stream "  defvar_lisp_nopro (A~a, \"~a\");~%"
-                  c-alias (str:downcase (symbol-name symbol)))
-          ))
+      (loop for symbol in var-symbols
+            for symbol-idx from 0
+            do (let ((c-alias (get-c-alias symbol)))
+                 (format stream "  A~a = Fcons(Qalien_var, intern(\"~a\"));~%"
+                         c-alias (str:downcase (symbol-name symbol)))
+                 (format stream "  static struct Lisp_Objfwd const o_fwd~a = {Lisp_Fwd_Alien, &A~a};~%"
+                         symbol-idx c-alias)
+                 (format stream "  defvar_lisp (&o_fwd~a, \"~a\");~%"
+                         symbol-idx (str:downcase (symbol-name symbol)))
+                 ))
       (format stream "}~%")
       )
     ))

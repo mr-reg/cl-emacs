@@ -55,8 +55,8 @@ filesystem tree, not (expand-file-name \"..\" dirname).  Note: make
 sure DIRNAME in this example doesn't end in a slash, unless it's
 the root directory.
 "
-  (check-string arg/name)
-  (check-string-null-bytes arg/name)
+  ;; (check-string arg/name)
+  ;; (check-string-null-bytes arg/name)
   (labels ((add-slash-to-dir (dir)
              (concatenate 'string dir "/"))
            (process-tildes (str)

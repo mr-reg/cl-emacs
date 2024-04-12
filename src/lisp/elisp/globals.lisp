@@ -36,19 +36,44 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (loop for var-sym being each hash-key of *defvar-defaults*
         do (setf (symbol-value var-sym) (gethash var-sym *defvar-defaults*))))
 
-(defmacro defvar-elisp (var-name init-value docstring)
+(defmacro defvar-elisp (var-name type init-value docstring)
   `(progn
+     (declaim (,type ,var-name))
      (setf (gethash ',var-name *defvar-defaults*) ,init-value)
      ,(append (list 'defvar var-name init-value docstring))
      (export ',var-name)))
 
 ;; (defvar invocation-directory nil )
-(declaim (fixnum gcs-done))
-(defvar-elisp gcs-done 0 "Accumulated number of garbage collections done.")
+(defvar-elisp test1 fixnum 0
+  "")
+(defvar-elisp gcs-done fixnum 0
+  "Accumulated number of garbage collections done.")
+(defvar-elisp cairo-version-string string ""
+  "Version info for cairo")
+;; (defvar-elisp font-encoding-alist cons nil
+;;   "Alist of fontname patterns vs the corresponding encoding and repertory info.
+;; Each element looks like (REGEXP . (ENCODING . REPERTORY)),
+;; where ENCODING is a charset or a char-table,
+;; and REPERTORY is a charset, a char-table, or nil.
+
+;; If ENCODING and REPERTORY are the same, the element can have the form
+;; \(REGEXP . ENCODING).
+
+;; ENCODING is for converting a character to a glyph code of the font.
+;; If ENCODING is a charset, encoding a character by the charset gives
+;; the corresponding glyph code.  If ENCODING is a char-table, looking up
+;; the table by a character gives the corresponding glyph code.
+
+;; REPERTORY specifies a repertory of characters supported by the font.
+;; If REPERTORY is a charset, all characters belonging to the charset are
+;; supported.  If REPERTORY is a char-table, all characters who have a
+;; non-nil value in the table are supported.  If REPERTORY is nil, Emacs
+;; gets the repertory information by an opened font and ENCODING.")
+
 
 (defvar *var-naming-lock* (bt:make-lock "var-naming-lock"))
 (defvar *var-uid* 1)
-(defun-elisp elisp/make-alien-var () (arg/name arg/value)
+(defun-elisp elisp/make-alien-var '(:rpc-debug) (arg/name arg/value)
   (declare (string arg/name))
   (let* ((uid (bt:with-lock-held (*var-naming-lock*)
                 (incf *var-uid*)))
@@ -58,10 +83,14 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
     (setf (symbol-value sym) arg/value)
     sym))
 
-(defun-elisp elisp/delete-alien-var () (arg/sym)
+(defun-elisp elisp/delete-alien-var '(:rpc-debug) (arg/sym)
   (declare (symbol arg/sym))
   (makunbound arg/sym))
 
-(defun-elisp elisp/increment '(:internal :c-native) (arg/sym)
+(defun-elisp elisp/increment '(:internal :rpc-debug) (arg/sym)
   (declare (symbol arg/sym))
   (incf (symbol-value arg/sym)))
+
+(defun-elisp elisp/find-symbol-value '(:internal :rpc-debug) (arg/sym)
+  (declare (symbol arg/sym))
+  (symbol-value arg/sym))

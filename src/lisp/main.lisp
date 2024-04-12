@@ -25,6 +25,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (in-package :cl-emacs/main)
 (log-enable :cl-emacs/main)
 (defparameter *intercomm-listen-address* "tcp://*:7447")
+(defparameter *intercomm-connect-address* "tcp://127.0.0.1:7447")
 
 (cffi:define-foreign-library temacs
   (t (:default "temacs")))
@@ -40,8 +41,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;; (defconstant +message-type/notify-s-expr+ 1)
 (defconstant +message-type/signal+ 2)
 (defconstant +message-type/rpc+ 3)
-
-(defun process-intercomm-message (message-type argv)
+(defparameter *full-rpc-debug* t)
+(defun process-intercomm-message (message-id message-type argv)
   "returns (output-type output-bytes)"
   (let ((out-stream (flexi-streams:make-in-memory-output-stream :element-type '(unsigned-byte 8))))
     (handler-case
@@ -51,8 +52,11 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
           ;;  (write-lisp-binary-object "ack" out-stream)
           ;;  )
           ((= message-type +message-type/rpc+)
-           (let ((result (cl-emacs/elisp:rpc-apply argv)))
-             (log-debug "rpc result ~s" result)
+           (let ((result (cl-emacs/elisp:rpc-apply argv))
+                 (sym (string-to-elisp-symbol (car argv))))
+             (when (or *full-rpc-debug* (find :rpc-debug (gethash sym *defun-flags*)))
+               (log-debug "#~a rpc ~s -> ~s" message-id argv result)
+               )
              (write-lisp-binary-object +message-type/rpc+ out-stream)
              (write-lisp-binary-object result out-stream)
              )
@@ -62,7 +66,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (error (e)
         ;; (break)
         (let ((signal (condition-to-elisp-signal e)))
-          (log-debug "signal ~s" signal)
+          (log-debug "#~a signal ~s -> ~s" message-id argv signal)
           (write-lisp-binary-object +message-type/signal+ out-stream)
           (write-lisp-binary-object signal out-stream))
         ;; (break)
@@ -102,13 +106,12 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                            (nargs (read-lisp-binary-object in-stream))
                            (argv (loop for idx from 0 below nargs
                                        collect (read-lisp-binary-object in-stream))))
-                      (log-debug "#~a intercomm message received ~s" message-id argv)
                       (when (= message-type +message-type/stop-server+)
                         (log-info "received stop-server message")
                         (return-from run-intercomm-server))
-                      (let ((output-bytes (process-intercomm-message message-type argv)))
+                      (let ((output-bytes (process-intercomm-message message-id message-type argv)))
                         (pzmq:with-message out-message
-                          (log-debug "sending response size ~a" (length output-bytes))
+                          ;; (log-debug "sending response size ~a" (length output-bytes))
                           (pzmq:msg-init-size out-message (length output-bytes))
                           (let ((ptr (pzmq:msg-data out-message)))
                             (loop for idx from 0 below (length output-bytes)
@@ -121,6 +124,23 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
               )
           (just-continue () nil)))
       )))
+
+(defun stop-intercomm-server ()
+  (pzmq:with-context nil
+    (pzmq:with-socket zmq-socket :req
+      (pzmq:connect zmq-socket *intercomm-connect-address*)
+      (let ((out-stream (flexi-streams:make-in-memory-output-stream :element-type '(unsigned-byte 8))))
+        (write-lisp-binary-object 0 out-stream)
+        (write-lisp-binary-object +message-type/stop-server+ out-stream)
+        (write-lisp-binary-object 0 out-stream)
+        (let ((output-bytes (flexi-streams:get-output-stream-sequence out-stream)))
+          (pzmq:with-message out-message
+            ;; (log-debug "sending response size ~a" (length output-bytes))
+            (pzmq:msg-init-size out-message (length output-bytes))
+            (let ((ptr (pzmq:msg-data out-message)))
+              (loop for idx from 0 below (length output-bytes)
+                    do (setf (cffi:mem-aref ptr :unsigned-char idx) (aref output-bytes idx))))
+            (pzmq:msg-send out-message zmq-socket)))))))
 
 
 ;; (pzmq:connect)
