@@ -20,9 +20,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (uiop:define-package :cl-emacs/elisp/globals
     (:use :common-lisp :cl-emacs/log
           :cl-emacs/elisp/internals)
-  (:export
-   #:init-globals
-   )
   )
 (in-package :cl-emacs/elisp/globals)
 (log-enable :cl-emacs/elisp/globals)
@@ -31,7 +28,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;; key - var symbol
 ;; value - default value
 (defvar *defvar-defaults* (make-hash-table))
-(defun init-globals ()
+(defun-elisp elisp/init-globals '(:internal :rpc-debug) ()
   "set emacs global-vars to default values"
   (loop for var-sym being each hash-key of *defvar-defaults*
         do (setf (symbol-value var-sym) (gethash var-sym *defvar-defaults*))))
@@ -44,7 +41,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
      (export ',var-name)))
 
 ;; (defvar invocation-directory nil )
-(defvar-elisp test1 fixnum 0
+(defvar-elisp test1 fixnum 10
   "")
 (defvar-elisp gcs-done fixnum 0
   "Accumulated number of garbage collections done.")
@@ -71,26 +68,3 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;; gets the repertory information by an opened font and ENCODING.")
 
 
-(defvar *var-naming-lock* (bt:make-lock "var-naming-lock"))
-(defvar *var-uid* 1)
-(defun-elisp elisp/make-alien-var '(:rpc-debug) (arg/name arg/value)
-  (declare (string arg/name))
-  (let* ((uid (bt:with-lock-held (*var-naming-lock*)
-                (incf *var-uid*)))
-         (sym-str (format nil "~a-~a" arg/name uid))
-         (sym (string-to-elisp-symbol sym-str)))
-    (defvar sym)
-    (setf (symbol-value sym) arg/value)
-    sym))
-
-(defun-elisp elisp/delete-alien-var '(:rpc-debug) (arg/sym)
-  (declare (symbol arg/sym))
-  (makunbound arg/sym))
-
-(defun-elisp elisp/increment '(:internal :rpc-debug) (arg/sym)
-  (declare (symbol arg/sym))
-  (incf (symbol-value arg/sym)))
-
-(defun-elisp elisp/find-symbol-value '(:internal :rpc-debug) (arg/sym)
-  (declare (symbol arg/sym))
-  (symbol-value arg/sym))

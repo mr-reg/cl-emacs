@@ -25,6 +25,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
    :cl-emacs/elisp/editfns
    :cl-emacs/elisp/fns
    :cl-emacs/elisp/globals
+   :cl-emacs/elisp/alien-vars
    )
   (:export #:rpc-apply))
 (in-package :cl-emacs/elisp)
@@ -48,11 +49,21 @@ should have kinda unique name, so I always use prefix arg_
     (apply (symbol-function func) func-args)
     ))
 
-(with-open-file (stream "alien-injection.c"
-                        :if-exists :supersede
-                        :direction :output)
-  (format stream "~a" (generate-c-block)))
-(with-open-file (stream "alien-injection.h"
-                        :if-exists :supersede
-                        :direction :output)
-  (format stream "~a" (generate-h-block)))
+(let ((c-name "alien-injection.c"))
+  (with-open-file (stream c-name
+                          :if-exists :supersede
+                          :direction :output)
+    (format stream "~a" (generate-c-block)))
+  (push :other-write (osicat:file-permissions c-name))
+  (push :group-write (osicat:file-permissions c-name))
+  )
+
+(let ((h-name "alien-injection.h"))
+  (with-open-file (stream h-name
+                          :if-exists :supersede
+                          :direction :output)
+    (format stream "~a" (generate-h-block)))
+  (push :other-write (osicat:file-permissions h-name))
+  (push :group-write (osicat:file-permissions h-name))
+  )
+

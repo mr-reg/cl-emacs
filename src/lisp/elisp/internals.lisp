@@ -321,8 +321,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                (flags (gethash symbol *defun-flags*)))
           (unless (find :internal flags)
             (push c-alias func-c-aliases))
-          (log-info "sym ~s" symbol)
-          
 
           (generate-elisp-c-fun stream symbol)
           (generate-native-c-fun stream symbol)
@@ -342,7 +340,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (loop for symbol in var-symbols
             for symbol-idx from 0
             do (let ((c-alias (get-c-alias symbol)))
-                 (format stream "  A~a = Fcons(Qalien_var, intern(\"~a\"));~%"
+                 (format stream "  A~a = intern(\"~a\");~%"
                          c-alias (str:downcase (symbol-name symbol)))
                  (format stream "  static struct Lisp_Objfwd const o_fwd~a = {Lisp_Fwd_Alien, &A~a};~%"
                          symbol-idx c-alias)
@@ -519,13 +517,13 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
        (lisp-binary:write-integer (length bytes) 8 stream)
        (lisp-binary:write-bytes bytes stream)))
     ((symbolp obj)
-     (handler-case
-         (progn (symbol-value obj)
-                (write-byte (char-code #\L) stream)
-                )
-       (unbound-variable ()
-         )
-       )
+     ;; (handler-case
+     ;;     (progn (symbol-value obj)
+     ;;            (write-byte (char-code #\L) stream)
+     ;;            )
+     ;;   (unbound-variable ()
+     ;;     )
+     ;;   )
      (write-byte (char-code #\S) stream)
      (let ((bytes (babel:string-to-octets (elisp-symbol-to-string obj))))
        (lisp-binary:write-integer (length bytes) 8 stream)

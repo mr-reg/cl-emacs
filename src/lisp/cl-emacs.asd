@@ -7,6 +7,7 @@
   :class :package-inferred-system
   :defsystem-depends-on (:cffi
                          :cl-ppcre
+                         :osicat
                          :fiveam
                          :flexi-streams
                          :lisp-binary
