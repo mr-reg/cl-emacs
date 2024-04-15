@@ -45,6 +45,14 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;; (swank-loader:init)
 
 
+
+
+
+(push (truename "./src/lisp/") asdf:*central-registry*)
+(ignore-errors
+ (asdf:load-system :cl-emacs))
+
+
 (unless *asdf-only*
   (defvar *swank-port* 4005)
   (format t "starting background swank on port ~a" *swank-port*)
@@ -55,12 +63,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                        :dont-close t)
   (print "run-swank.lisp complete")
   )
-
-
-(push (truename "./src/lisp/") asdf:*central-registry*)
-(ignore-errors
- (asdf:load-system :cl-emacs))
-
 
 (when *asdf-only*
   (format t "asdf load complete")
