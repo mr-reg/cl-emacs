@@ -50,9 +50,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (declare (symbol arg/sym))
   (symbol-value arg/sym))
 
-(defun-elisp elisp/alien-boundp '(:internal :rpc-debug) (arg/sym)
+(defun-elisp elisp/alien-boundp '(:internal :rpc-debug) (arg/var-name)
   "return NIL if there is no such alien variable. T otherwise"
-  (declare (symbol arg/sym))
-  (boundp arg/sym)
+  (declare (string arg/var-name))
+  (when (find-symbol arg/var-name 'cl-emacs/elisp) t)
   ;; (gethash arg/sym *alien-sym-map*)
   )
