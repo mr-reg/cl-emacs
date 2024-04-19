@@ -20,12 +20,14 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (uiop:define-package :cl-emacs/elisp
     (:use :common-lisp :cl-emacs/log :cl-emacs/elisp/internals)
   (:use-reexport
-   :cl-emacs/elisp/data
-   :cl-emacs/elisp/fileio
-   :cl-emacs/elisp/editfns
-   :cl-emacs/elisp/fns
-   :cl-emacs/elisp/globals
    :cl-emacs/elisp/alien-vars
+   :cl-emacs/elisp/alloc
+   :cl-emacs/elisp/data
+   :cl-emacs/elisp/editfns
+   :cl-emacs/elisp/fileio
+   :cl-emacs/elisp/fns
+   :cl-emacs/elisp/font
+   :cl-emacs/elisp/xfns
    )
   (:export #:rpc-apply))
 (in-package :cl-emacs/elisp)
@@ -48,6 +50,14 @@ should have kinda unique name, so I always use prefix arg_
     ;; (log-info (macroexpand (cons func func-args)))
     (apply (symbol-function func) func-args)
     ))
+
+(defun-elisp elisp/init-globals '(:internal :rpc-debug) ()
+  "set emacs global-vars to default values"
+  (loop for var-sym being each hash-key of *defvar-defaults*
+        do (setf (symbol-value var-sym) (gethash var-sym *defvar-defaults*))))
+
+(defvar-elisp test-alien-var fixnum 10
+  "")
 
 (let ((c-name "alien-injection.c"))
   (with-open-file (stream c-name

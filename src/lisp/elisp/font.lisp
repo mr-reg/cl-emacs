@@ -17,36 +17,13 @@ General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
-(uiop:define-package :cl-emacs/elisp/globals
+(uiop:define-package :cl-emacs/elisp/font
     (:use :common-lisp :cl-emacs/log
           :cl-emacs/elisp/internals)
   )
-(in-package :cl-emacs/elisp/globals)
-(log-enable :cl-emacs/elisp/globals)
+(in-package :cl-emacs/elisp/font)
+(log-enable :cl-emacs/elisp/font)
 
-
-;; key - var symbol
-;; value - default value
-(defvar *defvar-defaults* (make-hash-table))
-(defun-elisp elisp/init-globals '(:internal :rpc-debug) ()
-  "set emacs global-vars to default values"
-  (loop for var-sym being each hash-key of *defvar-defaults*
-        do (setf (symbol-value var-sym) (gethash var-sym *defvar-defaults*))))
-
-(defmacro defvar-elisp (var-name type init-value docstring)
-  `(progn
-     (declaim (,type ,var-name))
-     (setf (gethash ',var-name *defvar-defaults*) ,init-value)
-     ,(append (list 'defvar var-name init-value docstring))
-     (export ',var-name)))
-
-;; (defvar invocation-directory nil )
-(defvar-elisp test1 fixnum 10
-  "")
-(defvar-elisp gcs-done fixnum 0
-  "Accumulated number of garbage collections done.")
-(defvar-elisp cairo-version-string string ""
-  "Version info for cairo")
 (defvar-elisp font-encoding-alist cons nil
   "Alist of fontname patterns vs the corresponding encoding and repertory info.
 Each element looks like (REGEXP . (ENCODING . REPERTORY)),
@@ -66,5 +43,3 @@ If REPERTORY is a charset, all characters belonging to the charset are
 supported.  If REPERTORY is a char-table, all characters who have a
 non-nil value in the table are supported.  If REPERTORY is nil, Emacs
 gets the repertory information by an opened font and ENCODING.")
-
-

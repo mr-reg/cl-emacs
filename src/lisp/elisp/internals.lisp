@@ -26,6 +26,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
    #:check-string-null-bytes
    #:condition-to-elisp-signal
    #:defun-elisp
+   #:defvar-elisp
    #:elisp-symbol-to-string
    #:eval-intercomm-expr
    #:generate-c-block
@@ -34,6 +35,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
    #:read-lisp-binary-object
    #:string-to-elisp-symbol
    #:write-lisp-binary-object
+   #:*defvar-defaults*
    ;; #:wrong-type-argument
    )
   (:import-from :common-lisp-user
@@ -535,3 +537,13 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
      )
     (t (write-lisp-binary-object "unsupported" stream))))
 
+;; key - var symbol
+;; value - default value
+(defvar *defvar-defaults* (make-hash-table))
+
+(defmacro defvar-elisp (var-name type init-value docstring)
+  `(progn
+     (declaim (,type ,var-name))
+     (setf (gethash ',var-name *defvar-defaults*) ,init-value)
+     ,(append (list 'defvar var-name init-value docstring))
+     (export ',var-name)))

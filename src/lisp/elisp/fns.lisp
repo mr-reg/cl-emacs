@@ -30,3 +30,36 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 The value is actually the tail of LIST whose car is ELT."
   ;; memq is macros in common lisp, but in elisp we need function
   (memq arg/elt arg/list))
+
+(defun-elisp elisp/sxhash-eq '(:rpc-debug) (arg/obj)
+  "Return an integer hash code for OBJ suitable for `eq'.
+If (eq A B), then (= (sxhash-eq A) (sxhash-eq B)).
+
+Hash codes are not guaranteed to be preserved across Emacs sessions. "
+  (sxhash arg/obj))
+
+(defun-elisp elisp/sxhash-eql '(:rpc-debug) (arg/obj)
+  "Return an integer hash code for OBJ suitable for `eql'.
+If (eql A B), then (= (sxhash-eql A) (sxhash-eql B)), but the opposite
+isn't necessarily true.
+
+Hash codes are not guaranteed to be preserved across Emacs sessions."
+  (sxhash arg/obj))
+
+(defun-elisp elisp/sxhash-equal '(:rpc-debug) (arg/obj)
+  "Return an integer hash code for OBJ suitable for `equal'.
+If (equal A B), then (= (sxhash-equal A) (sxhash-equal B)), but the
+opposite isn't necessarily true.
+
+Hash codes are not guaranteed to be preserved across Emacs sessions. "
+  (sxhash arg/obj))
+
+(defun-elisp elisp/sxhash-equal-including-properties '(:rpc-debug) (arg/obj)
+  "Return an integer hash code for OBJ suitable for
+`equal-including-properties'.
+If (sxhash-equal-including-properties A B), then
+(= (sxhash-equal-including-properties A) (sxhash-equal-including-properties B)).
+
+Hash codes are not guaranteed to be preserved across Emacs sessions. "
+  (sxhash arg/obj))
+

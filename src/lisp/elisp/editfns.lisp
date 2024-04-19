@@ -26,6 +26,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (defun-elisp elisp/styled-format '(:internal :c-native) (message &rest arg/args)
   "Implement ‘format-message’ if MESSAGE is true, ‘format’ otherwise.
 args: (message format args)"
+  (declare (ignore message))
   (let ((format-str (car arg/args))
         (raw-args (cdr arg/args))
         new-args new-format)

@@ -17,20 +17,13 @@ General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
-(uiop:define-package :cl-emacs/elisp/data
-    (:use :common-lisp :alexandria :cl-emacs/log
-     :cl-emacs/elisp/internals)
-  ;; (:import-from :common-lisp-user
-  ;;               #:memq)
+(uiop:define-package :cl-emacs/elisp/alloc
+    (:use :common-lisp :cl-emacs/log
+          :cl-emacs/elisp/internals)
   )
-(in-package :cl-emacs/elisp/data)
+(in-package :cl-emacs/elisp/alloc)
+(log-enable :cl-emacs/elisp/alloc)
 
-(defun-elisp alien-set-internal '(:internal :rpc-debug) (arg/symbol arg/newval arg/where arg/bindflag)
-  ""
-  (declare (symbol arg/symbol)
-           (ignore arg/where arg/bindflag))
-  (setf (symbol-value arg/symbol) arg/newval)
-  ;; (log-debug "set-internal sym:~a" arg/symbol)
-  )
-
+(defvar-elisp gcs-done fixnum 0
+  "Accumulated number of garbage collections done.")
 

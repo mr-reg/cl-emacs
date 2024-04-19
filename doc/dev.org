@@ -29,7 +29,7 @@ comm -12 <(sort libs.txt) <(sort temacs.txt)
 #+begin_src sh
   git clean -f -d -x
   ./autogen.sh
-  CC=clang CFLAGS="-fPIC -g -gdwarf-4 -rdynamic -Wno-unused-command-line-argument -Wno-missing-prototypes -lzmq" ./configure \
+  CC=clang CFLAGS="-fPIC -g -gdwarf-4 -rdynamic -Wno-unused-command-line-argument -Wno-missing-prototypes -lzmq -fprofile-instr-generate -fcoverage-mapping" ./configure \
    --without-json \
    --without-xwidgets \
    --with-file-notification=inotify \
@@ -88,6 +88,9 @@ find . -name '*.log' -exec grep -Po "...unexpected" {} + | grep -v ' 0 unexpecte
 * let test
 #+begin_src lisp
   (let ((test1 4)) (setq test1 (+ 200 test1)))
+
+  (let ((test-alien-var (lambda (x) (* x 2))))
+    (mapcar test-alien-var '(1 2 3)))
 #+end_src
 * let stacktrace
 ./temacs(+0x3cf2cc) [0x55b2bab6b2cc]
@@ -170,3 +173,8 @@ find . -name '*.log' -exec grep -Po "...unexpected" {} + | grep -v ' 0 unexpecte
 /lib/x86_64-linux-gnu/libc.so.6(+0x271ca) [0x7f8dcaaaa1ca]
 /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x85) [0x7f8dcaaaa285]
 ./temacs(_start+0x21) [0x55b2ba820711]
+* coverage 
+#+begin_src sh
+/usr/lib/llvm-14/bin/llvm-profdata merge -sparse default.profraw -o default.profdata
+color_run /usr/lib/llvm-14/bin/llvm-cov show ./temacs -instr-profile=default.profdata  | less -SR
+#+end_src
