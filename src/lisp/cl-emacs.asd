@@ -14,7 +14,7 @@
                          :pzmq
                          :serapeum
                          :str
-                         :verbose
+                         :vom
                          :uiop
                          :usocket)
   :depends-on (:cl-emacs/main
