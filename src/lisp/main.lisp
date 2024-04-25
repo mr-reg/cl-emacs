@@ -44,7 +44,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (defparameter *full-rpc-debug* nil)
 (defun process-intercomm-message (message-id message-type argv)
   "returns (output-type output-bytes)"
-  (let ((out-stream (flexi-streams:make-in-memory-output-stream :element-type '(unsigned-byte 8))))
+  (let ((out-stream (flexi-streams:make-in-memory-output-stream :element-type '(unsigned-byte 8)))
+        (write-stack (make-hash-table)))
     (handler-case
         (cond
           ;; ((= message-type +message-type/notify-s-expr+)
@@ -57,8 +58,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
              (when (or *full-rpc-debug* (find :rpc-debug (gethash sym *defun-flags*)))
                (log-debug "#~a rpc ~s -> ~s" message-id argv result)
                )
-             (write-lisp-binary-object +message-type/rpc+ out-stream)
-             (write-lisp-binary-object result out-stream)
+             (write-lisp-binary-object +message-type/rpc+ out-stream write-stack)
+             (write-lisp-binary-object result out-stream write-stack)
              )
            )        
           (t (error (format nil "unsupported message-type ~a" message-type))
@@ -67,8 +68,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
         ;; (break)
         (let ((signal (condition-to-elisp-signal e)))
           (log-debug "#~a signal ~s -> ~s" message-id argv signal)
-          (write-lisp-binary-object +message-type/signal+ out-stream)
-          (write-lisp-binary-object signal out-stream))
+          (write-lisp-binary-object +message-type/signal+ out-stream write-stack)
+          (write-lisp-binary-object signal out-stream write-stack))
         ;; (break)
         ;; (values +message-type/signal+ (with-output-to-string (stream)
         ;;                                 (cl-emacs/elisp/internals:write-lisp-binary-object "error" stream)))
@@ -101,11 +102,12 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                 ;; (log-info "message size ~a" (length msg-bytes))
                 (handler-case
                     (let* ((in-stream (flexi-streams:make-in-memory-input-stream msg-bytes))
-                           (message-id (read-lisp-binary-object in-stream))
-                           (message-type (read-lisp-binary-object in-stream))
-                           (nargs (read-lisp-binary-object in-stream))
+                           (stack (make-hash-table))
+                           (message-id (read-lisp-binary-object in-stream stack))
+                           (message-type (read-lisp-binary-object in-stream stack))
+                           (nargs (read-lisp-binary-object in-stream stack))
                            (argv (loop for idx from 0 below nargs
-                                       collect (read-lisp-binary-object in-stream))))
+                                       collect (read-lisp-binary-object in-stream stack))))
                       (when (= message-type +message-type/stop-server+)
                         (log-info "received stop-server message")
                         (return-from run-intercomm-server))
@@ -129,10 +131,11 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (pzmq:with-context nil
     (pzmq:with-socket zmq-socket :req
       (pzmq:connect zmq-socket *intercomm-connect-address*)
-      (let ((out-stream (flexi-streams:make-in-memory-output-stream :element-type '(unsigned-byte 8))))
-        (write-lisp-binary-object 0 out-stream)
-        (write-lisp-binary-object +message-type/stop-server+ out-stream)
-        (write-lisp-binary-object 0 out-stream)
+      (let ((out-stream (flexi-streams:make-in-memory-output-stream :element-type '(unsigned-byte 8)))
+            (write-stack (make-hash-table)))
+        (write-lisp-binary-object 0 out-stream write-stack)
+        (write-lisp-binary-object +message-type/stop-server+ out-stream write-stack)
+        (write-lisp-binary-object 0 out-stream write-stack)
         (let ((output-bytes (flexi-streams:get-output-stream-sequence out-stream)))
           (pzmq:with-message out-message
             ;; (log-debug "sending response size ~a" (length output-bytes))
@@ -146,9 +149,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;; (pzmq:connect)
 
 (defun main ()
-  (bt:make-thread
-   #'run-intercomm-server)
-  ;; (run-intercomm-server)
+  ;; (bt:make-thread
+  ;;  #'run-intercomm-server)
+  (run-intercomm-server)
   (log-debug "main complete")
   )
 

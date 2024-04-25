@@ -446,7 +446,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 
 
-(defun read-lisp-binary-object (stream)
+(defun read-lisp-binary-object (stream stack)
+  (declare (hash-table stack))
   (let ((type (code-char (read-byte stream))))
     (cond
       ((eq type #\I)
@@ -463,12 +464,19 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
               (str (babel:octets-to-string bytes)))
          (string-to-elisp-symbol str)))
       ((eq type #\C)
-       (cons (read-lisp-binary-object stream)
-             (read-lisp-binary-object stream)))
+       (let ((addr (lisp-binary:read-integer 8 stream))
+             (cons (cons nil nil)))
+         (setf (gethash addr stack) cons)
+         (setf (car cons) (read-lisp-binary-object stream stack))
+         (setf (cdr cons) (read-lisp-binary-object stream stack))
+         cons))
+      ((eq type #\R)
+       (let ((addr (lisp-binary:read-integer 8 stream)))
+         (gethash addr stack)))
       ((eq type #\H)
-       (let* ((test-sym (read-lisp-binary-object stream))
-              (rehash-size (read-lisp-binary-object stream))
-              (rehash-threshold (read-lisp-binary-object stream))
+       (let* ((test-sym (read-lisp-binary-object stream stack))
+              (rehash-size (read-lisp-binary-object stream stack))
+              (rehash-threshold (read-lisp-binary-object stream stack))
               (len (lisp-binary:read-integer 8 stream))
               (test-fun (cond
                           ((or (eq test-sym 'eq))
@@ -477,8 +485,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
               (hash (make-hash-table :test test-fun :size len :rehash-size rehash-size :rehash-threshold rehash-threshold))
               )
          (loop for idx from 0 below len
-               do (let ((key (read-lisp-binary-object stream))
-                        (value (read-lisp-binary-object stream)))
+               do (let ((key (read-lisp-binary-object stream stack))
+                        (value (read-lisp-binary-object stream stack)))
                     ;; (log-debug "~s->~s" key value)
                     (setf (gethash key hash) value)))
          hash))
@@ -490,13 +498,13 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
            ((eq vector-type +vector-type/hash_table+)
             (setq result (make-hash-table))
             (loop for idx from 0 below len
-                  do (let ((key (read-lisp-binary-object stream))
-                           (value (read-lisp-binary-object stream)))
+                  do (let ((key (read-lisp-binary-object stream stack))
+                           (value (read-lisp-binary-object stream stack)))
                        (setf (gethash key result) value))))
            (t
             (setq result (make-array len))
             (loop for idx from 0 below len
-                  do (setf (aref result idx) (read-lisp-binary-object stream))))
+                  do (setf (aref result idx) (read-lisp-binary-object stream stack))))
            )
          (if (eq vector-type +vector-type/normal-vector+)
              result
@@ -504,7 +512,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
        )
       (t (format nil "unknown elisp type ~a" type)))))
 
-(defun write-lisp-binary-object (obj stream)
+(defun write-lisp-binary-object (obj stream stack)
+  (declare (hash-table stack))
   ;; (break)
   (cond
     ((integerp obj)
@@ -531,11 +540,21 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
        (lisp-binary:write-integer (length bytes) 8 stream)
        (lisp-binary:write-bytes bytes stream)))
     ((consp obj)
-     (write-byte (char-code #\C) stream)
-     (write-lisp-binary-object (car obj) stream)
-     (write-lisp-binary-object (cdr obj) stream)
+     (let ((id (gethash obj stack)))
+       (if id
+           (progn
+             (write-byte (char-code #\R) stream)
+             (lisp-binary:write-integer id 8 stream))
+           (progn
+             (setq id (hash-table-count stack))
+             (setf (gethash obj stack) id)
+             (write-byte (char-code #\C) stream)
+             (lisp-binary:write-integer id 8 stream)
+             (write-lisp-binary-object (car obj) stream stack)
+             (write-lisp-binary-object (cdr obj) stream stack))))
+
      )
-    (t (write-lisp-binary-object "unsupported" stream))))
+    (t (write-lisp-binary-object "unsupported" stream stack))))
 
 ;; key - var symbol
 ;; value - default value
