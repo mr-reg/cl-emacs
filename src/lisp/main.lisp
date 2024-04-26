@@ -149,9 +149,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;; (pzmq:connect)
 
 (defun main ()
-  ;; (bt:make-thread
-  ;;  #'run-intercomm-server)
-  (run-intercomm-server)
+  (bt:make-thread
+   #'run-intercomm-server)
+  ;; (run-intercomm-server)
   (log-debug "main complete")
   )
 

@@ -175,6 +175,8 @@ find . -name '*.log' -exec grep -Po "...unexpected" {} + | grep -v ' 0 unexpecte
 ./temacs(_start+0x21) [0x55b2ba820711]
 * coverage 
 #+begin_src sh
-/usr/lib/llvm-14/bin/llvm-profdata merge -sparse default.profraw -o default.profdata
-color_run /usr/lib/llvm-14/bin/llvm-cov show ./temacs -instr-profile=default.profdata  | less -SR
+export PATH=/usr/lib/llvm-14/bin/:$PATH
+llvm-profdata merge -sparse default.profraw -o default.profdata
+color_run llvm-cov show ./temacs -instr-profile=default.profdata  | less -SR
+
 #+end_src
