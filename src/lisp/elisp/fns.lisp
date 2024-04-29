@@ -21,7 +21,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
     (:use :common-lisp :alexandria :cl-emacs/log
      :cl-emacs/elisp/internals)
   (:import-from :common-lisp-user
-                #:memq)
+                #:memq
+                #:hash-table-weak-p)
   )
 (in-package :cl-emacs/elisp/fns)
 
@@ -64,7 +65,7 @@ Hash codes are not guaranteed to be preserved across Emacs sessions. "
   (sxhash arg/obj))
 
 
-(defun-elisp elisp/make-hash-table2 '(:rpc-debug) (&key (test #'eql)
+(defun-elisp elisp/make-hash-table2 '(:rpc-debug) (&key (test 'eql)
                                                         (size 65)
                                                         (rehash-size 1.5)
                                                         (rehash-threshold 0.8125)
@@ -105,5 +106,75 @@ table read only. Any further changes to purified tables will result
 in an error.
 
 usage: (make-hash-table &rest KEYWORD-ARGS) "
+  (assert (find test '(eq eql equal equalp)))
+  (make-hash-table :test (symbol-function test) :size size :rehash-size rehash-size
+                   :rehash-threshold rehash-threshold :weak weakness)
+  )
+
+
+(defun-elisp elisp/copy-hash-table2 '(:rpc-debug) (arg/hashtable)
+  "Return a copy of hash table TABLE."
+  (copy-hash-table arg/hashtable)
+  )
+
+(defun-elisp elisp/hash-table-count2 '(:rpc-debug) (arg/hashtable)
+  "Return the number of elements in TABLE."
+  (hash-table-count arg/hashtable)
+  )
+
+(defun-elisp elisp/hash-table-rehash-size2 '(:rpc-debug) (arg/hashtable)
+  "Return the current rehash size of TABLE."
+  (hash-table-rehash-size arg/hashtable)
+  )
+
+(defun-elisp elisp/hash-table-rehash-threshold2 '(:rpc-debug) (arg/hashtable)
+  "Return the current rehash threshold of TABLE."
+  (hash-table-rehash-threshold arg/hashtable)
+  )
+
+(defun-elisp elisp/hash-table-size2 '(:rpc-debug) (arg/hashtable)
+  "Return the size of TABLE.
+The size can be used as an argument to `make-hash-table' to create
+a hash table than can hold as many elements as TABLE holds
+without need for resizing."
+  (hash-table-size arg/hashtable)
+  )
+
+(defun-elisp elisp/hash-table-test2 '(:rpc-debug) (arg/hashtable)
+  "Return the test TABLE uses"
+  (hash-table-test arg/hashtable)
+  )
+
+(defun-elisp elisp/hash-table-weakness2 '(:rpc-debug) (arg/hashtable)
+  "Return the weakness of TABLE."
+  (hash-table-weak-p arg/hashtable)
+  )
+
+(defun-elisp elisp/hash-table-p2 '(:rpc-debug) (arg/hashtable)
+  "Return t if OBJ is a Lisp hash table object."
+  (hash-table-p arg/hashtable)
+  )
+
+(defun-elisp elisp/clrhash2 '(:rpc-debug) (arg/hashtable)
+  "Clear hash table TABLE and return it."
+  (clrhash arg/hashtable)
+  )
+
+(defun-elisp elisp/gethash2 '(:rpc-debug) (arg/key arg/hashtable arg/dflt)
+  "Look up KEY in TABLE and return its associated value.
+If KEY is not found, return DFLT which defaults to nil."
+  (gethash arg/key arg/hashtable arg/dflt)
+  )
+
+(defun-elisp elisp/puthash2 '(:rpc-debug) (arg/key arg/value arg/hashtable)
+  "Associate KEY with VALUE in hash table TABLE.
+If KEY is already present in table, replace its current value with
+VALUE.  In any case, return VALUE."
+  (setf (gethash arg/key arg/hashtable) arg/value)
+  )
+
+(defun-elisp elisp/remhash2 '(:rpc-debug) (arg/key arg/hashtable)
+  "Remove KEY from TABLE."
+  (remhash arg/key arg/hashtable)
   )
 

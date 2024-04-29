@@ -184,16 +184,18 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
          (docstring (documentation symbol 'function))
          n-req-args
          n-opt-args
-         restp
+         restp keys
+         array-args
          n-total-args)
-    (multiple-value-setq (n-req-args n-opt-args restp) (function-args function))
+    (multiple-value-setq (n-req-args n-opt-args restp keys) (function-args function))
+    (setq array-args (or restp keys))
     (setq n-total-args (+ n-req-args n-opt-args))
     (format stream "DEFUN (\"~a\", F~a, S~a, ~d, ~a, 0,~%"
-            elisp-alias c-alias c-alias n-req-args (if restp "MANY" n-total-args))
+            elisp-alias c-alias c-alias n-req-args (if array-args "MANY" n-total-args))
 
     (format stream "       doc: /* ~a */)~%" docstring)
     (format stream "  (")
-    (if restp
+    (if array-args
         (format stream "ptrdiff_t argc, Lisp_Object *argv")
         (loop for argi from 0 below n-total-args
               for arg in args
@@ -204,7 +206,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                    (format stream "Lisp_Object ~a" (get-c-alias arg)))))
     (format stream ")~%")
     (format stream "{~%")
-    (unless restp
+    (unless array-args
       (format stream "  Lisp_Object alien_data[] = {")
       (loop for argi from 0 below n-total-args
             for arg in args
@@ -216,9 +218,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (format stream "};~%")
       )
     (format stream "  return alien_rpc((char*)\"cl-emacs/elisp:~a\"" func-name)
-    (unless restp
+    (unless array-args
       (format stream ", ~d, alien_data);~%" n-total-args))
-    (when restp
+    (when array-args
       (format stream ", argc, argv);~%"))
     (format stream "}~%~%")))
 
@@ -371,10 +373,12 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (dolist (symbol function-symbols)
         (let* ((function (symbol-function symbol))
                (c-alias (get-c-alias symbol))
-               n-req-args n-opt-args restp)
-          (multiple-value-setq (n-req-args n-opt-args restp) (function-args function))
+               n-req-args n-opt-args restp keys
+               array-args)
+          (multiple-value-setq (n-req-args n-opt-args restp keys) (function-args function))
+          (setq array-args (or restp keys))
           (format stream "EXFUN (F~a, ~a);~%"
-                  c-alias (if restp
+                  c-alias (if array-args
                               "MANY"
                               (+ n-req-args n-opt-args)))))
       (dolist (symbol function-symbols)
@@ -473,44 +477,46 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       ((eq type #\R)
        (let ((addr (lisp-binary:read-integer 8 stream)))
          (gethash addr stack)))
-      ((eq type #\H)
-       (let* ((test-sym (read-lisp-binary-object stream stack))
-              (rehash-size (read-lisp-binary-object stream stack))
-              (rehash-threshold (read-lisp-binary-object stream stack))
-              (len (lisp-binary:read-integer 8 stream))
-              (test-fun (cond
-                          ((or (eq test-sym 'eq))
-                           (symbol-function test-sym))
-                          (t (error "unsupported hash test func"))))
-              (hash (make-hash-table :test test-fun :size len :rehash-size rehash-size :rehash-threshold rehash-threshold))
-              )
-         (loop for idx from 0 below len
-               do (let ((key (read-lisp-binary-object stream stack))
-                        (value (read-lisp-binary-object stream stack)))
-                    ;; (log-debug "~s->~s" key value)
-                    (setf (gethash key hash) value)))
-         hash))
-      ((eq type #\V)
-       (let ((vector-type (lisp-binary:read-integer 8 stream))
-             (len (lisp-binary:read-integer 8 stream))
-             result)
-         (cond
-           ((eq vector-type +vector-type/hash_table+)
-            (setq result (make-hash-table))
-            (loop for idx from 0 below len
-                  do (let ((key (read-lisp-binary-object stream stack))
-                           (value (read-lisp-binary-object stream stack)))
-                       (setf (gethash key result) value))))
-           (t
-            (setq result (make-array len))
-            (loop for idx from 0 below len
-                  do (setf (aref result idx) (read-lisp-binary-object stream stack))))
-           )
-         (if (eq vector-type +vector-type/normal-vector+)
-             result
-             (cons vector-type result)))
-       )
+      ;; ((eq type #\H)
+      ;;  (let* ((test-sym (read-lisp-binary-object stream stack))
+      ;;         (rehash-size (read-lisp-binary-object stream stack))
+      ;;         (rehash-threshold (read-lisp-binary-object stream stack))
+      ;;         (len (lisp-binary:read-integer 8 stream))
+      ;;         (test-fun (cond
+      ;;                     ((or (eq test-sym 'eq))
+      ;;                      (symbol-function test-sym))
+      ;;                     (t (error "unsupported hash test func"))))
+      ;;         (hash (make-hash-table :test test-fun :size len :rehash-size rehash-size :rehash-threshold rehash-threshold))
+      ;;         )
+      ;;    (loop for idx from 0 below len
+      ;;          do (let ((key (read-lisp-binary-object stream stack))
+      ;;                   (value (read-lisp-binary-object stream stack)))
+      ;;               ;; (log-debug "~s->~s" key value)
+      ;;               (setf (gethash key hash) value)))
+      ;;    hash))
+      ;; ((eq type #\V)
+      ;;  (let ((vector-type (lisp-binary:read-integer 8 stream))
+      ;;        (len (lisp-binary:read-integer 8 stream))
+      ;;        result)
+      ;;    (cond
+      ;;      ((eq vector-type +vector-type/hash_table+)
+      ;;       (setq result (make-hash-table))
+      ;;       (loop for idx from 0 below len
+      ;;             do (let ((key (read-lisp-binary-object stream stack))
+      ;;                      (value (read-lisp-binary-object stream stack)))
+      ;;                  (setf (gethash key result) value))))
+      ;;      (t
+      ;;       (setq result (make-array len))
+      ;;       (loop for idx from 0 below len
+      ;;             do (setf (aref result idx) (read-lisp-binary-object stream stack))))
+      ;;      )
+      ;;    (if (eq vector-type +vector-type/normal-vector+)
+      ;;        result
+      ;;        (cons vector-type result)))
+      ;;  )
       (t (format nil "unknown elisp type ~a" type)))))
+
+
 
 (defun write-lisp-binary-object (obj stream stack)
   (declare (hash-table stack))
@@ -539,6 +545,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
      (let ((bytes (babel:string-to-octets (elisp-symbol-to-string obj))))
        (lisp-binary:write-integer (length bytes) 8 stream)
        (lisp-binary:write-bytes bytes stream)))
+    ((hash-table-p obj)
+     (write-lisp-binary-object (cl-emacs/elisp::elisp/make-unique-alien-var obj) stream stack)
+     )
     ((consp obj)
      (let ((id (gethash obj stack)))
        (if id
