@@ -17,14 +17,23 @@
                          :vom
                          :uiop
                          :usocket)
-  :depends-on (:cl-emacs/main
-               :cl-emacs/log
-               :cl-emacs/utils
-               :cl-emacs/elisp/fileio
-               :cl-emacs/elisp/internals
-               :cl-emacs/elisp
-               :cl-emacs/elisp-tests/fileio
-               :cl-emacs/elisp-tests
+  :depends-on (
+               ;; :cl-emacs/elisp/alien-vars
+               ;; :cl-emacs/elisp/alloc
+               ;; :cl-emacs/elisp/data
+               ;; :cl-emacs/elisp/editfns
+               ;; :cl-emacs/elisp/fileio
+               ;; :cl-emacs/elisp/fns
+               ;; :cl-emacs/elisp/font
+               ;; :cl-emacs/elisp/internals
+               ;; :cl-emacs/elisp/xfns
+               ;; :cl-emacs/elisp-tests/editfns
+               ;; :cl-emacs/elisp-tests/fileio
+               ;; :cl-emacs/elisp
+               ;; :cl-emacs/elisp-tests
+               ;; :cl-emacs/log
+               :cl-emacs/main
+               ;; :cl-emacs/utils
                )
   ;; :components ((:module "src/lisp"
   ;;               :components (
