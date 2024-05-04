@@ -41,7 +41,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;; (defconstant +message-type/notify-s-expr+ 1)
 (defconstant +message-type/signal+ 2)
 (defconstant +message-type/rpc+ 3)
-(defparameter *full-rpc-debug* nil)
+(defparameter *full-rpc-debug* t)
+(defparameter *rpc-profiling* t)
 (defun process-intercomm-message (message-id message-type argv)
   "returns (output-type output-bytes)"
   (let ((out-stream (flexi-streams:make-in-memory-output-stream :element-type '(unsigned-byte 8)))
@@ -56,7 +57,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
            (let ((result (cl-emacs/elisp:rpc-apply argv))
                  (sym (string-to-elisp-symbol (car argv))))
              (when (or *full-rpc-debug* (find :rpc-debug (gethash sym *defun-flags*)))
-               (log-debug "#~a rpc ~s -> ~s" message-id argv result)
+               (log-debug "#~a ~a rpc ~s -> ~s" message-id (set-timer) argv result)
                )
              (write-lisp-binary-object +message-type/rpc+ out-stream write-stack)
              (write-lisp-binary-object result out-stream write-stack)
@@ -67,7 +68,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (error (e)
         ;; (break)
         (let ((signal (condition-to-elisp-signal e)))
-          (log-debug "#~a signal ~s -> ~s" message-id argv signal)
+          (log-debug "#~a ~a signal ~s -> ~s" message-id (set-timer) argv signal)
           (write-lisp-binary-object +message-type/signal+ out-stream write-stack)
           (write-lisp-binary-object signal out-stream write-stack))
         ;; (break)
@@ -83,6 +84,12 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (defvar *intercomm-server-socket* nil)
 
+(defvar *timer* 0)
+(defun set-timer ()
+  (let* ((new-time (get-internal-real-time))
+         (time (- new-time *timer*)))
+    (setq *timer* new-time)
+    (* 1.0 (/ time internal-time-units-per-second))))
 
 
 (defun run-intercomm-server ()
@@ -96,6 +103,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
         (restart-case
             (pzmq:with-message in-message
               (pzmq:msg-recv in-message zmq-socket)
+              (set-timer)
               (let ((msg-bytes (cffi:foreign-array-to-lisp (pzmq:msg-data in-message)
                                                            (list :array :unsigned-char (pzmq:msg-size in-message))
                                                            :element-type '(unsigned-byte 8) )))

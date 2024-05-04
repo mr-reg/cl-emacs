@@ -508,6 +508,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                do (setf (aref result idx) (read-lisp-binary-object stream stack)))
          result)
        )
+      ((eq type #\P)
+       (cons :pointer (lisp-binary:read-integer 8 stream)))
       (t (format nil "unknown elisp type ~a" type)))))
 
 (defvar *alien-values-lock* (bt:make-lock "alien-values"))
@@ -550,19 +552,29 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
      (write-byte (char-code #\V) stream)
      (lisp-binary:write-integer (push-alien-value obj) 8 stream)
      )
+    ((vectorp obj)
+     (write-byte (char-code #\N) stream)
+     (lisp-binary:write-integer (length obj) 8 stream)
+     (loop for el across obj
+           do (write-lisp-binary-object el stream stack)))
     ((consp obj)
-     (let ((id (gethash obj stack)))
-       (if id
-           (progn
-             (write-byte (char-code #\R) stream)
-             (lisp-binary:write-integer id 8 stream))
-           (progn
-             (setq id (hash-table-count stack))
-             (setf (gethash obj stack) id)
-             (write-byte (char-code #\C) stream)
-             (lisp-binary:write-integer id 8 stream)
-             (write-lisp-binary-object (car obj) stream stack)
-             (write-lisp-binary-object (cdr obj) stream stack))))
+     (cond
+       ((eq (car obj) :pointer)
+        (write-byte (char-code #\P) stream)
+        (lisp-binary:write-integer (cdr obj) 8 stream)
+        )
+       (t (let ((id (gethash obj stack)))
+            (if id
+                (progn
+                  (write-byte (char-code #\R) stream)
+                  (lisp-binary:write-integer id 8 stream))
+                (progn
+                  (setq id (hash-table-count stack))
+                  (setf (gethash obj stack) id)
+                  (write-byte (char-code #\C) stream)
+                  (lisp-binary:write-integer id 8 stream)
+                  (write-lisp-binary-object (car obj) stream stack)
+                  (write-lisp-binary-object (cdr obj) stream stack))))))
 
      )
     (t (write-lisp-binary-object "unsupported" stream stack))))

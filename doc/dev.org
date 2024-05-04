@@ -29,7 +29,7 @@ comm -12 <(sort libs.txt) <(sort temacs.txt)
 #+begin_src sh
   git clean -f -d -x
   ./autogen.sh
-  CC=clang CFLAGS="-fPIC -g -gdwarf-4 -rdynamic -Wno-unused-command-line-argument -Wno-missing-prototypes -lzmq -fprofile-instr-generate -fcoverage-mapping" ./configure \
+  CC=clang CFLAGS="-fPIC -g -gdwarf-4 -rdynamic -Wno-unused-command-line-argument -Wno-missing-prototypes -lzmq -fprofile-instr-generate -fcoverage-mapping -ftime-trace -Wno-unused-variable" ./configure \
    --without-json \
    --without-xwidgets \
    --with-file-notification=inotify \
@@ -176,7 +176,10 @@ find . -name '*.log' -exec grep -Po "...unexpected" {} + | grep -v ' 0 unexpecte
 * coverage 
 #+begin_src sh
 export PATH=/usr/lib/llvm-14/bin/:$PATH
+LLVM_PROFILE_FILE="temacs.profraw" ./temacs
 llvm-profdata merge -sparse default.profraw -o default.profdata
 color_run llvm-cov show ./temacs -instr-profile=default.profdata  | less -SR
-
+color_run llvm-cov report ./temacs -instr-profile=default.profdata  | less -SR
 #+end_src
+* profiling
+valgrind --fair-sched=yes --tool=callgrind ./temacs

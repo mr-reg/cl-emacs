@@ -64,6 +64,8 @@ If (sxhash-equal-including-properties A B), then
 Hash codes are not guaranteed to be preserved across Emacs sessions. "
   (sxhash arg/obj))
 
+(defun-elisp elisp/sxhash-case-insensitive '(:internal :rpc-debug) (arg/obj)
+  (sxhash (str:downcase arg/obj)))
 
 (defun-elisp elisp/make-hash-table '(:rpc-debug) (&key (test 'eql)
                                                        (size 65)
@@ -106,9 +108,21 @@ table read only. Any further changes to purified tables will result
 in an error.
 
 usage: (make-hash-table &rest KEYWORD-ARGS) "
-  (assert (find test '(eq eql equal equalp)))
-  (make-hash-table :test (symbol-function test) :size size :rehash-size rehash-size
-                   :rehash-threshold rehash-threshold :weak weakness)
+  (assert (position test '(cl-emacs/elisp::eq cl-emacs/elisp::eql cl-emacs/elisp::equal cl-emacs/elisp::equalp)))
+  (assert (position weakness '(nil t cl-emacs/elisp::key cl-emacs/elisp::value cl-emacs/elisp::key-or-value cl-emacs/elisp::key-and-value)))
+  (let ((cl-weakness nil))
+    (when (and weakness (eq test 'cl-emacs/elisp::eq)) 
+      (cond
+        ((null weakness) nil)
+        ((or (eq weakness t) (eq weakness 'cl-emacs/elisp::value)) t)
+        ((eq weakness 'cl-emacs/elisp::key) :key)
+        ((eq weakness 'cl-emacs/elisp::key-and-value) :both)
+        ((eq weakness 'cl-emacs/elisp::key-or-value) :one)
+        (t (error "unknown weakness ~s" weakness))
+        ))
+    (make-hash-table :test (symbol-function test) :size size :rehash-size rehash-size
+                     :rehash-threshold rehash-threshold :weak cl-weakness))
+
   )
 
 
@@ -160,7 +174,7 @@ without need for resizing."
   (clrhash arg/hashtable)
   )
 
-(defun-elisp elisp/gethash '(:rpc-debug) (arg/key arg/hashtable arg/dflt)
+(defun-elisp elisp/gethash '(:rpc-debug) (arg/key arg/hashtable &optional arg/dflt)
   "Look up KEY in TABLE and return its associated value.
 If KEY is not found, return DFLT which defaults to nil."
   (gethash arg/key arg/hashtable arg/dflt)
