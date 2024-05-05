@@ -427,7 +427,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                          do (when (or (<= (char-code #\A) (char-code c) (char-code #\Z)) (eq c #\_))
                               (format stream "_"))
                             (format stream "~a" (str:upcase c)))))
-         (package (find-package 'cl-emacs/elisp)))
+         (package (find-package 'cl-emacs/elisp/symbols)))
     (let ((pos (position #\: cl-str)))
       (when pos
         (setq package (str:substring 0 pos cl-str))

@@ -17,6 +17,8 @@ General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
+
+
 (uiop:define-package :cl-emacs/elisp/fns
     (:use :common-lisp :alexandria :cl-emacs/log
      :cl-emacs/elisp/internals)
@@ -25,6 +27,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                 #:hash-table-weak-p)
   )
 (in-package :cl-emacs/elisp/fns)
+
 
 ;; (defun-elisp elisp/memq () (arg/elt arg/list)
 ;;   "Return non-nil if ELT is an element of LIST.  Comparison done with `eq'.
@@ -108,16 +111,16 @@ table read only. Any further changes to purified tables will result
 in an error.
 
 usage: (make-hash-table &rest KEYWORD-ARGS) "
-  (assert (position test '(cl-emacs/elisp::eq cl-emacs/elisp::eql cl-emacs/elisp::equal cl-emacs/elisp::equalp)))
-  (assert (position weakness '(nil t cl-emacs/elisp::key cl-emacs/elisp::value cl-emacs/elisp::key-or-value cl-emacs/elisp::key-and-value)))
+  (assert (position test '(cl-emacs/elisp/symbols::eq cl-emacs/elisp/symbols::eql cl-emacs/elisp/symbols::equal cl-emacs/elisp/symbols::equalp)))
+  (assert (position weakness '(nil t cl-emacs/elisp/symbols::key cl-emacs/elisp/symbols::value cl-emacs/elisp/symbols::key-or-value cl-emacs/elisp/symbols::key-and-value)))
   (let ((cl-weakness nil))
-    (when (and weakness (eq test 'cl-emacs/elisp::eq)) 
+    (when (and weakness (eq test 'cl-emacs/elisp/symbols::eq)) 
       (cond
         ((null weakness) nil)
-        ((or (eq weakness t) (eq weakness 'cl-emacs/elisp::value)) t)
-        ((eq weakness 'cl-emacs/elisp::key) :key)
-        ((eq weakness 'cl-emacs/elisp::key-and-value) :both)
-        ((eq weakness 'cl-emacs/elisp::key-or-value) :one)
+        ((or (eq weakness t) (eq weakness 'cl-emacs/elisp/symbols::value)) t)
+        ((eq weakness 'cl-emacs/elisp/symbols::key) :key)
+        ((eq weakness 'cl-emacs/elisp/symbols::key-and-value) :both)
+        ((eq weakness 'cl-emacs/elisp/symbols::key-or-value) :one)
         (t (error "unknown weakness ~s" weakness))
         ))
     (make-hash-table :test (symbol-function test) :size size :rehash-size rehash-size
