@@ -48,7 +48,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (log-enable :cl-emacs/elisp/internals)
 
 (defvar *context* nil)
-(defparameter *string-encoding* :iso-8859-1)
+(defparameter *string-encoding* :utf-8 ;;:iso-8859-1
+  )
 (defclass emacs-signal (error)
   ())
 

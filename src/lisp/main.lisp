@@ -41,8 +41,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;; (defconstant +message-type/notify-s-expr+ 1)
 (defconstant +message-type/signal+ 2)
 (defconstant +message-type/rpc+ 3)
-(defparameter *full-rpc-debug* t)
-(defparameter *rpc-filter-time* 0.1)
+(defparameter *full-rpc-debug* nil)
+(defparameter *rpc-filter-time* nil)
 (defun process-intercomm-message (message-id message-type argv)
   "returns (output-type output-bytes)"
   (let ((out-stream (flexi-streams:make-in-memory-output-stream :element-type '(unsigned-byte 8)))
