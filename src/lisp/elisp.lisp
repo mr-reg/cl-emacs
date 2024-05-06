@@ -18,62 +18,51 @@ You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
 (uiop:define-package :cl-emacs/elisp
-    (:use :common-lisp :cl-emacs/log :cl-emacs/elisp/internals)
-  (:use-reexport
-   :cl-emacs/elisp/alien-vars
-   :cl-emacs/elisp/alloc
-   :cl-emacs/elisp/data
-   :cl-emacs/elisp/editfns
-   :cl-emacs/elisp/fileio
-   :cl-emacs/elisp/fns
-   :cl-emacs/elisp/font
-   :cl-emacs/elisp/xfns
-   )
-  (:export #:rpc-apply))
+    (:use :common-lisp :cl-emacs/log)
+  ;; (:use-reexport
+  ;;  ;; :cl-emacs/elisp/alien-vars
+  ;;  ;; :cl-emacs/elisp/alloc
+  ;;  ;; :cl-emacs/elisp/data
+  ;;  ;; :cl-emacs/elisp/editfns
+  ;;  ;; :cl-emacs/elisp/fileio
+  ;;  ;; :cl-emacs/elisp/fns
+  ;;  ;; :cl-emacs/elisp/font
+  ;;  ;; :cl-emacs/elisp/xfns
+  ;;  )
+  ;; (:export #:rpc-apply)
+  )
 (in-package :cl-emacs/elisp)
 (log-enable :cl-emacs/elisp)
 
-#|       
-IMPORTANT NOTE 
+(defparameter *states* '(state/toplevel state/comment))
+(loop for state in *states*
+      for id from 0
+      do (eval `(defparameter ,state ,id)))
 
-If elisp function argument name has the same name as variable in
-lexical scope, you will have PROBLEMS. So all function arguments
-should have kinda unique name, so I always use prefix arg_
-|#
-
-(defun rpc-apply (argv)
-  (setq *context* (third argv))
-  (let ((func (string-to-elisp-symbol (first argv)))
-        (func-args (second argv)))
-    ;; (log-info (cons func func-args))
-    ;; (eval (cons func func-args))
-    ;; (log-info (macroexpand (cons func func-args)))
-    (apply (symbol-function func) func-args)
-    ))
-
-(defun-elisp elisp/init-globals '(:internal :rpc-debug) ()
-  "set emacs global-vars to default values"
-  (loop for var-sym being each hash-key of *defvar-defaults*
-        do (setf (symbol-value var-sym) (gethash var-sym *defvar-defaults*))))
-
-(defvar-elisp test-alien-var fixnum 10
-  "")
-
-(let ((c-name "alien-injection.c"))
-  (with-open-file (stream c-name
-                          :if-exists :supersede
-                          :direction :output)
-    (format stream "~a" (generate-c-block)))
-  (push :other-write (osicat:file-permissions c-name))
-  (push :group-write (osicat:file-permissions c-name))
+(defun state/toplevel-transition (char)
+  (cond
+    ((memq char '(#\())
+     (start-new-list))))
+(defun state/comment-transition (char)
   )
+(defvar *transitions* nil)
+(let ((n-states (length *states*)))
+  (setf *transitions* (make-array n-states)))
+(dolist (state *states*)
+  (log-debug "~s" (symbol-name state))
+  (eval `(setf (aref *transitions* ,state)
+               ,(let* ((transition-function-name (concatenate 'string (symbol-name state) "-TRANSITION"))
+                       (transition-function-symbol (find-symbol transition-function-name)))
+                  (if transition-function-symbol
+                      (symbol-function transition-function-symbol)
+                      (error "can't find transition function ~a" transition-function-name))))))
 
-(let ((h-name "alien-injection.h"))
-  (with-open-file (stream h-name
-                          :if-exists :supersede
-                          :direction :output)
-    (format stream "~a" (generate-h-block)))
-  (push :other-write (osicat:file-permissions h-name))
-  (push :group-write (osicat:file-permissions h-name))
-  )
-
+;; (defstruct reader
+;;   (state 0 :type fixnum)
+;;   (matrix)
+;;   )
+;; (setq transitions
+;;       (+READ-STATE-TOPLEVEL+ . ("(") start-new-list))
+;; (defun read (stream)
+;;   (peek-char stream)
+;;   )

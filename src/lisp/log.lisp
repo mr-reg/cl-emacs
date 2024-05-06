@@ -32,7 +32,7 @@
           (bt:with-lock-held (*log-config-lock*)
             (let (streams)
               (when *log-file-stream* (push *log-file-stream* streams))
-              (when (< level 8) ;; 8 = debug
+              (when (<= level 8) ;; 8 = debug
                 (push *standard-output* streams))
               (values-list streams)
               ))
