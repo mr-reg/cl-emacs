@@ -47,11 +47,16 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (in-suite cl-emacs/reader)
 (named-readtables:in-readtable mstrings:mstring-syntax)
 
+(defclass reader-signal (error)
+  ())
+
+(define-condition reader-stopped-signal (reader-signal)
+  ())
+
 (defparameter *states*
   '(state/toplevel
     state/chardata
-    state/comment
-    state/stopped))
+    state/line-comment))
 (loop for state in *states*
       for id from 0
       do (eval `(defparameter ,state ,id)))
@@ -66,7 +71,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   #M"return t if character is whitespace or nil. 
      nil used for EOF"
   (declare (type character char))
-  (or (null char) (memq char '(#\space #\tab))))
+  (or (null char) (memq char '(#\space #\tab #\newline))))
 
 (defun start-list (reader)
   (declare (type reader reader))
@@ -82,7 +87,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
           (push last-list (car stack))
           (progn
             (setq result last-list)
-            (change-state reader state/stopped))))))
+            (error 'reader-stopped-signal))))))
+
 (defun start-chardata (reader)
   (declare (type reader reader))
   (log-debug "start chardata")
@@ -103,14 +109,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
           (push parsed (car stack))
           (progn
             (setq result parsed)
-            (change-state reader state/stopped))))))
+            (error 'reader-stopped-signal))))))
 
-;; (defun state/toplevel-stop-handler (reader)
-;;   (declare (type reader reader))
-;;   )
-;; (defun state/toplevel-start-handler (reader)
-;;   (declare (type reader reader))
-;;   )
 (defun state/toplevel-transition (reader char)
   (declare (type reader reader)
            (type character char))
@@ -121,6 +121,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
      (end-list reader))
     ((whitespace-p char)
      (progn))
+    ((memq char '(#\;))
+     (process-char reader char :new-state state/line-comment))
     (t
      (start-chardata reader)
      (process-char reader char :new-state state/chardata))
@@ -135,34 +137,20 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
        (end-chardata reader)
        (process-char reader char :new-state state/toplevel))
       (t
-       (when (upper-case-p char)
-         (push "_" (car stack)))
+       (when (or (upper-case-p char) (eq char #\_))
+         (push #\_ (car stack)))
        (push char (car stack))
        )
       )))
+(defun state/line-comment-transition (reader char)
+  (declare (type reader reader)
+           (type character char))
+  (with-slots (stack) reader
+    (cond
+      ((eq char #\newline)
+       (process-char reader char :new-state state/toplevel))
+      (t (progn)))))
 
-;; (defun state/chardata-stop-handler (reader)
-;;   (declare (type reader reader))
-;;   )
-;; (defun state/chardata-start-handler (reader)
-;;   (declare (type reader reader))
-;;   )
-;; (defun state/comment-stop-handler (reader)
-;;   (declare (type reader reader))
-;;   )
-;; (defun state/comment-start-handler (reader)
-;;   (declare (type reader reader))
-;;   )
-(defun state/comment-transition (reader char)
-  (declare (ignore reader char))
-  ;; (declare (type reader reader)
-  ;;          (type character char))
-  
-  )
-(defun state/stopped-transition (reader char)
-  (declare (ignore reader char))
-  (error "can't process characters in stopped state")
-  )
 (defvar *transitions* nil)
 ;; (defvar *start-handlers* nil)
 ;; (defvar *stop-handlers* nil)
@@ -202,9 +190,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (declare (type reader reader)
            (type character char))
   (with-slots (state) reader
+    (log-debug1 "process char ~s in state ~s" char state)
     (when new-state
       (change-state reader new-state))
-    (log-debug1 "process char ~s in state ~s" char state)
     (let ((handler (aref *transitions* state)))
       (funcall handler reader char))))
 
@@ -212,29 +200,31 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (let ((reader (make-reader :state state/toplevel)))
     (with-slots (state stack result character-counter) reader
       (handler-case
-          (loop
-            while (/= state state/stopped) 
-            do (let ((char (read-char stream)))
-                 (incf character-counter)
-                 (process-char reader char)))
-        (end-of-file ()
-          (log-debug1 "end of file")
-          (process-char reader nil)))
+          (handler-case
+              (loop
+                do (let ((char (read-char stream)))
+                     (incf character-counter)
+                     (process-char reader char)))
+            (end-of-file ()
+              (log-debug1 "end of file")
+              (process-char reader nil)))
+        (reader-stopped-signal ()
+          (log-debug1 "reader stopped")))
       (log-debug "stack: ~s" stack)
       (log-debug "result: ~s" result)
       (values result reader))))
 
 (defun read (stream)
-  "Read one Lisp expression as text from STREAM, return as Lisp object.
-If STREAM is nil, use the value of `standard-input' (which see).
-STREAM or the value of `standard-input' may be:
- a buffer (read from point and advance it)
- a marker (read from where it points and advance it)
- a function (call it with no arguments for each character,
+  #M"Read one Lisp expression as text from STREAM, return as Lisp object.
+     If STREAM is nil, use the value of `standard-input' (which see).
+     STREAM or the value of `standard-input' may be:
+     a buffer (read from point and advance it)
+     a marker (read from where it points and advance it)
+     a function (call it with no arguments for each character,
      call it with a char as argument to push a char back)
- a string (takes text from string, starting at the beginning)
- t (read text line using minibuffer and use it, or read from
-    standard input in batch mode)."
+     a string (takes text from string, starting at the beginning)
+     t (read text line using minibuffer and use it, or read from
+     standard input in batch mode)."
   (multiple-value-bind (result) (read-internal stream)
     result))
 (defun read-from-string (string &optional (start 0) (end (length string)))
@@ -250,8 +240,24 @@ the end of STRING."
       (with-slots (character-counter) reader
         (cons result character-counter)))))
 (test read-from-string
-  (is (equalp (read-from-string "test") '(test . 4))))
+  (is (equalp (read-from-string "test") '(test . 4)))
+  (is (equalp (read-from-string "\"test\" ") '("test" . 6)))
+  (is (equalp (read-from-string "test two") '(test . 5)))
+  (is (equalp (read-from-string "(test 2 3 \"A ( B\")") '((test 2 3 "A ( B") . 10)))
+  (is (equalp (read-from-string "(test (2 3) 4 ())") '((test (2 3) 4 ()) . 17)))
+  (is (equalp (read-from-string #M";;; comment line
+                                   test symbol") '(test . 22)))
+  (is (equalp (read-from-string #M"(defvar test-var nil \"some 
+                                   multiline docstring `with symbols'.\")"
+                                '(defvar test-var nil
+                                  #M"some 
+                                     multiline docstring `with symbols'."))))
+  )
 
+
+(defun real-file-test ()
+  (with-open-file (stream "../emacs/lisp/master.el" :direction :input)
+    (read stream)))
 
 (defun test-me ()
   (run! 'cl-emacs/reader))

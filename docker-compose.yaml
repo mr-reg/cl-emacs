@@ -17,4 +17,5 @@ services:
       # - 7447:7447
     volumes: 
       - ${PWD}/:${PWD}/
+      - ${PWD}/../emacs/:${PWD}/../emacs/
     command: ["bash", "-c", "cd ${PWD}/ && echo '(sleep 1000000000000)' | ./run-swank.sh"]
