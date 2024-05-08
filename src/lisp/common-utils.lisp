@@ -17,21 +17,18 @@ General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
-
-(uiop:define-package :cl-emacs/main
-    (:use :common-lisp :cl-emacs/log :cl-emacs/elisp :fiveam)
-  (:import-from :common-lisp-user #:quit)
+(uiop:define-package :cl-emacs/common-utils
+    (:use :common-lisp :cl-emacs/log :alexandria :fiveam)
   )
-(in-package :cl-emacs/main)
-(log-enable :cl-emacs/main)
+(in-package :cl-emacs/common-utils)
+(log-enable :cl-emacs/common-utils :debug1)
+(def-suite cl-emacs/common-utils)
+(in-suite cl-emacs/common-utils)
 
-(defparameter *emacs-source-path* "../emacs/")
+(defvar *timer* 0)
+(defun set-timer ()
+  (let* ((new-time (get-internal-real-time))
+         (time (- new-time *timer*)))
+    (setq *timer* new-time)
+    (* 1.0 (/ time internal-time-units-per-second))))
 
-
-(defun main ()
-  (log-debug "main complete")
-  )
-
-(defun run-all-tests ()
-  (dolist (suite fiveam::*toplevel-suites*)
-    (run! suite)))

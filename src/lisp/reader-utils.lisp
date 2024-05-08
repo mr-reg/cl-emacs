@@ -17,23 +17,27 @@ General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
-(uiop:define-package :cl-emacs/elisp
+(uiop:define-package :cl-emacs/reader-utils
     (:use :common-lisp :cl-emacs/log :alexandria :fiveam)
-  ;; (:use-reexport
-  ;;  ;; :cl-emacs/elisp/alien-vars
-  ;;  ;; :cl-emacs/elisp/alloc
-  ;;  ;; :cl-emacs/elisp/data
-  ;;  ;; :cl-emacs/elisp/editfns
-  ;;  ;; :cl-emacs/elisp/fileio
-  ;;  ;; :cl-emacs/elisp/fns
-  ;;  ;; :cl-emacs/elisp/font
-  ;;  ;; :cl-emacs/elisp/xfns
-  ;;  )
-  ;; (:export #:rpc-apply)
+  (:export #:parse-elisp-number)
   )
-(in-package :cl-emacs/elisp)
-(log-enable :cl-emacs/elisp :debug1)
-(def-suite cl-emacs/elisp)
-(in-suite cl-emacs/elisp)
+(in-package :cl-emacs/reader-utils)
+(log-enable :cl-emacs/reader-utils :debug1)
+(def-suite cl-emacs/reader-utils)
+(in-suite cl-emacs/reader-utils)
 
+(defun parse-elisp-number (chardata)
+  (handler-case
+      (parse-number:parse-real-number chardata)
+    (parse-error ()
+      nil)))
+(test parse-elisp-number
+  (is (= (parse-elisp-number "24") 24))
+  (is (= (parse-elisp-number "-3") -3))
+  (is (= (parse-elisp-number "0") 0))
+  (is (= (parse-elisp-number "0.0") 0.0))
+  (is (= (parse-elisp-number "-4.5") -4.5))
+  (is (= (parse-elisp-number "2.71828") 2.71828))
+  (is (= (parse-elisp-number "1.5e2") 150.0))
+  )
 

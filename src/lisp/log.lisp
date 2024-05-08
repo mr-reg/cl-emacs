@@ -4,7 +4,7 @@
   (:export #:log-debug
            #:log-error
            #:log-info
-           #:log-trace
+           #:log-debug1
            #:log-enable
            #:log-disable
            #:log-reset
@@ -32,7 +32,7 @@
           (bt:with-lock-held (*log-config-lock*)
             (let (streams)
               (when *log-file-stream* (push *log-file-stream* streams))
-              (when (<= level 8) ;; 8 = debug
+              (when (<= level 9) ;; 8 = debug, 9 = trace
                 (push *standard-output* streams))
               (values-list streams)
               ))
@@ -64,6 +64,10 @@
 (defun log-disable (pkg)
   (vom:config pkg *default-loglevel*)
   )
+
+(defmacro log-debug1 (format &rest args)
+  `(let ((*print-circle* t))
+     (vom:debug1 ,format ,@args)))
 
 (defmacro log-debug (format &rest args)
   `(let ((*print-circle* t))

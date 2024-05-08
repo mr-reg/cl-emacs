@@ -11,6 +11,8 @@
                          :fiveam
                          :flexi-streams
                          :lisp-binary
+                         :mstrings
+                         :parse-number
                          :pzmq
                          :serapeum
                          :str
@@ -33,7 +35,7 @@
                ;; :cl-emacs/elisp-tests
                ;; :cl-emacs/log
                :cl-emacs/main
-               ;; :cl-emacs/utils
+               :cl-emacs/reader
                )
   ;; :components ((:module "src/lisp"
   ;;               :components (
