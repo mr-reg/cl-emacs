@@ -5,3 +5,4 @@ systems.csv
 cl-emacs.log
 alien-injection.*
 .ccl
+.volumes

@@ -22,8 +22,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   )
 (in-package :cl-emacs/common-utils)
 (log-enable :cl-emacs/common-utils :debug1)
-(def-suite cl-emacs/common-utils)
-(in-suite cl-emacs/common-utils)
+;; (def-suite cl-emacs/common-utils)
+;; (in-suite cl-emacs/common-utils)
 
 (defvar *timer* 0)
 (defun set-timer ()

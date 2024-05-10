@@ -1,12 +1,14 @@
 services:
-  # rabbit:
-  #   image: rabbitmq:3.13.1-management
-  #   ports: 
-  #     - 5672:5672
-  #     - 15672:15672
-  #   environment:
-  #     - RABBITMQ_DEFAULT_USER=guest
-  #     - RABBITMQ_DEFAULT_PASS=guest
+  zot:
+    image: zot
+    build:
+      context: src/docker
+      dockerfile: zot.Dockerfile
+    volumes: 
+      - ${PWD}/.volumes/zot-registry/:/var/lib/registry
+    ports:
+      - 5000:5000
+
   swank:
     image: cl-emacs-swank
     build:
@@ -15,7 +17,14 @@ services:
     ports:
       - 4005:4005
       # - 7447:7447
+    environment:
+      - OCICL_REGISTRY=--plain-http zot:5000/ocicl
+      - OCICL_GLOBALDIR=/ocicl/
+    depends_on:
+      - zot
     volumes: 
+      - .volumes/cache-common-lisp:/root/.cache/common-lisp/
+      - .volumes/cache-ocicl:/ocicl/
       - ${PWD}/:${PWD}/
       - ${PWD}/../emacs/:${PWD}/../emacs/
     command: ["bash", "-c", "cd ${PWD}/ && echo '(sleep 1000000000000)' | ./run-swank.sh"]

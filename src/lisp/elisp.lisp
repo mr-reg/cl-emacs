@@ -33,7 +33,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   )
 (in-package :cl-emacs/elisp)
 (log-enable :cl-emacs/elisp :debug1)
-(def-suite cl-emacs/elisp)
-(in-suite cl-emacs/elisp)
+;; (def-suite cl-emacs/elisp)
+;; (in-suite cl-emacs/elisp)
 
 

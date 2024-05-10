@@ -32,10 +32,25 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 
 (load (truename "~/.local/share/ocicl/ocicl-runtime.lisp"))
+;; (in-package :ocicl-runtime)
+;; (setq *verbose* t)
+;; (defun ocicl-install (name)
+;;   (let ((cmd (format nil "ocicl -g install ~A" name)))
+;;     (when *verbose* (format t "; running: ~A~%" cmd))
+;;     (let ((output (uiop:run-program cmd :output '(:string))))
+;;       (setq *systems-csv-timestamp* 0)
+;;       (when *verbose*
+;;         (format t "~A~%~A~%" cmd output)))))
+
+(setq ocicl-runtime::*systems-dir* "/ocicl/systems/")
+(setq ocicl-runtime::*systems-csv* "/ocicl/systems.csv")
+(setq ocicl-runtime::*verbose* t)
+;; (in-package :cl-user)
+
 (asdf:initialize-source-registry
  '(:source-registry
    :ignore-inherited-configuration
-   (:tree "~/.local/share/ocicl/")))
+   (:tree "/ocicl/")))
 
 ;; (push (truename "~/.emacs.d/straight/repos/slime/") asdf:*central-registry*)
 
@@ -43,10 +58,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;; (load (truename "~/.emacs.d/straight/repos/slime/swank-loader.lisp"))
 ;; (setq swank-loader::*fasl-directory* "/tmp/fasl/")
 ;; (swank-loader:init)
-
-
-
-
 
 (push (truename "./src/lisp/") asdf:*central-registry*)
 (ignore-errors

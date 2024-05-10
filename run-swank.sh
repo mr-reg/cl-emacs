@@ -6,6 +6,19 @@ CCL_PATH=./.ccl/
 rm -Rf $CCL_PATH || echo $CCL_PATH directory does not exist
 mkdir -p $CCL_PATH
 cp -R /ccl/* $CCL_PATH
+rm -Rf ./systems systems.csv
+if [ ! -z "$OCICL_REGISTRY" ]
+then
+    echo using custom ocicl registry $OCICL_REGISTRY
+    echo "$OCICL_REGISTRY" > ~/.local/share/ocicl/ocicl-registry.cfg 
+fi
+if [ ! -z "$OCICL_GLOBALDIR" ]
+then
+    echo using ocicl $OCICL_GLOBALDIR
+    mkdir -p $OCICL_GLOBALDIR
+    ocicl setup $OCICL_GLOBALDIR
+fi
+
 if [ "$ASDF_ONLY" = "1" ]
 then
     echo "starting asdf only"
