@@ -17,27 +17,17 @@ General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
-(uiop:define-package :cl-emacs/elisp
-    ;; (:use :cl-emacs/log)
-    (:import-from #:cl
-                  #:in-package)
-  
-  (:use-reexport
-   :cl-emacs/reader
-   ;; :cl-emacs/elisp/alloc
-   ;; :cl-emacs/elisp/data
-   ;; :cl-emacs/elisp/editfns
-   ;; :cl-emacs/elisp/fileio
-   ;; :cl-emacs/elisp/fns
-   ;; :cl-emacs/elisp/font
-   ;; :cl-emacs/elisp/xfns
-   )
-  ;; (:export #:rpc-apply)
-  )
-(in-package :cl-emacs/elisp)
-(named-readtables:in-readtable mstrings:mstring-syntax)
-;; (log-enable :cl-emacs/elisp :debug1)
-;; (def-suite cl-emacs/elisp)
-;; (in-suite cl-emacs/elisp)
+(load "/asdf/build/asdf.lisp")
 
+(unless (probe-file (truename "~/.local/share/ocicl/ocicl-runtime.lisp"))
+  (error "please install ocicl to continue"))
+(load (truename "~/.local/share/ocicl/ocicl-runtime.lisp"))
 
+(setq ocicl-runtime::*systems-dir* (concatenate 'string (uiop:getenv "OCICL_GLOBALDIR") "systems/"))
+(setq ocicl-runtime::*systems-csv* (concatenate 'string (uiop:getenv "OCICL_GLOBALDIR") "systems.csv"))
+(setq ocicl-runtime::*verbose* t)
+
+(asdf:initialize-source-registry
+ `(:source-registry
+   :ignore-inherited-configuration
+   (:tree ,(uiop:getenv "OCICL_GLOBALDIR"))))

@@ -14,28 +14,47 @@
 
 (defparameter *log-filename* "cl-emacs.log")
 (defvar *log-file-stream* nil)
-(defvar *log-config-lock* (bt:make-lock "log-config-hook"))
+;; (setq *log-file-stream* nil)
+;; (defvar *log-config-lock* (bt:make-lock "log-config-hook"))
+;; (setq *real-log-file-stream* nil)
+(defun file-log-syncer ()
+  (format t "file log syncer started")
+  (with-open-file (file *log-filename* :direction :output
+                                       :if-exists :supersede
+                                       :if-does-not-exist :create
+                                       :sharing :lock)
+    (loop
+      for char = (read-char-no-hang *log-file-stream*)
+      with last-sync = 0
+      do (if char
+             (progn
+               (write-char char file)
+               (incf last-sync)
+               (when (> last-sync 64000)
+                 (setq last-sync 0)
+                 (finish-output file)))
+             (progn
+               (finish-output file)
+               (write-char (read-char *log-file-stream*) file))))))
+(defvar *log-sync-process* nil)
 (defun log-reset ()
-  (bt:with-lock-held (*log-config-lock*)
-    (when *log-file-stream*
-      (ignore-errors
-       (close *log-file-stream*))
-      )
-    (setq *log-file-stream* (open *log-filename* :direction :output
-                                                 :if-exists :supersede
-                                                 :if-does-not-exist :create
-                                                 :sharing :lock)))
-
+  (unless *log-file-stream*
+    (setq *log-file-stream* (cl-plumbing:make-pipe)))
+  (when *log-sync-process*
+    (bt:destroy-thread *log-sync-process*))
+  (setq *log-sync-process* (bt:make-thread #'file-log-syncer :name "file-log-syncer"))
   (setf vom:*log-hook*
         (lambda (level package package-level)
+          (declare (fixnum level))
           (declare (ignore package package-level))
-          (bt:with-lock-held (*log-config-lock*)
+          (progn ;; bt:with-lock-held (*log-config-lock*)
             (let (streams)
               (when *log-file-stream* (push *log-file-stream* streams))
-              (when (<= level 9) ;; 8 = debug, 9 = trace
+              (when (<= level 8) ;; 8 = debug, 9 = debug1
                 (push *standard-output* streams))
               (values-list streams)
-              ))
+              )
+            )
           ))
   (format t "opened log file ~s~%" *log-file-stream*)
 
@@ -83,5 +102,5 @@
 
 (log-reset)
 (log-enable :cl-emacs/log)
-(log-enable :common-lisp-user)
+(log-enable :common-lisp-user :debug1)
 

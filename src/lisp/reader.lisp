@@ -29,6 +29,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (:import-from :common-lisp-user
                 #:memq
                 )
+  (:local-nicknames (:el :cl-emacs/elisp))
   ;; (:use-reexport
   ;;  ;; :cl-emacs/elisp/alien-vars
   ;;  ;; :cl-emacs/elisp/alloc
@@ -39,7 +40,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   ;;  ;; :cl-emacs/elisp/font
   ;;  ;; :cl-emacs/elisp/xfns
   ;;  )
-  ;; (:export #:rpc-apply)
+  (:export #:read-from-string)
   )
 (in-package :cl-emacs/reader)
 (log-enable :cl-emacs/reader :debug1)
@@ -56,7 +57,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (defparameter *states*
   '(state/toplevel
     state/chardata
-    state/line-comment))
+    state/line-comment
+    state/string))
 (loop for state in *states*
       for id from 0
       do (eval `(defparameter ,state ,id)))
@@ -73,9 +75,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (declare (type character char))
   (or (null char) (memq char '(#\space #\tab #\newline))))
 
-(defun start-list (reader)
+(defun start-collector (reader)
   (declare (type reader reader))
-  (log-debug "start list")
+  (log-debug "start collector")
   (with-slots (stack) reader
     (push nil stack)))
 (defun end-list (reader)
@@ -89,12 +91,19 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
             (setq result last-list)
             (error 'reader-stopped-signal))))))
 
-(defun start-chardata (reader)
+(defun end-string (reader)
   (declare (type reader reader))
-  (log-debug "start chardata")
-  (with-slots (stack) reader
-    (push nil stack)))
-
+  (log-debug "end string")
+  (with-slots (stack result) reader
+    (let* ((last-charlist (nreverse (pop stack)))
+           (parsed (with-output-to-string (stream)
+                     (dolist (char last-charlist)
+                       (write-char char stream)))))
+      (if stack
+          (push parsed (car stack))
+          (progn
+            (setq result parsed)
+            (error 'reader-stopped-signal))))))
 (defun end-chardata (reader)
   (declare (type reader reader))
   (log-debug "end chardata")
@@ -116,23 +125,38 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
            (type character char))
   (cond
     ((memq char '(#\())
-     (start-list reader))
+     (start-collector reader))
     ((memq char '(#\)))
      (end-list reader))
     ((whitespace-p char)
      (progn))
     ((memq char '(#\;))
      (process-char reader char :new-state state/line-comment))
+    ((memq char '(#\"))
+     (start-collector reader)
+     (change-state reader state/string)
+     )
     (t
-     (start-chardata reader)
+     (start-collector reader)
      (process-char reader char :new-state state/chardata))
     ))
+(defun state/string-transition (reader char)
+  (declare (type reader reader)
+           (type character char))
+  (with-slots (stack) reader
+    (cond
+      ((memq char '(#\"))
+       (end-string reader)
+       (change-state reader state/toplevel))
+      (t
+       (push char (car stack)))
+      )))
 (defun state/chardata-transition (reader char)
   (declare (type reader reader)
            (type character char))
   (with-slots (stack) reader
     (cond
-      ((or (memq char '(#\( #\)))
+      ((or (memq char '(#\( #\) #\"))
            (whitespace-p char))
        (end-chardata reader)
        (process-char reader char :new-state state/toplevel))
@@ -239,19 +263,22 @@ the end of STRING."
     (multiple-value-bind (result reader) (read-internal stream)
       (with-slots (character-counter) reader
         (cons result character-counter)))))
+
+
 (test read-from-string
-  (is (equalp (read-from-string "test") '(test . 4)))
+  (is (equalp (read-from-string "test") '(el::test . 4)))
   (is (equalp (read-from-string "\"test\" ") '("test" . 6)))
-  (is (equalp (read-from-string "test two") '(test . 5)))
-  (is (equalp (read-from-string "(test 2 3 \"A ( B\")") '((test 2 3 "A ( B") . 10)))
-  (is (equalp (read-from-string "(test (2 3) 4 ())") '((test (2 3) 4 ()) . 17)))
-  (is (equalp (read-from-string #M";;; comment line
-                                   test symbol") '(test . 22)))
-  (is (equalp (read-from-string #M"(defvar test-var nil \"some 
-                                   multiline docstring `with symbols'.\")"
-                                '(defvar test-var nil
-                                  #M"some 
-                                     multiline docstring `with symbols'."))))
+  (is (equalp (read-from-string "test two") '(el::test . 5)))
+  (is (equalp (car (read-from-string "(a\"b\") ")) '(el::a "b")))
+  (is (equalp (car (read-from-string "(test 2 3 \"A ( B\")")) '(el::test 2 3 "A ( B")))
+  (is (equalp (car (read-from-string "(test (2 3) 4 ())")) '(el::test (2 3) 4 ())))
+  (is (equalp (car (read-from-string #M";;; comment line
+                                        test symbol")) 'el::test))
+  (is (equalp (car (read-from-string #M"(defvar test-var nil \"some 
+                                        multiline docstring `with symbols'.\")"))
+              '(el::defvar el::test-var el::nil
+                #M"some 
+                                          multiline docstring `with symbols'.")))
   )
 
 
@@ -261,3 +288,4 @@ the end of STRING."
 
 (defun test-me ()
   (run! 'cl-emacs/reader))
+

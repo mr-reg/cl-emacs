@@ -18,40 +18,12 @@ You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
 
-(require :asdf)
-
 (defvar *asdf-only* nil)
 (format t "*asdf-only*=~s~%" *asdf-only*)
 
 (unless (uiop:file-exists-p "run-swank.lisp")
   (error "please run this program from folder with file cl-emacs.asd"))
-
-(unless (probe-file (truename "~/.local/share/ocicl/ocicl-runtime.lisp"))
-  (error "please install ocicl to continue"))
-
-
-
-(load (truename "~/.local/share/ocicl/ocicl-runtime.lisp"))
-;; (in-package :ocicl-runtime)
-;; (setq *verbose* t)
-;; (defun ocicl-install (name)
-;;   (let ((cmd (format nil "ocicl -g install ~A" name)))
-;;     (when *verbose* (format t "; running: ~A~%" cmd))
-;;     (let ((output (uiop:run-program cmd :output '(:string))))
-;;       (setq *systems-csv-timestamp* 0)
-;;       (when *verbose*
-;;         (format t "~A~%~A~%" cmd output)))))
-
-(setq ocicl-runtime::*systems-dir* "/ocicl/systems/")
-(setq ocicl-runtime::*systems-csv* "/ocicl/systems.csv")
-(setq ocicl-runtime::*verbose* t)
-;; (in-package :cl-user)
-
-(asdf:initialize-source-registry
- '(:source-registry
-   :ignore-inherited-configuration
-   (:tree "/ocicl/")))
-
+(format t "ASDF version ~s~%" asdf::*asdf-version*)
 ;; (push (truename "~/.emacs.d/straight/repos/slime/") asdf:*central-registry*)
 
 (asdf:load-system :swank)

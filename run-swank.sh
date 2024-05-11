@@ -22,9 +22,9 @@ fi
 if [ "$ASDF_ONLY" = "1" ]
 then
     echo "starting asdf only"
-    $CCL_PATH/lx86cl64 --no-init --eval "(defvar *asdf-only* t)" --load run-swank.lisp
+    $CCL_PATH/lx86cl64 --eval "(defvar *asdf-only* t)" --load run-swank.lisp
 else
-    $CCL_PATH/lx86cl64 --no-init --load run-swank.lisp
+    $CCL_PATH/lx86cl64 --load run-swank.lisp
 fi
 # ecl --norc --load run-swank.lisp
 # sbcl --no-sysinit --no-userinit --load run-swank.lisp

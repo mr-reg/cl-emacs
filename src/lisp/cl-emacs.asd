@@ -5,20 +5,22 @@
   :license "GPLv3"
   :long-name "cl-emacs"
   :class :package-inferred-system
-  :defsystem-depends-on (:cffi
+  :defsystem-depends-on (;; :cffi
+                         :cl-plumbing
                          :cl-ppcre
-                         :osicat
+                         ;; :osicat
                          :fiveam
                          :flexi-streams
-                         :lisp-binary
+                         ;; :lisp-binary
                          :mstrings
                          :parse-number
-                         :pzmq
+                         ;; :pzmq
                          :serapeum
                          :str
                          :vom
                          :uiop
-                         :usocket)
+                         ;; :usocket
+                         )
   :depends-on (
                ;; :cl-emacs/elisp/alien-vars
                ;; :cl-emacs/elisp/alloc

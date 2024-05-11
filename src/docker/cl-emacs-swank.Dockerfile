@@ -9,7 +9,7 @@ RUN curl -OL https://github.com/Clozure/ccl/releases/download/v$CCL_VERSION/ccl-
     && curl -OL https://github.com/Clozure/ccl/releases/download/v$CCL_VERSION/linuxx86.tar.gz \
     && tar xf linuxx86.tar.gz
 ENV OCICL_VERSION=1.0.19
-RUN aptitude install -y make less sbcl procps apt-file net-tools clang libzmq5 libzmq5-dev
+RUN aptitude install -y make less sbcl procps apt-file net-tools clang git
 COPY src/docker/ocicl-patch.lisp /tmp/ocicl-patch.lisp
 
 RUN curl -OL https://github.com/ocicl/ocicl/archive/refs/tags/v$OCICL_VERSION.tar.gz \
@@ -23,6 +23,12 @@ RUN mkdir /cl-emacs \
     && mv /root/.local/bin/ocicl /root/.local/bin/ocicl-bin
 COPY src/docker/ocicl /root/.local/bin/ocicl
 RUN chmod +x /root/.local/bin/ocicl
+
+ENV ASDF_VERSION=3.3.6.7
+RUN git clone --depth 1 -b $ASDF_VERSION https://gitlab.common-lisp.net/asdf/asdf.git /asdf \
+    && cd /asdf \
+    && make 
+COPY src/docker/ccl-init.lisp /root/ccl-init.lisp
 COPY run-swank* /cl-emacs/
 #/COPY src /cl-emacs/src
 WORKDIR /cl-emacs
