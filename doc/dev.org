@@ -37,12 +37,12 @@ comm -12 <(sort libs.txt) <(sort temacs.txt)
    --with-included-regex \
    --without-xaw3d \
    --with-modules \
-   --with-dumping=none \
    --with-cairo \
    --without-gpm \
    --with-x-toolkit=no \
    --without-rsvg \
    --without-threads
+   # --with-dumping=none \
   cd src
   make -j8 emacs
   make -j8 temacs.so

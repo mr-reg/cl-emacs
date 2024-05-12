@@ -95,7 +95,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
         sum (ash h shift)))
 
 ;; 
-;;   Let's decode these ancient alien codes
+;; Let's decode these ancient alien codes
 ;; 
 ;;               ========
 ;;          ====           ===
@@ -134,7 +134,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
           (named-list)
           (octals) (hex))
       (labels ((change-mode (new-mode)
-                 ;; (log-debug "new-mode ~s" new-mode)
                  (setq mode new-mode))
                (return-result (result)
                  (unless (= position n-chars)
