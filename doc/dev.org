@@ -183,3 +183,5 @@ color_run llvm-cov report ./temacs -instr-profile=default.profdata  | less -SR
 #+end_src
 * profiling
 valgrind --fair-sched=yes --tool=callgrind ./temacs
+* reader notation
+https://www.emacswiki.org/emacs/EmacsSymbolNotation

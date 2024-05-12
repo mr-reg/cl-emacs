@@ -19,7 +19,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
 
 (uiop:define-package :cl-emacs/main
-    (:use :common-lisp :cl-emacs/log :cl-emacs/elisp :fiveam)
+    (:use :common-lisp :cl-emacs/log :fiveam)
   (:import-from :common-lisp-user #:quit)
   )
 (in-package :cl-emacs/main)

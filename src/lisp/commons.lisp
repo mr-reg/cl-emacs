@@ -19,7 +19,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
 (uiop:define-package :cl-emacs/commons
     (:use :common-lisp :cl-emacs/log :alexandria :fiveam)
-  (:export #:reader-error))
+  (:export #:reader-error
+           #:reexport-symbols
+           #:char-list-to-string))
 (in-package :cl-emacs/commons)
 (log-enable :cl-emacs/commons :debug1)
 
@@ -33,3 +35,12 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
     (setq *timer* new-time)
     (* 1.0 (/ time internal-time-units-per-second))))
 
+(defun reexport-symbols (package-from)
+  (do-external-symbols (sym package-from)
+    (shadowing-import sym)
+    (export sym)))
+
+(defun char-list-to-string (char-list)
+  (with-output-to-string (stream)
+    (dolist (char char-list)
+      (write-char char stream))))

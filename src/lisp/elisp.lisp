@@ -18,20 +18,20 @@ You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
 (uiop:define-package :cl-emacs/elisp
-    ;; (:use :cl-emacs/log)
     (:import-from #:cl
                   #:in-package)
-  
-  (:use-reexport
-   :cl-emacs/reader
-   ;; :cl-emacs/elisp/alloc
-   ;; :cl-emacs/elisp/data
-   ;; :cl-emacs/elisp/editfns
-   ;; :cl-emacs/elisp/fileio
-   ;; :cl-emacs/elisp/fns
-   ;; :cl-emacs/elisp/font
-   ;; :cl-emacs/elisp/xfns
-   )
+  ;; (:import-from #:cl-emacs/commons
+  ;;               #:reexport-symbols)
+  ;; (:use-reexport
+  ;;  :cl-emacs/reader
+  ;;  ;; :cl-emacs/elisp/alloc
+  ;;  ;; :cl-emacs/elisp/data
+  ;;  ;; :cl-emacs/elisp/editfns
+  ;;  ;; :cl-emacs/elisp/fileio
+  ;;  ;; :cl-emacs/elisp/fns
+  ;;  ;; :cl-emacs/elisp/font
+  ;;  ;; :cl-emacs/elisp/xfns
+  ;;  )
   ;; (:export #:rpc-apply)
   )
 (in-package :cl-emacs/elisp)
@@ -40,4 +40,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;; (def-suite cl-emacs/elisp)
 ;; (in-suite cl-emacs/elisp)
 
+
+;; (in-package :cl-emacs/elisp)
+(defun reexport-symbols (package)
+  (cl-emacs/commons:reexport-symbols package))
 

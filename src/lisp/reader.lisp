@@ -96,9 +96,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (log-debug "end string")
   (with-slots (stack result) reader
     (let* ((last-charlist (nreverse (pop stack)))
-           (parsed (with-output-to-string (stream)
-                     (dolist (char last-charlist)
-                       (write-char char stream)))))
+           (parsed (char-list-to-string last-charlist)))
       (if stack
           (push parsed (car stack))
           (progn
@@ -109,9 +107,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (log-debug "end chardata")
   (with-slots (stack result) reader
     (let* ((last-charlist (nreverse (pop stack)))
-           (last-chardata (str:upcase (with-output-to-string (stream)
-                                        (dolist (char last-charlist)
-                                          (write-char char stream)))))
+           (last-chardata (str:upcase (char-list-to-string last-charlist)))
            (non-symbol (parse-elisp-number last-chardata))
            (parsed (or non-symbol (intern last-chardata :cl-emacs/elisp))))
       (if stack
@@ -290,3 +286,5 @@ the end of STRING."
 (defun test-me ()
   (run! 'cl-emacs/reader))
 
+(in-package :cl-emacs/elisp)
+(reexport-symbols :cl-emacs/reader)
