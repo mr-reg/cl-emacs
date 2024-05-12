@@ -24,7 +24,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
      :alexandria
      :fiveam
      :cl-emacs/reader-utils
-     :cl-emacs/common-utils)
+     :cl-emacs/commons)
   (:shadow #:read #:read-from-string)
   (:import-from :common-lisp-user
                 #:memq
@@ -284,6 +284,7 @@ the end of STRING."
 
 (defun real-file-test ()
   (with-open-file (stream "../emacs/lisp/master.el" :direction :input)
+    (read stream)
     (read stream)))
 
 (defun test-me ()

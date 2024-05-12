@@ -17,13 +17,14 @@ General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
-(uiop:define-package :cl-emacs/common-utils
+(uiop:define-package :cl-emacs/commons
     (:use :common-lisp :cl-emacs/log :alexandria :fiveam)
-  )
-(in-package :cl-emacs/common-utils)
-(log-enable :cl-emacs/common-utils :debug1)
-;; (def-suite cl-emacs/common-utils)
-;; (in-suite cl-emacs/common-utils)
+  (:export #:reader-error))
+(in-package :cl-emacs/commons)
+(log-enable :cl-emacs/commons :debug1)
+
+(defclass reader-error (error)
+  ())
 
 (defvar *timer* 0)
 (defun set-timer ()
