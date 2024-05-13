@@ -25,8 +25,10 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
      :fiveam
      :cl-emacs/commons)
   (:import-from :common-lisp-user
-                #:memq
-                )
+                #:memq)
+  (:export #:read-emacs-character
+           #:extra-symbols-in-character-spec-error
+           #:invalid-character-spec-error)
   (:local-nicknames (:el :cl-emacs/elisp)))
 (in-package :cl-emacs/character-reader)
 (log-enable :cl-emacs/character-reader :debug1)
@@ -51,12 +53,15 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (defclass extra-symbols-in-character-spec-error (character-reader-error)
   ((position :initarg :position
              :initform -1
-             :type fixnum)))
-(defmethod initialize-instance :after ((e extra-symbols-in-character-spec-error) &key position input)
+             :type fixnum)
+   (parsed-code :initarg :parsed-code
+                :initform 0
+                :type fixnum)))
+(defmethod initialize-instance :after ((e extra-symbols-in-character-spec-error) &key position input parsed-code)
   (with-slots (details) e
     (let ((rem (- (length input) position)))
-      (setq details (format nil "~a last character~p not parsed"
-                            rem rem)))))
+      (setq details (format nil "~a last character~p not parsed. Current result ~a"
+                            rem rem parsed-code)))))
 
 (defun decode-named-char (raw-input name)
   (declare (string name))
@@ -136,10 +141,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (labels ((change-mode (new-mode)
                  (setq mode new-mode))
                (return-result (result)
-                 (unless (= position n-chars)
-                   (error 'extra-symbols-in-character-spec-error
-                          :input input
-                          :position position))
                  (loop for _ below (+ caret control)
                        do (cond
                             ((= result 63) (incf result 64))
@@ -150,6 +151,11 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                  (loop for _ below (+ super)
                        do (setq result (logior result #x800000)))
                  (setq result (logior result modifiers))
+                 (unless (= position n-chars)
+                   (error 'extra-symbols-in-character-spec-error
+                          :input input
+                          :position position
+                          :parsed-code result))
                  (return-from parsing result))
 
                (process-one-character (char)
@@ -246,14 +252,13 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                                 :details (format nil "bad symbol after the modifier ~a" char)))))
                    (super-modifier
                     (cond
-                      ((null char)
-                       (decf super)
-                       (return-result 32))
                       ((eq char #\-)
                        (change-mode 'toplevel))
-                      (t (error 'invalid-character-spec-error
-                                :input input
-                                :details (format nil "bad symbol after the modifier ~a" char)))))
+                      (t
+                       (decf super)
+                       (when char
+                         (decf position))
+                       (return-result 32) )))
                    (named
                     (cond
                       ((null char)
@@ -573,6 +578,14 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (is (= 8388733 (read-emacs-character "\\s-\\}")))
   (is (= 8388733 (read-emacs-character "\\s-\\}")))
   (is (= 8388608 (read-emacs-character "\\s-\\s-\\0")))
+  (signals extra-symbols-in-character-spec-error (read-emacs-character "\\s."))
+  (is (= 32 (handler-case
+                (progn
+                  (read-emacs-character "\\s.")
+                  nil)
+              (extra-symbols-in-character-spec-error (e)
+                (with-slots (parsed-code) e
+                  parsed-code)))))
   )
 
 (test read-n-syntax

@@ -6,7 +6,8 @@
 (defun make-read-test-data (filename)
   (let ((contents (f-read-text filename))
         (output-filename (concat (replace-regexp-in-string "[/~]" "_" filename) ".result"))
-        (position 0))
+        (position 0)
+        body)
     (f-write "" 'utf-8 output-filename)
     (message output-filename)
     (ignore-errors
@@ -14,11 +15,13 @@
        (let ((expr (read-from-string contents position)))
          (setq position (cdr expr))
          (setq expr (car expr))
-         (f-append
-          (with-output-to-string
-            (print expr))
-          'utf-8 output-filename)
+         (setq body (with-output-to-string
+                      (print expr)))
+         
          )))
+    (f-append
+     body
+     'utf-8 output-filename)
     ))
 (defun recurse-process-dir ()
   (let ((dir-name "~/github/emacs/"))

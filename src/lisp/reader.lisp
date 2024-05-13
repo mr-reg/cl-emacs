@@ -24,6 +24,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
      :alexandria
      :fiveam
      :cl-emacs/reader-utils
+     :cl-emacs/character-reader
      :cl-emacs/commons)
   (:shadow #:read #:read-from-string)
   (:import-from :common-lisp-user
@@ -51,14 +52,20 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (defclass reader-signal (error)
   ())
 
+(define-condition invalid-reader-input-error (reader-signal)
+  ())
+
 (define-condition reader-stopped-signal (reader-signal)
   ())
 
 (defparameter *states*
   '(state/toplevel
     state/chardata
+    state/character
     state/line-comment
     state/string))
+
+;; using numeric states to select transition function faster
 (loop for state in *states*
       for id from 0
       do (eval `(defparameter ,state ,id)))
@@ -67,8 +74,13 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (state 0 :type fixnum)
   (stack nil :type list)
   (character-counter 0 :type fixnum)
-  (result nil)
-  )
+  (extra-buffer nil :type list)
+  (result nil))
+(defun push-extra-char (reader char)
+  (with-slots (extra-buffer) reader
+    (push char extra-buffer)))
+
+
 (defun whitespace-p (char)
   #M"return t if character is whitespace or nil. 
      nil used for EOF"
@@ -80,17 +92,53 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (log-debug "start collector")
   (with-slots (stack) reader
     (push nil stack)))
+
 (defun end-list (reader)
   (declare (type reader reader))
   (log-debug "end list")
   (with-slots (stack result) reader
-    (let ((last-list (nreverse (pop stack))))
+    (let ((reversed-list (pop stack))
+          result-list)
+      (loop for element in reversed-list
+            for idx from 0
+            do (cond
+                 ((and (= idx 1) (eq element 'el::.))
+                  (setq result-list (car result-list)))
+                 (t (push element result-list))))
       (if stack
-          (push last-list (car stack))
+          (push result-list (car stack))
           (progn
-            (setq result last-list)
+            (setq result result-list)
             (error 'reader-stopped-signal))))))
 
+(defun state/toplevel-transition (reader char)
+  (declare (type reader reader)
+           (type character char))
+  (cond
+    ((eq char #\()
+     (start-collector reader))
+    ((eq char #\))
+     (end-list reader))
+    ((whitespace-p char)
+     ;; do nothing on whitespace
+     (progn))
+    ((eq char #\;)
+     (change-state reader state/line-comment)
+     (push-extra-char reader char))
+    ((eq char #\")
+     (start-collector reader)
+     (change-state reader state/string))
+    ((eq char #\?)
+     (start-collector reader)
+     (change-state reader state/character))
+    (t
+     (start-collector reader)
+     (change-state reader state/chardata)
+     (push-extra-char reader char)
+     )
+    ))
+
+;; string
 (defun end-string (reader)
   (declare (type reader reader))
   (log-debug "end string")
@@ -102,6 +150,56 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
           (progn
             (setq result parsed)
             (error 'reader-stopped-signal))))))
+
+(defun state/string-transition (reader char)
+  (declare (type reader reader)
+           (type character char))
+  (with-slots (stack) reader
+    (cond
+      ((memq char '(#\"))
+       (end-string reader)
+       (change-state reader state/toplevel))
+      (t
+       (push char (car stack)))
+      )))
+
+;; character
+(defun end-character (reader)
+  (declare (type reader reader))
+  (log-debug "end character")
+  (with-slots (stack result extra-buffer) reader
+    (let* ((last-charlist (nreverse (pop stack)))
+           (parsed (char-list-to-string last-charlist))
+           code)
+      (handler-case
+          (setq code (read-emacs-character parsed))
+        (extra-symbols-in-character-spec-error (e)
+          (with-slots (cl-emacs/character-reader::position cl-emacs/character-reader::parsed-code) e
+            (let ((remainder (str:substring cl-emacs/character-reader::position t parsed)))
+              (log-debug1 "~s parsed:~s position:~s" e parsed cl-emacs/character-reader::position)
+              (log-debug1 "character definition remainder ~s" remainder)
+              (loop for idx from (1- (length remainder)) downto 0
+                    do (push (aref remainder idx) extra-buffer))
+              (setq code cl-emacs/character-reader::parsed-code)))))
+      (if stack
+          (push code (car stack))
+          (progn
+            (setq result code)
+            (error 'reader-stopped-signal))))))
+
+(defun state/character-transition (reader char)
+  (declare (type reader reader)
+           (type character char))
+  (with-slots (stack) reader
+    (cond
+      ((whitespace-p char)
+       (push-extra-char reader char) ; put whitespace early, because it is stack 
+       (end-character reader)
+       (change-state reader state/toplevel))
+      (t
+       (push char (car stack))))))
+
+;; chardata
 (defun end-chardata (reader)
   (declare (type reader reader))
   (log-debug "end chardata")
@@ -116,37 +214,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
             (setq result parsed)
             (error 'reader-stopped-signal))))))
 
-(defun state/toplevel-transition (reader char)
-  (declare (type reader reader)
-           (type character char))
-  (cond
-    ((memq char '(#\())
-     (start-collector reader))
-    ((memq char '(#\)))
-     (end-list reader))
-    ((whitespace-p char)
-     (progn))
-    ((memq char '(#\;))
-     (process-char reader char :new-state state/line-comment))
-    ((memq char '(#\"))
-     (start-collector reader)
-     (change-state reader state/string)
-     )
-    (t
-     (start-collector reader)
-     (process-char reader char :new-state state/chardata))
-    ))
-(defun state/string-transition (reader char)
-  (declare (type reader reader)
-           (type character char))
-  (with-slots (stack) reader
-    (cond
-      ((memq char '(#\"))
-       (end-string reader)
-       (change-state reader state/toplevel))
-      (t
-       (push char (car stack)))
-      )))
 (defun state/chardata-transition (reader char)
   (declare (type reader reader)
            (type character char))
@@ -155,20 +222,25 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       ((or (memq char '(#\( #\) #\"))
            (whitespace-p char))
        (end-chardata reader)
-       (process-char reader char :new-state state/toplevel))
+       (change-state reader state/toplevel)
+       (push-extra-char reader char)
+       )
       (t
        (when (or (upper-case-p char) (eq char #\_))
          (push #\_ (car stack)))
        (push char (car stack))
        )
       )))
+;; comment
 (defun state/line-comment-transition (reader char)
   (declare (type reader reader)
            (type character char))
   (with-slots (stack) reader
     (cond
       ((eq char #\newline)
-       (process-char reader char :new-state state/toplevel))
+       (change-state reader state/toplevel)
+       (push-extra-char reader char)
+       )
       (t (progn)))))
 
 (defvar *transitions* nil)
@@ -216,18 +288,34 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
     (let ((handler (aref *transitions* state)))
       (funcall handler reader char))))
 
+(declaim (inline process-extra-buffer))
+(defun process-extra-buffer (reader)
+  (with-slots (extra-buffer) reader
+    (log-debug1 "checking extra-buffer: ~s" extra-buffer)
+    (loop while extra-buffer
+          do (let ((char (car extra-buffer)))
+               (log-debug1 "processing extra character ~s" char)
+               (setq extra-buffer (cdr extra-buffer))
+               ;; extra buffer is modified during character processing
+               (process-char reader char)))))
+
 (defun read-internal (stream)
   (let ((reader (make-reader :state state/toplevel)))
-    (with-slots (state stack result character-counter) reader
+    (with-slots (state stack result character-counter extra-buffer) reader
       (handler-case
           (handler-case
               (loop
                 do (let ((char (read-char stream)))
                      (incf character-counter)
-                     (process-char reader char)))
+                     (process-char reader char)
+                     (process-extra-buffer reader)))
             (end-of-file ()
               (log-debug1 "end of file")
-              (process-char reader nil)))
+              (process-extra-buffer reader)
+              ;; final whitespace to finish any structure
+              (process-char reader nil)
+              ;; and extra buffer finally
+              (process-extra-buffer reader)))
         (reader-stopped-signal ()
           (log-debug1 "reader stopped")))
       (log-debug "stack: ~s" stack)
@@ -248,13 +336,13 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (multiple-value-bind (result) (read-internal stream)
     result))
 (defun read-from-string (string &optional (start 0) (end (length string)))
-  "Read one Lisp expression which is represented as text by STRING.
-Returns a cons: (OBJECT-READ . FINAL-STRING-INDEX).
-FINAL-STRING-INDEX is an integer giving the position of the next
-remaining character in STRING.  START and END optionally delimit
-a substring of STRING from which to read;  they default to 0 and
-\(length STRING) respectively.  Negative values are counted from
-the end of STRING."
+  #M"Read one Lisp expression which is represented as text by STRING.
+     Returns a cons: (OBJECT-READ . FINAL-STRING-INDEX).
+     FINAL-STRING-INDEX is an integer giving the position of the next
+     remaining character in STRING.  START and END optionally delimit
+     a substring of STRING from which to read;  they default to 0 and
+     \(length STRING) respectively.  Negative values are counted from
+     the end of STRING."
   (with-input-from-string (stream (str:substring start end string))
     (multiple-value-bind (result reader) (read-internal stream)
       (with-slots (character-counter) reader
@@ -262,19 +350,39 @@ the end of STRING."
 
 
 (test read-from-string
-  (is (equalp (read-from-string "test") '(el::test . 4)))
-  (is (equalp (read-from-string "\"test\" ") '("test" . 6)))
-  (is (equalp (read-from-string "test two") '(el::test . 5)))
-  (is (equalp (car (read-from-string "(a\"b\") ")) '(el::a "b")))
-  (is (equalp (car (read-from-string "(test 2 3 \"A ( B\")")) '(el::test 2 3 "A ( B")))
-  (is (equalp (car (read-from-string "(test (2 3) 4 ())")) '(el::test (2 3) 4 ())))
-  (is (equalp (car (read-from-string #M";;; comment line
-                                        test symbol")) 'el::test))
-  (is (equalp (car (read-from-string #M"(defvar test-var nil \"some 
-                                        multiline docstring `with symbols'.\")"))
-              '(el::defvar el::test-var el::nil
+  (is (equalp '(el::test . 4)
+              (read-from-string "test")))
+  (is (equalp '("test" . 6)
+              (read-from-string "\"test\" ")))
+  (is (equalp '(el::test . 5)
+              (read-from-string "test two")))
+  (is (equalp '(el::a "b")
+              (car (read-from-string "(a\"b\") "))))
+  (is (equalp '(el::test 2 3 "A ( B")
+              (car (read-from-string "(test 2 3 \"A ( B\")"))))
+  (is (equalp '(el::test (2 3) 4 ())
+              (car (read-from-string "(test (2 3) 4 ())"))))
+  (is (equalp 'el::test
+              (car (read-from-string #M";;; comment line
+                                        test symbol"))))
+  (is (equalp '(el::defvar el::test-var el::nil
                 #M"some 
-                                          multiline docstring `with symbols'.")))
+                   multiline docstring `with symbols'.")
+              (car (read-from-string #M"(defvar test-var nil \"some 
+                                        multiline docstring `with symbols'.\")"))))
+  (is (equalp '(el::.)
+              (car (read-from-string "(.)"))))
+  ;; "(. 4)" = 4, looks like emacs bug, not supported yet
+  ;; "(?A.?B)" , not supported yet, looks like some hardcoded case
+  (is (equalp '(3 . 4)
+              (car (read-from-string "(3 .  4)"))))
+  (is (equalp '(65 66)
+              (car (read-from-string "(?A?B))"))))
+  (is (equalp '(65 . 66)
+              (car (read-from-string "(?A. ?B))"))))
+  (is (equalp '(el::a 92 65 66 65 32 . 3)
+              (car (read-from-string "(a ?\\\\ ?A?B ?A?\\s. 3)"))))
+  ;; "" eof
   )
 
 
