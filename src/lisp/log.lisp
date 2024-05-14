@@ -5,6 +5,7 @@
            #:log-error
            #:log-info
            #:log-debug1
+           #:log-debug2
            #:log-enable
            #:log-disable
            #:log-reset
@@ -14,6 +15,9 @@
 
 (defparameter *log-filename* "cl-emacs.log")
 (defvar *log-file-stream* nil)
+;; 8 = debug, 9 = debug1, 10 = debug2
+(defvar *loglevel-file* 9)
+(defvar *loglevel-stdout* 8)
 ;; (setq *log-file-stream* nil)
 ;; (defvar *log-config-lock* (bt:make-lock "log-config-hook"))
 ;; (setq *real-log-file-stream* nil)
@@ -49,8 +53,10 @@
           (declare (ignore package package-level))
           (progn ;; bt:with-lock-held (*log-config-lock*)
             (let (streams)
-              (when *log-file-stream* (push *log-file-stream* streams))
-              (when (<= level 8) ;; 8 = debug, 9 = debug1
+              (when (and *log-file-stream*
+                         (<= level *loglevel-file*))
+                (push *log-file-stream* streams))
+              (when (<= level *loglevel-stdout*)
                 (push *standard-output* streams))
               (values-list streams)
               )
@@ -84,6 +90,9 @@
   (vom:config pkg *default-loglevel*)
   )
 
+(defmacro log-debug2 (format &rest args)
+  `(let ((*print-circle* t))
+     (vom:debug2 ,format ,@args)))
 (defmacro log-debug1 (format &rest args)
   `(let ((*print-circle* t))
      (vom:debug1 ,format ,@args)))

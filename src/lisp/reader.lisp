@@ -55,6 +55,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (define-condition invalid-reader-input-error (reader-signal)
   ())
 
+(define-condition eof-reader-error (reader-signal)
+  ())
+
 (define-condition reader-stopped-signal (reader-signal)
   ())
 
@@ -75,7 +78,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (stack nil :type list)
   (character-counter 0 :type fixnum)
   (extra-buffer nil :type list)
-  (result nil))
+  (result '-undefined-))
 (defun push-extra-char (reader char)
   (with-slots (extra-buffer) reader
     (push char extra-buffer)))
@@ -89,13 +92,13 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (defun start-collector (reader)
   (declare (type reader reader))
-  (log-debug "start collector")
+  (log-debug1 "start collector")
   (with-slots (stack) reader
     (push nil stack)))
 
 (defun end-list (reader)
   (declare (type reader reader))
-  (log-debug "end list")
+  (log-debug1 "end list")
   (with-slots (stack result) reader
     (let ((reversed-list (pop stack))
           result-list)
@@ -141,7 +144,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;; string
 (defun end-string (reader)
   (declare (type reader reader))
-  (log-debug "end string")
+  (log-debug1 "end string")
   (with-slots (stack result) reader
     (let* ((last-charlist (nreverse (pop stack)))
            (parsed (char-list-to-string last-charlist)))
@@ -166,7 +169,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;; character
 (defun end-character (reader)
   (declare (type reader reader))
-  (log-debug "end character")
+  (log-debug1 "end character")
   (with-slots (stack result extra-buffer) reader
     (let* ((last-charlist (nreverse (pop stack)))
            (parsed (char-list-to-string last-charlist))
@@ -202,7 +205,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;; chardata
 (defun end-chardata (reader)
   (declare (type reader reader))
-  (log-debug "end chardata")
+  (log-debug1 "end chardata")
   (with-slots (stack result) reader
     (let* ((last-charlist (nreverse (pop stack)))
            (last-chardata (str:upcase (char-list-to-string last-charlist)))
@@ -276,13 +279,13 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (defun change-state (reader new-state)
   (with-slots (state stack) reader
     (log-debug1 "transition to state ~s" (nth new-state *states*))
-    (log-debug1 "stack: ~s" stack)
+    (log-debug2 "stack: ~s" stack)
     (setq state new-state)))
 (defun process-char (reader char &key new-state)
   (declare (type reader reader)
            (type character char))
   (with-slots (state) reader
-    (log-debug1 "process char ~s in state ~s" char state)
+    (log-debug2 "process char ~s in state ~s" char state)
     (when new-state
       (change-state reader new-state))
     (let ((handler (aref *transitions* state)))
@@ -291,10 +294,10 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (declaim (inline process-extra-buffer))
 (defun process-extra-buffer (reader)
   (with-slots (extra-buffer) reader
-    (log-debug1 "checking extra-buffer: ~s" extra-buffer)
+    (log-debug2 "checking extra-buffer: ~s" extra-buffer)
     (loop while extra-buffer
           do (let ((char (car extra-buffer)))
-               (log-debug1 "processing extra character ~s" char)
+               (log-debug2 "processing extra character ~s" char)
                (setq extra-buffer (cdr extra-buffer))
                ;; extra buffer is modified during character processing
                (process-char reader char)))))
@@ -318,8 +321,10 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
               (process-extra-buffer reader)))
         (reader-stopped-signal ()
           (log-debug1 "reader stopped")))
-      (log-debug "stack: ~s" stack)
-      (log-debug "result: ~s" result)
+      (log-debug2 "stack: ~s" stack)
+      (log-debug1 "result: ~s" result)
+      (when (or stack (eq result '-undefined-))
+        (error 'eof-reader-error))
       (values result reader))))
 
 (defun read (stream)
@@ -372,17 +377,40 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                                         multiline docstring `with symbols'.\")"))))
   (is (equalp '(el::.)
               (car (read-from-string "(.)"))))
-  ;; "(. 4)" = 4, looks like emacs bug, not supported yet
   ;; "(?A.?B)" , not supported yet, looks like some hardcoded case
   (is (equalp '(3 . 4)
               (car (read-from-string "(3 .  4)"))))
+  (is (equalp '4
+              (car (read-from-string "(. 4)"))))
   (is (equalp '(65 66)
               (car (read-from-string "(?A?B))"))))
   (is (equalp '(65 . 66)
               (car (read-from-string "(?A. ?B))"))))
   (is (equalp '(el::a 92 65 66 65 32 . 3)
               (car (read-from-string "(a ?\\\\ ?A?B ?A?\\s. 3)"))))
-  ;; "" eof
+  (is (equalp nil (car (read-from-string "()"))))
+  (signals eof-reader-error (read-from-string ""))
+  (signals eof-reader-error (read-from-string "("))
+  (is (equalp '(el::\:test)
+              (car (read-from-string "(:test))"))))
+  ;; (is (equalp '(65 66)
+  ;;             (car (read-from-string "'(test))"))))
+  ;; ` , ,@
+  ;;;###autoload
+  ;; #'test
+  ;; #'(lambda (x) (use-package-require-after-load x body))
+  ;; #'*
+  ;; #'.
+  ;; #'gnus-article-jump-to-part
+  ;; #(" " 0 1 (invisible t))
+  ;; #+A invalid syntax
+  ;; '#'test - function
+  ;; #'test - symbol
+  ;; #[1 2] - bytecode?
+  ;; #\" eof?
+  ;; #o600
+  ;; #x000100
+
   )
 
 
