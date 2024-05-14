@@ -16,8 +16,8 @@
 (defparameter *log-filename* "cl-emacs.log")
 (defvar *log-file-stream* nil)
 ;; 8 = debug, 9 = debug1, 10 = debug2
-(defvar *loglevel-file* 9)
-(defvar *loglevel-stdout* 8)
+(defparameter *loglevel-file* 10)
+(defparameter *loglevel-stdout* 8)
 ;; (setq *log-file-stream* nil)
 ;; (defvar *log-config-lock* (bt:make-lock "log-config-hook"))
 ;; (setq *real-log-file-stream* nil)
