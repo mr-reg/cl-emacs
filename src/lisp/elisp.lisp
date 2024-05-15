@@ -17,9 +17,10 @@ General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
+;; (defpackage :cl-emacs/elisp)
 (uiop:define-package :cl-emacs/elisp
-    (:import-from #:cl
-                  #:in-package)
+  ;; (:import-from #:cl
+  ;;               #:in-package)
   ;; (:import-from #:cl-emacs/commons
   ;;               #:reexport-symbols)
   ;; (:use-reexport
@@ -34,6 +35,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   ;;  )
   ;; (:export #:rpc-apply)
   )
+;; (delete-package :cl-emacs/elisp)
 (in-package :cl-emacs/elisp)
 (named-readtables:in-readtable mstrings:mstring-syntax)
 ;; (log-enable :cl-emacs/elisp :debug1)

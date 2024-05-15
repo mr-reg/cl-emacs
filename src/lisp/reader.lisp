@@ -175,10 +175,13 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
          (change-state reader state/character))
         ((eq char #\')
          (push 'single-quote (car mod-stack))
-         (log-debug1 "add single-quote modifier")
-         ;; (start-collector reader)
-         ;; (push (make-el-symbol "quote") (car (reader-stack reader)))
-         )
+         (log-debug1 "add single-quote modifier"))
+        ((eq char #\`)
+         (push 'back-quote (car mod-stack))
+         (log-debug1 "add back-quote modifier"))
+        ((eq char #\,)
+         (push 'comma (car mod-stack))
+         (log-debug1 "add comma modifier"))
         (t
          (start-collector reader)
          (change-state reader state/chardata)
@@ -256,7 +259,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
            (type character char))
   (with-slots (stack) reader
     (cond
-      ((or (memq char '(#\( #\) #\" #\'))
+      ((or (memq char '(#\( #\) #\" #\' #\` #\,))
            (whitespace-p char))
        (end-chardata reader)
        (change-state reader state/toplevel)
@@ -289,7 +292,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   ;; (setf *stop-handlers* (make-array n-states))
   )
 (dolist (state *states*)
-  (log-debug "~s" (symbol-name state))
+  (log-debug1 "found state ~s" (symbol-name state))
   (eval `(setf (aref *transitions* ,state)
                ,(let* ((transition-function-name (concatenate 'string (symbol-name state) "-TRANSITION"))
                        (transition-function-symbol (find-symbol transition-function-name)))
@@ -313,10 +316,14 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (defun apply-modifiers (something modifiers)
   (log-debug2 "applying modifiers ~s to:~s" modifiers something)
   (dolist (modifier modifiers)
+    (log-debug1 "process ~s modifier" modifier)
     (ecase modifier
       (single-quote
-       (log-debug1 "process single-quote modifier")
-       (setq something (list 'el::quote something)))))
+       (setq something (list 'el::quote something)))
+      (back-quote
+       (setq something (list 'el::\` something)))
+      (comma
+       (setq something (list 'el::\, something)))))
   ;; all modifiers processed
   (log-debug2 "modification result ~s" something)
   something)
@@ -460,7 +467,24 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
               (car (read-from-string "'(\"a\"'b)"))))
   (is (equalp (quote '(65 'el::b))
               (car (read-from-string "'(?A'b)"))))
-  
+
+  (is (equalp (quote (el::\` el::test-symbol))
+              (car (read-from-string "`test-symbol"))))
+  (is (equalp (quote (el::\` (el::test-symbol)))
+              (car (read-from-string "`(test-symbol)"))))
+  (is (equalp (quote (el::\` (el::\` el::test-symbol)))
+              (car (read-from-string "``test-symbol"))))
+  (is (equalp (quote ((el::\` el::test-symbol) (el::\, 3)))
+              (car (read-from-string "(`test-symbol ,3)"))))
+  ;; real emacs test (equal (quote (\` (form ((\, a) (\, ((\` (b (\, c))))))))) (car (read-from-string "`(form (,a ,(`(b ,c))))")))
+  (is (equalp (quote (el::\` (el::form ((el::\, el::a) (el::\, ((el::\` (el::b (el::\, el::c)))))))))
+              (car (read-from-string "`(form (,a ,(`(b ,c))))"))))
+  (signals eof-reader-error (read-from-string "`,"))
+  (is (equalp (quote el::\,)
+              (car (read-from-string "\,"))))
+  (is (equalp (quote 'el::\,)
+              (car (read-from-string "'\,"))))
+
   ;; ` , ,@
   ;;;###autoload
   ;; #'test

@@ -32,8 +32,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;; (swank-loader:init)
 
 (push (truename "./src/lisp/") asdf:*central-registry*)
-(ignore-errors
- (asdf:load-system :cl-emacs))
+;; (ignore-errors
+;;  (asdf:load-system :cl-emacs))
 
 
 (unless *asdf-only*
