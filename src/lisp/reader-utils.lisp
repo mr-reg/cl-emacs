@@ -26,18 +26,18 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (def-suite cl-emacs/reader-utils)
 (in-suite cl-emacs/reader-utils)
 
-(defun parse-elisp-number (chardata)
-  (handler-case
-      (parse-number:parse-real-number chardata)
-    (parse-error ()
-      nil)))
-(test parse-elisp-number
-  (is (= (parse-elisp-number "24") 24))
-  (is (= (parse-elisp-number "-3") -3))
-  (is (= (parse-elisp-number "0") 0))
-  (is (= (parse-elisp-number "0.0") 0.0))
-  (is (= (parse-elisp-number "-4.5") -4.5))
-  (is (= (parse-elisp-number "2.71828") 2.71828))
-  (is (= (parse-elisp-number "1.5e2") 150.0))
-  )
+;; (defun parse-elisp-number (chardata)
+;;   (handler-case
+;;       (parse-number:parse-real-number chardata)
+;;     (parse-error ()
+;;       nil)))
+;; (test parse-elisp-number
+;;   (is (= (parse-elisp-number "24") 24))
+;;   (is (= (parse-elisp-number "-3") -3))
+;;   (is (= (parse-elisp-number "0") 0))
+;;   (is (= (parse-elisp-number "0.0") 0.0))
+;;   (is (= (parse-elisp-number "-4.5") -4.5))
+;;   (is (= (parse-elisp-number "2.71828") 2.71828))
+;;   (is (= (parse-elisp-number "1.5e2") 150.0))
+;;   )
 
