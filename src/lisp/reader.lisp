@@ -91,6 +91,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (with-slots (extra-buffer) reader
     (push char extra-buffer)))
 (defun pop-stack-frame (reader)
+  (log-debug2 "pop stack frame")
   (with-slots (stack mod-stack) reader
     (values (pop stack) (pop mod-stack))))
 
@@ -115,8 +116,11 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (push nil stack)
       (push nil mod-stack))))
 
-(defun push-modifier (reader modifier)
+(defun push-modifier (reader modifier &key replace-last)
   (with-slots (mod-stack) reader
+    (log-debug1 "add ~s modifier replace-last:~s" modifier replace-last)
+    (when replace-last
+      (pop (car mod-stack)))
     (push modifier (car mod-stack))))
 
 (defun end-collector (reader collector-result modifiers)
@@ -144,7 +148,10 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                      ;; dot in 0 index is considered as normal symbol
                      (push element result-list))
                     ((= idx 1)
-                     (setq result-list (car result-list)))
+                     (let ((last-element (car result-list)))
+                       (setq result-list (if (eq last-element 'el::nil)
+                                             nil
+                                             last-element) )))
                     (t
                      (error 'invalid-reader-input-error :details "dot in wrong position"))))
                  (t (push element result-list))))
@@ -197,18 +204,25 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
          (start-collector reader)
          (change-state reader state/character))
         ((eq char #\')
-         (push '\' (car mod-stack))
-         (log-debug1 "add ' modifier"))
+         (if (eq active-modifier '\#)
+             (push-modifier reader '\#\' :replace-last t)
+             (push-modifier reader '\')))
         ((eq char #\`)
-         (push '\` (car mod-stack))
-         (log-debug1 "add ` modifier"))
+         (push-modifier reader '\`))
         ((eq char #\,)
-         (push '\, (car mod-stack))
-         (log-debug1 "add , modifier"))
+         (push-modifier reader '\,))
         ((and (eq char #\@) (eq active-modifier '\,))
-         (pop (car mod-stack))
-         (push '\,@ (car mod-stack))
-         (log-debug1 "add ,@ modifier"))
+         (push-modifier reader '\,@ :replace-last t))
+        ((eq char #\#)
+         (if (eq active-modifier '\#)
+             (progn
+               (pop (car mod-stack))
+               (push-extra-char reader char)
+               (push-extra-char reader char)
+               (start-collector reader)
+               (change-state reader state/symbol))
+             (push-modifier reader '\#))
+         )
         (t
          (start-collector reader)
          (change-state reader state/symbol)
@@ -269,27 +283,31 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
        (push char (car stack))))))
 
 (defun make-el-symbol (string)
-  (intern string :cl-emacs/elisp))
+  (intern (with-output-to-string (stream)
+            (loop for char across string
+                  do (when (or (upper-case-p char) (eq char #\_))
+                       (write-char #\_ stream))
+                     (write-char (char-upcase char) stream))) :cl-emacs/elisp))
 
 ;; symbol
 (defun end-symbol (reader)
   (declare (type reader reader))
   (log-debug1 "end symbol")
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
-    (let* ((last-symbol (str:upcase (char-list-to-string (nreverse stack-frame))))
-           ;; (elisp-number (parse-elisp-number last-symbol))
+    (let* ((chardata (char-list-to-string (nreverse stack-frame)))
+           (elisp-number (unless (memq 'symbol mod-frame)
+                           (parse-elisp-number chardata)))
            parsed)
       (cond
-        ((string= last-symbol "##") (setq parsed 'el::||))
-        ;; (elisp-number (setq parsed elisp-number))
-        (t (setq parsed (make-el-symbol last-symbol))))
+        ((string= chardata "##") (setq parsed 'el::||))
+        (elisp-number (setq parsed elisp-number))
+        (t (setq parsed (make-el-symbol chardata))))
       (end-collector reader parsed mod-frame))))
 
 (defun push-emacs-sym-char-to-stack (reader char)
   (with-slots (stack) reader
-    (when (or (upper-case-p char) (eq char #\_))
-      (push #\_ (car stack)))
     (push char (car stack))))
+
 (defun state/symbol-transition (reader char)
   (declare (type reader reader)
            (type character char))
@@ -308,12 +326,15 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
        ;; (push-extra-char reader char)
        )
       )))
+
 (defun state/symbol-escaped-transition (reader char)
   (declare (type reader reader)
            (type character char))
   (push-emacs-sym-char-to-stack reader char)
+  (push-modifier reader 'symbol)
   (change-state reader state/symbol)
   )
+
 ;; comment
 (defun state/line-comment-transition (reader char)
   (declare (type reader reader)
@@ -361,6 +382,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (dolist (modifier modifiers)
     (log-debug1 "process ~s modifier" modifier)
     (ecase modifier
+      (symbol (progn))
       (\'
        (setq something (list 'el::quote something)))
       (\`
@@ -368,7 +390,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (\,
        (setq something (list 'el::\, something)))
       (\,@
-       (setq something (list 'el::\,@ something)))))
+       (setq something (list 'el::\,@ something)))
+      (\#\'
+       (setq something (list 'el::function something)))))
   ;; all modifiers processed
   (log-debug2 "modification result ~s" something)
   something)
@@ -453,21 +477,21 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (test read-symbols
   (is (equalp (quote el::||) 
               (car (read-from-string "##"))))
-  (is (equalp '(el::test . 4)
+  (is (equalp (quote (el::test . 4))
               (read-from-string "test")))
-  (is (equalp '(el::test . 5)
+  (is (equalp (quote (el::test . 5))
               (read-from-string "test two")))
-  (is (equalp '(el::\:test)
+  (is (equalp (quote (el::\:test))
               (car (read-from-string "(:test))"))))
-  (is (equalp 'el::|AB123-+=*/C|
+  (is (equalp (quote el::|AB123-+=*/C|)
               (car (read-from-string "ab123-+=*/c"))))
-  (is (equalp 'el::|AB__~!@$%^&:<>{}?C|
+  (is (equalp (quote el::|AB__~!@$%^&:<>{}?C|)
               (car (read-from-string "ab_~!@$%^&:<>{}?c"))))
   (is-false (equalp (car (read-from-string "FOO"))
                     (car (read-from-string "foo"))))
-  (is (equalp 'el::_AB_CD
+  (is (equalp (quote el::_AB_CD)
               (car (read-from-string "AbCd"))))
-  (is (equalp nil
+  (is (equalp (quote el::nil)
               (car (read-from-string "nil"))))
   (is (equalp (quote el::|ABC, [/]'`|)
               (car (read-from-string "a\\b\\c\\,\\ \\[\\/\\]\\'\\`"))))
@@ -478,27 +502,34 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   )
 (test read-integers
   (is (equalp 1 (car (read-from-string "+1")))))
+
 (test read-quotes
-  (is (equalp (quote 'el::test-symbol)
+  (is (equalp (quote (el::quote el::test-symbol))
               (car (read-from-string "'test-symbol"))))
-  (is (equalp (quote ''el::test-sym)
+  (is (equalp (quote (el::quote (el::quote el::test-sym)))
               (car (read-from-string "''test-sym"))))
-  (is (equalp (quote '(el::test-symbol))
+  (is (equalp (quote (el::quote (el::test-symbol)))
               (car (read-from-string "'(test-symbol)"))))
   (signals eof-reader-error (read-from-string "(' 3)"))
   (signals eof-reader-error (read-from-string "';; test comment"))
-  (is (equalp (quote '"abc (")
+  (is (equalp (quote (el::quote "abc ("))
               (car (read-from-string "'\"abc (\""))))
-  (is (equalp (quote '66)
+  (is (equalp (quote (el::quote 66))
               (car (read-from-string "'?B"))))
 
-  (is (equalp (quote ''(1 '('''(2 ''''3) 4) 5))
+  (is (equalp (quote (el::quote
+                      (el::quote
+                       (1 (el::quote
+                           ((el::quote
+                             (el::quote
+                              (el::quote
+                               (2 (el::quote (el::quote (el::quote (el::quote 3)))))))) 4)) 5))))
               (car (read-from-string "''(1 '('''(2 ''''3) 4) 5)"))))
-  (is (equalp (quote '(el::a 'el::b))
+  (is (equalp (quote (el::quote (el::a (el::quote el::b))))
               (car (read-from-string "'(a'b)"))))
-  (is (equalp (quote '("a" 'el::b))
+  (is (equalp (quote (el::quote ("a" (el::quote el::b))))
               (car (read-from-string "'(\"a\"'b)"))))
-  (is (equalp (quote '(65 'el::b))
+  (is (equalp (quote (el::quote (65 (el::quote el::b))))
               (car (read-from-string "'(?A'b)"))))
   (is (equalp (quote (el::\` el::test-symbol))
               (car (read-from-string "`test-symbol"))))
@@ -514,43 +545,43 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (signals eof-reader-error (read-from-string "'"))
   (signals eof-reader-error (read-from-string "`,"))
 
-  (is (equalp (quote 'el::\,)
+  (is (equalp (quote (el::quote el::\,))
               (car (read-from-string "'\\,"))))
   (is (equalp (quote (el::\` (el::a (el::\,@ el::b))))
               (car (read-from-string "`(a ,@b)"))))
   )
 
 (test read-strings
-  (is (equalp '("test" . 6)
+  (is (equalp (quote ("test" . 6))
               (read-from-string "\"test\" ")))
-  (is (equalp '(el::defvar el::test-var el::nil
-                #M"some 
-                   multiline docstring `with symbols'.")
+  (is (equalp (quote (el::defvar el::test-var el::nil
+                       #M"some 
+                          multiline docstring `with symbols'."))
               (car (read-from-string #M"(defvar test-var nil \"some 
                                         multiline docstring `with symbols'.\")"))))
   )
 (test read-lists
-  (is (equalp '(el::a "b")
+  (is (equalp (quote (el::a "b"))
               (car (read-from-string "(a\"b\") "))))
-  (is (equalp '(el::test 2 3 "A ( B")
+  (is (equalp (quote (el::test 2 3 "A ( B"))
               (car (read-from-string "(test 2 3 \"A ( B\")"))))
-  (is (equalp '(el::test (2 3) 4 ())
+  (is (equalp (quote (el::test (2 3) 4 ()))
               (car (read-from-string "(test (2 3) 4 ())"))))
-  (is (equalp '(el::.)
+  (is (equalp (quote (el::.))
               (car (read-from-string "(.)"))))
-  (is (equalp '(el::a el::.)
+  (is (equalp (quote (el::a el::.))
               (car (read-from-string "(a .)"))))
   ;; "(?A.?B)" , not supported yet, looks like some hardcoded case
-  (is (equalp '(3 . 4)
+  (is (equalp (quote (3 . 4))
               (car (read-from-string "(3 .  4)"))))
-  (is (equalp '4
+  (is (equalp (quote 4)
               (car (read-from-string "(. 4)"))))
   (signals invalid-reader-input-error (read-from-string "(a b . c d)"))
-  (is (equalp '(65 . 66)
+  (is (equalp (quote (65 . 66))
               (car (read-from-string "(?A. ?B))"))))
   (is (equalp nil (car (read-from-string "()"))))
   (signals eof-reader-error (read-from-string "("))
-  (is (equalp '(1 2 3)
+  (is (equalp (quote (1 2 3))
               (car (read-from-string "(1 . (2 . (3 . nil)))"))))
   )
 (test read-comments
@@ -594,6 +625,10 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
   )
 
+(test reader-functions
+  (is (equalp (quote (el::function el::a))
+              (car (read-from-string "#'a"))))
+  )
 
 (defun real-file-test ()
   (with-open-file (stream "../emacs/lisp/master.el" :direction :input)

@@ -35,15 +35,20 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   ;;  )
   ;; (:export #:rpc-apply)
   )
-;; (delete-package :cl-emacs/elisp)
-(in-package :cl-emacs/elisp)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(cl:unuse-package :common-lisp :cl-emacs/elisp)
+(cl:do-symbols (symbol :cl-emacs/elisp)
+  (cl:unintern symbol))
+(cl:in-package :cl-emacs/elisp)
+;; (cl-user::package-use-list :cl-emacs/elisp)
+;; (named-readtables:in-readtable mstrings:mstring-syntax)
 ;; (log-enable :cl-emacs/elisp :debug1)
 ;; (def-suite cl-emacs/elisp)
 ;; (in-suite cl-emacs/elisp)
 
-
 ;; (in-package :cl-emacs/elisp)
-(defun reexport-symbols (package)
+(cl:defun reexport-symbols (package)
   (cl-emacs/commons:reexport-symbols package))
 
+(unless t
+  (do-symbols (symbol :cl-emacs/elisp)
+    (format t "~s~%" symbol)))
