@@ -91,9 +91,12 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (with-slots (extra-buffer) reader
     (push char extra-buffer)))
 (defun pop-stack-frame (reader)
-  (log-debug2 "pop stack frame")
   (with-slots (stack mod-stack) reader
-    (values (pop stack) (pop mod-stack))))
+    (let ((stack-frame (pop stack))
+          (mod-frame (pop mod-stack)))
+      (log-debug2 "pop stack-frame:~s mod-frame:~s. stack:~s mod-stack:~s"
+                  stack-frame mod-frame stack mod-stack)
+      (values stack-frame mod-frame))))
 
 (defun whitespace-p (char)
   #M"return t if character is whitespace or nil. 
@@ -112,16 +115,17 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   "init stack with single empty list only first time. That means that parsing actually started"
   (with-slots (stack mod-stack) reader
     (unless stack
-      (log-debug2 "initialize stack")
+      (log-debug2 "initialize stacks")
       (push nil stack)
       (push nil mod-stack))))
 
 (defun push-modifier (reader modifier &key replace-last)
   (with-slots (mod-stack) reader
-    (log-debug1 "add ~s modifier replace-last:~s" modifier replace-last)
     (when replace-last
       (pop (car mod-stack)))
-    (push modifier (car mod-stack))))
+    (push modifier (car mod-stack))
+    (log-debug1 "add modifier:~s replace-last:~s, mod-stack:~s" modifier replace-last mod-stack)
+    ))
 
 (defun end-collector (reader collector-result modifiers)
   (setq collector-result (apply-modifiers collector-result modifiers))
@@ -175,7 +179,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (with-slots (stack mod-stack) reader
     (let* ((current-modifiers (car mod-stack))
            (active-modifier (car current-modifiers)))
-      (log-debug2 "toplevel current-modifiers: ~s" current-modifiers)
+      (log-debug2 "toplevel active-modifier: ~s" active-modifier)
       (unless (whitespace-p char)
         (init-stack reader))
       (cond
@@ -213,6 +217,12 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
          (push-modifier reader '\,))
         ((and (eq char #\@) (eq active-modifier '\,))
          (push-modifier reader '\,@ :replace-last t))
+        ((and (eq char #\:) (eq active-modifier '\#))
+         (pop (car mod-stack))
+         (start-collector reader)
+         (change-state reader state/symbol)
+         (push-modifier reader 'symbol)
+         (push-modifier reader '\#\:))
         ((eq char #\#)
          (if (eq active-modifier '\#)
              (progn
@@ -263,7 +273,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
           (extra-symbols-in-character-spec-error (e)
             (with-slots (cl-emacs/character-reader::position cl-emacs/character-reader::parsed-code) e
               (let ((remainder (str:substring cl-emacs/character-reader::position t parsed)))
-                (log-debug1 "~s parsed:~s position:~s" e parsed cl-emacs/character-reader::position)
+                (log-debug2 "~s parsed:~s position:~s" e parsed cl-emacs/character-reader::position)
                 (log-debug1 "character definition remainder ~s" remainder)
                 (loop for idx from (1- (length remainder)) downto 0
                       do (push (aref remainder idx) extra-buffer))
@@ -282,12 +292,15 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (t
        (push char (car stack))))))
 
-(defun make-el-symbol (string)
-  (intern (with-output-to-string (stream)
-            (loop for char across string
-                  do (when (or (upper-case-p char) (eq char #\_))
-                       (write-char #\_ stream))
-                     (write-char (char-upcase char) stream))) :cl-emacs/elisp))
+(defun make-el-symbol (string &key intern)
+  (let ((symbol-name (with-output-to-string (stream)
+                       (loop for char across string
+                             do (when (or (upper-case-p char) (eq char #\_))
+                                  (write-char #\_ stream))
+                                (write-char (char-upcase char) stream)))))
+    (if intern
+        (intern symbol-name :cl-emacs/elisp )
+        (make-symbol symbol-name))))
 
 ;; symbol
 (defun end-symbol (reader)
@@ -300,8 +313,13 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
            parsed)
       (cond
         ((string= chardata "##") (setq parsed 'el::||))
+        ((eq (car mod-frame) '\#\:)
+         (pop mod-frame)
+         (log-debug2 "removing #: modifier. mod-frame:" mod-frame)
+         (setq parsed (make-el-symbol chardata :intern nil)))
         (elisp-number (setq parsed elisp-number))
-        (t (setq parsed (make-el-symbol chardata))))
+        (t (setq parsed (make-el-symbol chardata :intern t))))
+      (log-debug2 "chardata parsed: ~s" parsed)
       (end-collector reader parsed mod-frame))))
 
 (defun push-emacs-sym-char-to-stack (reader char)
@@ -318,6 +336,10 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
        (end-symbol reader)
        (change-state reader state/toplevel)
        (push-extra-char reader char))
+      ((and (eq char #\.) (null (car stack)))
+       (push-emacs-sym-char-to-stack reader char)
+       (end-symbol reader)
+       (change-state reader state/toplevel))
       ((eq char #\\)
        (change-state reader state/symbol-escaped))
       (t
@@ -381,8 +403,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (log-debug2 "applying modifiers ~s to:~s" modifiers something)
   (dolist (modifier modifiers)
     (log-debug1 "process ~s modifier" modifier)
-    (ecase modifier
-      (symbol (progn))
+    (case modifier
+      ((symbol \#\:) (progn))
       (\'
        (setq something (list 'el::quote something)))
       (\`
@@ -392,7 +414,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (\,@
        (setq something (list 'el::\,@ something)))
       (\#\'
-       (setq something (list 'el::function something)))))
+       (setq something (list 'el::function something)))
+      (t (error "unexpected modifier ~s" modifier))
+      ))
   ;; all modifiers processed
   (log-debug2 "modification result ~s" something)
   something)
@@ -499,6 +523,13 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
               (car (read-from-string "\\,"))))
   (is (equalp (quote el::+1)
               (car (read-from-string "\\+1"))))
+  (is (equalp "NON-INTERN-SYMBOL"
+              (symbol-name (car (read-from-string "#:non-intern-symbol")))))
+  (is-false (find-symbol "NON-INTERN-SYMBOL" :el))
+  (is (equalp "+1"
+              (symbol-name (car (read-from-string "#:+1")))))
+  (is (equalp ""
+              (symbol-name (car (read-from-string "#:,")))))
   )
 (test read-integers
   (is (equalp 1 (car (read-from-string "+1")))))
@@ -577,6 +608,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (is (equalp (quote 4)
               (car (read-from-string "(. 4)"))))
   (signals invalid-reader-input-error (read-from-string "(a b . c d)"))
+  (is (equalp (quote (65 . 66))
+              (car (read-from-string "(?A.?B)"))))
   (is (equalp (quote (65 . 66))
               (car (read-from-string "(?A. ?B))"))))
   (is (equalp nil (car (read-from-string "()"))))
