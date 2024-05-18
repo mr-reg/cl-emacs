@@ -8,6 +8,7 @@
   :defsystem-depends-on (;; :cffi
                          :cl-plumbing
                          :cl-ppcre
+                         :defstar
                          ;; :osicat
                          :fiveam
                          :flexi-streams

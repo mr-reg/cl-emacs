@@ -20,6 +20,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (uiop:define-package :cl-emacs/reader
     (:use
      :common-lisp
+     :defstar
      :cl-emacs/log
      :alexandria
      :fiveam
@@ -59,7 +60,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (define-condition eof-reader-error (reader-signal)
   ())
-(defmethod print-object ((e reader-signal) stream)
+(defmethod* print-object ((e reader-signal) stream)
   (with-slots (details) e
     (format stream "#<~a details:~s>"
             (class-name (class-of e)) details))
@@ -68,13 +69,17 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (define-condition reader-stopped-signal (reader-signal)
   ())
 
+(deftype rcharacter ()
+  '(or null character))
+
 (defparameter *states*
   '(state/toplevel
     state/symbol
     state/symbol-escaped
     state/character
     state/line-comment
-    state/string))
+    state/string
+    state/pointer))
 
 ;; using numeric states to select transition function faster
 (loop for state in *states*
@@ -86,11 +91,14 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (stack nil :type list)
   (character-counter 0 :type fixnum)
   (extra-buffer nil :type list)
-  (mod-stack nil :type list))
-(defun push-extra-char (reader char)
+  (mod-stack nil :type list)
+  ;; key = pointer number, value = cons (nil . placeholder) or (t . real value) 
+  (pointers (make-hash-table :test #'eq) :type hash-table))
+
+(defun* push-extra-char ((reader reader) (char rcharacter))
   (with-slots (extra-buffer) reader
     (push char extra-buffer)))
-(defun pop-stack-frame (reader)
+(defun* (pop-stack-frame -> (values t t)) ((reader reader))
   (with-slots (stack mod-stack) reader
     (let ((stack-frame (pop stack))
           (mod-frame (pop mod-stack)))
@@ -98,20 +106,22 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                   stack-frame mod-frame stack mod-stack)
       (values stack-frame mod-frame))))
 
-(defun whitespace-p (char)
+(defun* whitespace-p ((char rcharacter))
   #M"return t if character is whitespace or nil. 
      nil used for EOF"
-  (declare (type character char))
   (or (null char) (memq char '(#\space #\tab #\newline))))
+;; (defun* digit-p (char)
+;;   #M"return t if character is digit"
+;;   (declare (type character char))
+;;   (char>= #\0 char #\9))
 
-(defun start-collector (reader)
-  (declare (type reader reader))
+(defun* start-collector ((reader reader))
   (log-debug1 "start collector")
   (with-slots (stack mod-stack) reader
     (push nil stack)
     (push nil mod-stack)))
 
-(defun init-stack (reader)
+(defun* init-stack ((reader reader))
   "init stack with single empty list only first time. That means that parsing actually started"
   (with-slots (stack mod-stack) reader
     (unless stack
@@ -119,7 +129,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (push nil stack)
       (push nil mod-stack))))
 
-(defun push-modifier (reader modifier &key replace-last)
+(defun* push-modifier ((reader reader) modifier &key replace-last)
   (with-slots (mod-stack) reader
     (when replace-last
       (pop (car mod-stack)))
@@ -127,19 +137,19 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
     (log-debug1 "add modifier:~s replace-last:~s, mod-stack:~s" modifier replace-last mod-stack)
     ))
 
-(defun end-collector (reader collector-result modifiers)
-  (setq collector-result (apply-modifiers collector-result modifiers))
+(defun* end-collector ((reader reader) collector-result modifiers)
+  (setq collector-result (apply-modifiers reader collector-result modifiers))
   (with-slots (stack mod-stack) reader
     (let ((actual-top-modifiers (pop mod-stack)))
-      (push (apply-modifiers collector-result actual-top-modifiers) (car stack)))
+      (log-debug2 "actual-top-modifiers:~s" actual-top-modifiers)
+      (push (apply-modifiers reader collector-result actual-top-modifiers) (car stack)))
     (push nil mod-stack)
     (change-state reader state/toplevel)
     ;; when our stack contains only one frame with only one element, looks like read operation can be stopped
     (when (and (null (cdr stack)) (null (cdar stack)))
       (error 'reader-stopped-signal))))
 
-(defun end-list (reader)
-  (declare (type reader reader))
+(defun* end-list ((reader reader))
   (log-debug1 "end list")
   (multiple-value-bind (reversed-list mod-frame) (pop-stack-frame reader)
     (let (result-list)
@@ -161,8 +171,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                  (t (push element result-list))))
       (end-collector reader result-list mod-frame))))
 
-(defun end-vector (reader)
-  (declare (type reader reader))
+(defun* end-vector ((reader reader))
   (log-debug1 "end vector")
   (multiple-value-bind (reversed-list mod-frame) (pop-stack-frame reader)
     (loop for element in reversed-list
@@ -173,9 +182,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
            (parsed (make-array (length result-list) :initial-contents result-list)))
       (end-collector reader parsed mod-frame))))
 
-(defun state/toplevel-transition (reader char)
-  (declare (type reader reader)
-           (type character char))
+(defun* state/toplevel-transition ((reader reader) (char rcharacter))
   (with-slots (stack mod-stack) reader
     (let* ((current-modifiers (car mod-stack))
            (active-modifier (car current-modifiers)))
@@ -233,6 +240,11 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                (change-state reader state/symbol))
              (push-modifier reader '\#))
          )
+        ((and (eq active-modifier '\#) (digit-char-p char))
+         (pop (car mod-stack))
+         (start-collector reader)
+         (change-state reader state/pointer)
+         (push-extra-char reader char))
         (t
          (start-collector reader)
          (change-state reader state/symbol)
@@ -241,16 +253,13 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
         ))))
 
 ;; string
-(defun end-string (reader)
-  (declare (type reader reader))
+(defun* end-string ((reader reader))
   (log-debug1 "end string")
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
     (let ((parsed (char-list-to-string (nreverse stack-frame))))
       (end-collector reader parsed mod-frame))))
 
-(defun state/string-transition (reader char)
-  (declare (type reader reader)
-           (type character char))
+(defun* state/string-transition ((reader reader) (char rcharacter))
   (with-slots (stack) reader
     (cond
       ((memq char '(#\"))
@@ -261,8 +270,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       )))
 
 ;; character
-(defun end-character (reader)
-  (declare (type reader reader))
+(defun* end-character ((reader reader))
   (log-debug1 "end character")
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
     (with-slots (extra-buffer) reader
@@ -280,9 +288,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                 (setq code cl-emacs/character-reader::parsed-code)))))
         (end-collector reader code mod-frame)))))
 
-(defun state/character-transition (reader char)
-  (declare (type reader reader)
-           (type character char))
+(defun* state/character-transition ((reader reader) (char rcharacter))
   (with-slots (stack) reader
     (cond
       ((whitespace-p char)
@@ -292,7 +298,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (t
        (push char (car stack))))))
 
-(defun make-el-symbol (string &key intern)
+(defun* make-el-symbol (string &key intern)
   (let ((symbol-name (with-output-to-string (stream)
                        (loop for char across string
                              do (when (or (upper-case-p char) (eq char #\_))
@@ -303,8 +309,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
         (make-symbol symbol-name))))
 
 ;; symbol
-(defun end-symbol (reader)
-  (declare (type reader reader))
+(defun* end-symbol ((reader reader))
   (log-debug1 "end symbol")
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
     (let* ((chardata (char-list-to-string (nreverse stack-frame)))
@@ -322,13 +327,11 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (log-debug2 "chardata parsed: ~s" parsed)
       (end-collector reader parsed mod-frame))))
 
-(defun push-emacs-sym-char-to-stack (reader char)
+(defun* push-emacs-sym-char-to-stack ((reader reader) (char rcharacter))
   (with-slots (stack) reader
     (push char (car stack))))
 
-(defun state/symbol-transition (reader char)
-  (declare (type reader reader)
-           (type character char))
+(defun* state/symbol-transition ((reader reader) (char rcharacter))
   (with-slots (stack) reader
     (cond
       ((or (memq char '(#\( #\) #\[ #\] #\" #\' #\` #\,))
@@ -349,18 +352,14 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
        )
       )))
 
-(defun state/symbol-escaped-transition (reader char)
-  (declare (type reader reader)
-           (type character char))
+(defun* state/symbol-escaped-transition ((reader reader) (char rcharacter))
   (push-emacs-sym-char-to-stack reader char)
   (push-modifier reader 'symbol)
   (change-state reader state/symbol)
   )
 
 ;; comment
-(defun state/line-comment-transition (reader char)
-  (declare (type reader reader)
-           (type character char))
+(defun* state/line-comment-transition ((reader reader) (char rcharacter))
   (with-slots (stack) reader
     (cond
       ((eq char #\newline)
@@ -368,6 +367,49 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
        (push-extra-char reader char)
        )
       (t (progn)))))
+
+(defun* get-pointer-cons ((reader reader) (pointer-number fixnum))
+  #M"return already defined pointer value if it exists, 
+     or creates empty placeholder and return it"
+  (with-slots (pointers) reader
+    (multiple-value-bind (cons found) (gethash pointer-number pointers)
+      (unless found
+        (let ((placeholder (cons nil nil)))
+          (setq cons (cons nil placeholder))
+          (setf (gethash pointer-number pointers) cons)))
+      cons)))
+
+;; pointer
+(defun* end-pointer ((reader reader) &key new-pointer)
+  (log-debug1 "end pointer")
+  (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
+    (with-slots (pointers) reader
+      (let* ((chardata (char-list-to-string (nreverse stack-frame)))
+             (pointer-number (parse-elisp-number chardata))
+             )
+        (unless pointer-number
+          (error 'invalid-reader-input-error :details "can't parse pointer number"))
+        (if new-pointer
+            (progn (push-modifier reader pointer-number)
+                   (push-modifier reader 'new-pointer)
+                   (change-state reader state/toplevel))
+            (end-collector reader (cdr (get-pointer-cons reader pointer-number)) mod-frame))))))
+
+(defun* state/pointer-transition ((reader reader) (char rcharacter))
+  (with-slots (stack) reader
+    (cond
+      ((digit-char-p char)
+       (push-emacs-sym-char-to-stack reader char))
+      ((eq char #\=)
+       (end-pointer reader :new-pointer t)
+       (change-state reader state/toplevel))
+      ((eq char #\#)
+       (end-pointer reader)
+       (change-state reader state/toplevel))
+      (t
+       (error 'invalid-reader-input-error :details "non-digital character inside pointer definition")))))
+
+;; main part
 
 (defvar *transitions* nil)
 ;; (defvar *start-handlers* nil)
@@ -378,7 +420,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   ;; (setf *stop-handlers* (make-array n-states))
   )
 (dolist (state *states*)
-  (log-debug1 "found state ~s" (symbol-name state))
   (eval `(setf (aref *transitions* ,state)
                ,(let* ((transition-function-name (concatenate 'string (symbol-name state) "-TRANSITION"))
                        (transition-function-symbol (find-symbol transition-function-name)))
@@ -399,37 +440,82 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   ;;                     (error "can't find start-handler function ~a" start-function-name)))))
   )
 
-(defun apply-modifiers (something modifiers)
+(defun* replace-placeholder-in-tree (tree old-value new-value &optional stack)
+  (when (memq tree stack)
+    ;; protection from circles
+    (return-from replace-placeholder-in-tree tree))
+  (push tree stack)
+  (log-debug2 "replace-placeholder-in-tree old:~s new:~s type-of:~s tree:~s" old-value new-value (type-of tree) tree)
+  (cond
+    ((consp tree)
+     (log-debug2 "cons iteration")
+     (setf (car tree)
+           (if (eq old-value (car tree))
+               new-value
+               (replace-placeholder-in-tree (car tree) old-value new-value stack)))
+     (setf (cdr tree)
+           (if (eq old-value (cdr tree))
+               new-value
+               (replace-placeholder-in-tree (cdr tree) old-value new-value stack)))
+     tree)
+    ((vectorp tree)
+     (log-debug2 "vector iteration")
+     (loop for idx from 0
+           for x across tree
+           do (setf (aref tree idx)
+                    (if (eq old-value x)
+                        new-value
+                        (replace-placeholder-in-tree x old-value new-value stack))))
+     tree)
+    (t
+     tree)))
+
+(defun* apply-modifiers ((reader reader) something (modifiers list))
   (log-debug2 "applying modifiers ~s to:~s" modifiers something)
-  (dolist (modifier modifiers)
-    (log-debug1 "process ~s modifier" modifier)
-    (case modifier
-      ((symbol \#\:) (progn))
-      (\'
-       (setq something (list 'el::quote something)))
-      (\`
-       (setq something (list 'el::\` something)))
-      (\,
-       (setq something (list 'el::\, something)))
-      (\,@
-       (setq something (list 'el::\,@ something)))
-      (\#\'
-       (setq something (list 'el::function something)))
-      (t (error "unexpected modifier ~s" modifier))
-      ))
+  (with-slots (pointers stack) reader
+    (loop
+      while modifiers
+      do (let ((modifier (car modifiers)))
+           (setq modifiers (cdr modifiers))
+           (log-debug1 "process ~s modifier" modifier)
+           (case modifier
+             ((symbol \#\:) (progn))
+             (\'
+              (setq something (list 'el::quote something)))
+             (\`
+              (setq something (list 'el::\` something)))
+             (\,
+              (setq something (list 'el::\, something)))
+             (\,@
+              (setq something (list 'el::\,@ something)))
+             (\#\'
+              (setq something (list 'el::function something)))
+             ('new-pointer
+              (let* ((pointer-number (pop modifiers))
+                     (actual-cons (get-pointer-cons reader pointer-number)))
+                (log-debug2 "actual-cons:~s" actual-cons)
+                (when (car actual-cons)
+                  (error 'invalid-reader-input-error
+                         :details (format nil "pointer #~a already defined" pointer-number)))
+                (log-debug2 "setting pointer #~a to current object ~s" pointer-number something)
+                (setf (gethash pointer-number pointers) (cons t something))
+                (setq something (replace-placeholder-in-tree something (cdr actual-cons) something))
+                (setq stack (replace-placeholder-in-tree stack (cdr actual-cons) something))
+                ))
+             (t (error 'invalid-reader-input-error
+                       :details (format nil "unexpected modifier ~s" modifier)))
+             ))))
   ;; all modifiers processed
   (log-debug2 "modification result ~s" something)
   something)
 
-(defun change-state (reader new-state)
+(defun* change-state ((reader reader) new-state)
   (with-slots (state stack mod-stack) reader
     (log-debug1 "transition to state ~s" (nth new-state *states*))
     (log-debug2 "mod-stack: ~s" mod-stack)
     (log-debug2 "stack: ~s" stack)
     (setq state new-state)))
-(defun process-char (reader char &key new-state)
-  (declare (type reader reader)
-           (type character char))
+(defun* process-char ((reader reader) (char rcharacter) &key new-state)
   (with-slots (state) reader
     (log-debug2 "process char ~s in state ~s" char state)
     (when new-state
@@ -437,8 +523,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
     (let ((handler (aref *transitions* state)))
       (funcall handler reader char))))
 
-(declaim (inline process-extra-buffer))
-(defun process-extra-buffer (reader)
+(defun* process-extra-buffer ((reader reader))
   (with-slots (extra-buffer) reader
     (log-debug2 "checking extra-buffer: ~s" extra-buffer)
     (loop while extra-buffer
@@ -448,7 +533,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                ;; extra buffer is modified during character processing
                (process-char reader char)))))
 
-(defun read-internal (stream)
+(defun* read-internal (stream)
   (let ((reader (make-reader :state state/toplevel)))
     (with-slots (state stack character-counter extra-buffer) reader
       (handler-case
@@ -472,7 +557,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
         (error 'eof-reader-error :details "Lisp structure is not complete"))
       (values (caar stack) reader))))
 
-(defun read (stream)
+(defun* read (stream)
   #M"Read one Lisp expression as text from STREAM, return as Lisp object.
      If STREAM is nil, use the value of `standard-input' (which see).
      STREAM or the value of `standard-input' may be:
@@ -485,7 +570,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
      standard input in batch mode)."
   (multiple-value-bind (result) (read-internal stream)
     result))
-(defun read-from-string (string &optional (start 0) (end (length string)))
+(defun* read-from-string (string &optional (start 0) (end (length string)))
   #M"Read one Lisp expression which is represented as text by STRING.
      Returns a cons: (OBJECT-READ . FINAL-STRING-INDEX).
      FINAL-STRING-INDEX is an integer giving the position of the next
@@ -663,7 +748,36 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
               (car (read-from-string "#'a"))))
   )
 
-(defun real-file-test ()
+(test read-circles
+  (let ((sample (car (read-from-string "#1=(a #1#)"))))
+    (is (eq sample (second sample))))
+  (let ((sample (car (read-from-string "#1=[a #1#]"))))
+    (is (eq sample (aref sample 1))))
+  (let ((sample (car (read-from-string "#1=[#1# a #1#]"))))
+    (is (eq sample (aref sample 0)))
+    (is (eq sample (aref sample 2))))
+  (let ((sample (car (read-from-string "#1=(a . #1#)"))))
+    (is (eq sample (cdr sample))))
+  (let ((sample (car (read-from-string "#1=(#2=[#1# #2#] . #1#)"))))
+    (is (eq sample (cdr sample)))
+    (is (eq sample (aref (car sample) 0)))
+    (is (eq (car sample) (aref (car sample) 1))))
+  (let ((sample (car (read-from-string "#1=(#2=[#1# #2#] . #2#)"))))
+    (is (eq sample (aref (car sample) 0)))
+    (is (eq (car sample) (cdr sample)))
+    (is (eq (car sample) (aref (car sample) 1))))
+  (let ((sample (car (read-from-string "#1=[#2=(#1# . #2#)]"))))
+    (is (eq sample (car (aref sample 0))))
+    (is (eq (aref sample 0) (cdr (aref sample 0)))))
+  (let ((sample (car (read-from-string "#1=(#2=[#3=(#1# . #2#) #4=(#3# . #4#)])"))))
+    (is (eq sample (car (aref (car sample) 0))))
+    (is (eq (car sample) (cdr (aref (car sample) 0))))
+    (is (eq (aref (car sample) 0) (car (aref (car sample) 1))))
+    (is (eq (aref (car sample) 1) (cdr (aref (car sample) 1)))))
+  ;; check in other collection types, like hashmap and string properties
+  )
+
+(defun* real-file-test ()
   (with-open-file (stream "../emacs/lisp/master.el" :direction :input)
     (read stream)
     (read stream)))

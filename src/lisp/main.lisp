@@ -26,7 +26,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (log-enable :cl-emacs/main)
 
 (defparameter *emacs-source-path* "../emacs/")
-
+(defparameter *print-circle* t)
 
 (defun main ()
   (log-debug "main complete")

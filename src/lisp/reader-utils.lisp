@@ -31,6 +31,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (parse-number:parse-real-number chardata)
     (parse-error ()
       nil)))
+
 (test parse-elisp-number
   (is (= (parse-elisp-number "+1") 1))
   (is (= (parse-elisp-number "24") 24))
