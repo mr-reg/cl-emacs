@@ -18,19 +18,42 @@ You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
 (uiop:define-package :cl-emacs/reader-utils
-    (:use :common-lisp :cl-emacs/log :alexandria :fiveam)
-  (:export #:parse-elisp-number)
+    (:use :common-lisp :cl-emacs/log :alexandria :fiveam :defstar)
+  (:export #:parse-elisp-number
+           #:reversed-list-to-number)
   )
 (in-package :cl-emacs/reader-utils)
 (log-enable :cl-emacs/reader-utils :debug1)
+(named-readtables:in-readtable mstrings:mstring-syntax)
 (def-suite cl-emacs/reader-utils)
 (in-suite cl-emacs/reader-utils)
 
-(defun parse-elisp-number (chardata)
+(defun* parse-elisp-number (chardata)
   (handler-case
       (parse-number:parse-real-number chardata)
     (parse-error ()
       nil)))
+
+(defun* reversed-list-to-number ((digits list) (radix-bits fixnum))
+  #M"internal function for readers
+     Inputs:
+     digits - reversed list of digits in integer form, 
+     radix - radix in power of 2, like 3 means 2^3 octal, 4 - 2^4 hex
+     result - one big number"
+  (loop for digit in digits
+        for shift from 0 by radix-bits
+        sum (ash digit shift)))
+
+;; (defun octals-to-code (octals)
+;;   (declare (list octals))
+;;   (loop for oct in octals
+;;         for shift from 0 by 3
+;;         sum (ash oct shift)))
+;; (defun hex-to-code (hex)
+;;   (declare (list hex))
+;;   (loop for h in hex
+;;         for shift from 0 by 4
+;;         sum (ash h shift)))
 
 (test parse-elisp-number
   (is (= (parse-elisp-number "+1") 1))
@@ -41,5 +64,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (is (= (parse-elisp-number "-4.5") -4.5))
   (is (= (parse-elisp-number "2.71828") 2.71828))
   (is (= (parse-elisp-number "1.5e2") 150.0))
+  )
+(test radix-list
+  (is (= #o321 (reversed-list-to-number '(1 2 3) 3)))
+  (is (= #x1fa (reversed-list-to-number '(10 15 1) 4)))
   )
 

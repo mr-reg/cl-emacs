@@ -23,6 +23,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
      :cl-emacs/log
      :alexandria
      :fiveam
+     :defstar
+     :cl-emacs/reader-utils
      :cl-emacs/commons)
   (:import-from :common-lisp-user
                 #:memq)
@@ -63,16 +65,14 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (setq details (format nil "~a last character~p not parsed. Current result ~a"
                             rem rem parsed-code)))))
 
-(defun decode-named-char (raw-input name)
-  (declare (string name))
+(defun* decode-named-char ((raw-input string) (name string))
   (let* ((clean-name (str:replace-all "\n" "" name))
          decoded 
          )
     (if (str:starts-with-p "U+" clean-name)
-        (let ((hex-part (str:upcase (str:substring 2 t clean-name))))
+        (let ((hex-part (str:substring 2 t clean-name)))
           (loop for char across hex-part
-                do (when (not (or (char<= #\0 char #\9)
-                                  (char<= #\A char #\F)))
+                do (unless (digit-char-p char 16)
                      (error 'invalid-character-spec-error
                             :input raw-input
                             :details (format nil "invalid character in hex notation ~a" char))))
@@ -88,16 +88,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                :input raw-input
                :details (format nil "can't recognize unicode name ~a" name)))))
 
-(defun octals-to-code (octals)
-  (declare (list octals))
-  (loop for oct in octals
-        for shift from 0 by 3
-        sum (ash oct shift)))
-(defun hex-to-code (hex)
-  (declare (list hex))
-  (loop for h in hex
-        for shift from 0 by 4
-        sum (ash h shift)))
+
 
 ;; 
 ;; Let's decode these ancient alien codes
@@ -124,7 +115,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;;                       tt
 ;;                       tt
 
-(defun read-emacs-character (input)
+(defun* read-emacs-character ((input string))
   #M"Read emacs character notation with all it's weird exceptions. 
      Initial ? sign should be omitted
      Return value: character code, because emacs has no special type for character"
@@ -180,9 +171,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                       (t (return-result (char-code char)))))
                    (special
                     (cond 
-                      ((char<= #\0 char #\7)
+                      ((digit-char-p char 8)
                        (change-mode 'octal)
-                       (push (- (char-code char) (char-code #\0)) octals))
+                       (push (digit-char-p char 8) octals))
                       ((eq char #\A) (setq modifiers (logior modifiers #x400000)) (change-mode 'modifier))
                       ((eq char #\C) (incf control) (change-mode 'modifier))
                       ((eq char #\H) (setq modifiers (logior modifiers #x1000000)) (change-mode 'modifier))
@@ -206,9 +197,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                    (octal
                     (cond
                       ((null char)
-                       (return-result (octals-to-code octals)))
-                      ((char<= #\0 char #\7)
-                       (push (- (char-code char) (char-code #\0)) octals))
+                       (return-result (reversed-list-to-number octals 3)))
+                      ((digit-char-p char 8)
+                       (push (digit-char-p char 8) octals))
                       (t (error 'invalid-character-spec-error
                                 :input input
                                 :details (format nil "bad symbol in octal mode ~a" char)))))
@@ -225,17 +216,13 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                             (error 'invalid-character-spec-error
                                    :input input
                                    :details "spec should should contain exactly 8 hexadecimal symbols"))
-                          (when (> (hex-to-code hex) cl-unicode:+code-point-limit+)
+                          (when (> (reversed-list-to-number hex 4) cl-unicode:+code-point-limit+)
                             (error 'invalid-character-spec-error
                                    :input input
                                    :details "character not in unicode range"))))
-                       (return-result (hex-to-code hex)))
-                      ((char<= #\0 char #\9)
-                       (push (- (char-code char) (char-code #\0)) hex))
-                      ((char<= #\a char #\f)
-                       (push (+ 10 (- (char-code char) (char-code #\a))) hex))
-                      ((char<= #\A char #\F)
-                       (push (+ 10 (- (char-code char) (char-code #\A))) hex))
+                       (return-result (reversed-list-to-number hex 4)))
+                      ((digit-char-p char 16)
+                       (push (digit-char-p char 16) hex))
                       (t (error 'invalid-character-spec-error
                                 :input input
                                 :details (format nil "bad symbol in hexadecimal mode ~a" char)))))
