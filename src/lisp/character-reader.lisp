@@ -264,7 +264,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                               :input input
                               :details "no closing curly brace"))
                       ((eq char #\})
-                       (return-result (decode-named-char input (char-list-to-string (nreverse named-list)))))
+                       (return-result (decode-named-char input (char-list-to-cl-string (nreverse named-list)))))
                       (t (push char named-list))))
                    )))
         (loop for char across input

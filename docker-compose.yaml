@@ -19,6 +19,7 @@ services:
     environment:
       - OCICL_REGISTRY=--plain-http zot:5000/ocicl
       - OCICL_GLOBALDIR=${PWD}/.volumes/cache-ocicl/
+      - ASDF_DIR=${PWD}/.volumes/asdf/
     depends_on:
       - zot
     volumes: 

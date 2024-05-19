@@ -20,8 +20,11 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (uiop:define-package :cl-emacs/reader-utils
     (:use :common-lisp :cl-emacs/log :alexandria :fiveam :defstar)
   (:export #:parse-elisp-number
-           #:reversed-list-to-number)
-  )
+           #:reversed-list-to-number
+           #:char-list-to-cl-string
+           #:char-list-to-el-string)
+  (:local-nicknames (#:el #:cl-emacs/elisp)
+                    (#:et #:cl-emacs/types)))
 (in-package :cl-emacs/reader-utils)
 (log-enable :cl-emacs/reader-utils :debug1)
 (named-readtables:in-readtable mstrings:mstring-syntax)
@@ -54,6 +57,16 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 ;;   (loop for h in hex
 ;;         for shift from 0 by 4
 ;;         sum (ash h shift)))
+
+(defun* (char-list-to-cl-string -> string) (char-list)
+  (with-output-to-string (stream)
+    (dolist (char char-list)
+      (write-char char stream))))
+
+(defun* (char-list-to-el-string -> et:string) (char-list)
+  (et:make-string :chardata (with-output-to-string (stream)
+                              (dolist (char char-list)
+                                (write-char char stream)))))
 
 (test parse-elisp-number
   (is (= (parse-elisp-number "+1") 1))

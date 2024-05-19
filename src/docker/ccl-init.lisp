@@ -17,7 +17,9 @@ General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
-(load "/asdf/build/asdf.lisp")
+(let ((asdf-path (concatenate 'string (ccl:getenv "ASDF_DIR") "build/asdf.lisp")))
+  (format t "loading asdf from ~s" asdf-path)
+  (load asdf-path))
 
 (unless (probe-file (truename "~/.local/share/ocicl/ocicl-runtime.lisp"))
   (error "please install ocicl to continue"))

@@ -24,7 +24,8 @@ RUN mkdir /cl-emacs \
 COPY src/docker/ocicl /root/.local/bin/ocicl
 RUN chmod +x /root/.local/bin/ocicl
 
-ENV ASDF_VERSION=3.3.6.7
+ENV ASDF_VERSION=3.3.6.7 \
+    ASDF_DIR=/asdf
 RUN git clone --depth 1 -b $ASDF_VERSION https://gitlab.common-lisp.net/asdf/asdf.git /asdf \
     && cd /asdf \
     && make 
@@ -32,7 +33,8 @@ COPY src/docker/ccl-init.lisp /root/ccl-init.lisp
 COPY run-swank* /cl-emacs/
 #/COPY src /cl-emacs/src
 WORKDIR /cl-emacs
-ENV PATH=/ccl/:/root/.local/bin/:$PATH
+ENV PATH=/ccl/:/root/.local/bin/:$PATH 
+
 # RUN ASDF_ONLY=1 ./run-swank.sh
 
 

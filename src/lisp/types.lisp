@@ -17,23 +17,31 @@ General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 |#
-(uiop:define-package :cl-emacs/commons
-    (:use :common-lisp :cl-emacs/log :alexandria :fiveam)
-  (:export 
-   #:reexport-symbols))
-(in-package :cl-emacs/commons)
-(log-enable :cl-emacs/commons :debug1)
+(uiop:define-package :cl-emacs/types
+    (:use
+     :common-lisp
+     :defstar
+     :cl-emacs/log
+     :alexandria
+     :fiveam
+     :cl-emacs/commons)
+  (:shadow #:string #:make-string)
+  (:export #:string
+           #:make-string
+           #:string-chardata
+           #:string-properties
+           #:build-string)
+  )
+(in-package :cl-emacs/types)
+(log-enable :cl-emacs/types :debug2)
+(named-readtables:in-readtable mstrings:mstring-syntax)
 
-(defvar *timer* 0)
-(defun set-timer ()
-  (let* ((new-time (get-internal-real-time))
-         (time (- new-time *timer*)))
-    (setq *timer* new-time)
-    (* 1.0 (/ time internal-time-units-per-second))))
+(defstruct string
+  (chardata "" :type cl:string)
+  (properties nil :type list))
 
-(defun reexport-symbols (package-from)
-  (do-external-symbols (sym package-from)
-    (shadowing-import sym)
-    (export sym)))
+(defun* (build-string -> string) ((cl-string cl:string))
+  (make-string :chardata cl-string))
 
-
+;; (in-package :cl-emacs/elisp)
+;; (reexport-symbols :cl-emacs/types)

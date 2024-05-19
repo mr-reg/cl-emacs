@@ -37,8 +37,10 @@
                ;; :cl-emacs/elisp
                ;; :cl-emacs/elisp-tests
                ;; :cl-emacs/log
-               :cl-emacs/main
+               :cl-emacs/commons
+               :cl-emacs/elisp
                :cl-emacs/reader
+               :cl-emacs/main
                )
   ;; :components ((:module "src/lisp"
   ;;               :components (

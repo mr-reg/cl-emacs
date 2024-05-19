@@ -28,10 +28,11 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
      :cl-emacs/character-reader
      :cl-emacs/commons)
   (:shadow #:read #:read-from-string)
-  (:import-from :common-lisp-user
+  (:import-from #:common-lisp-user
                 #:memq
                 )
-  (:local-nicknames (:el :cl-emacs/elisp))
+  (:local-nicknames (#:el #:cl-emacs/elisp)
+                    (#:et #:cl-emacs/types))
   ;; (:use-reexport
   ;;  ;; :cl-emacs/elisp/alien-vars
   ;;  ;; :cl-emacs/elisp/alloc
@@ -70,9 +71,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (define-condition reader-stopped-signal (reader-signal)
   ())
 
-(deftype rcharacter ()
-  '(or null character))
-
 (defparameter *states*
   '(state/toplevel
     state/symbol
@@ -100,7 +98,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   ;; key = pointer number, value = cons (nil . placeholder) or (t . real value) 
   (pointers (make-hash-table :test #'eq) :type hash-table))
 
-(defun* push-extra-char ((reader reader) (char rcharacter))
+(defun* push-extra-char ((reader reader) (char character))
   (with-slots (extra-buffer) reader
     (push char extra-buffer)))
 (defun* (pop-stack-frame -> (values t t)) ((reader reader))
@@ -111,12 +109,12 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                   stack-frame mod-frame stack mod-stack)
       (values stack-frame mod-frame))))
 
-(defun* char-whitespace-p ((char rcharacter))
-  #M"return t if character is whitespace or nil. 
-     nil used for EOF"
-  (or (null char) (memq char '(#\space #\tab #\newline))))
+(defun* char-whitespace-p ((char character))
+  #M"return t if character is whitespace or #\null. 
+     #\nullnil used for EOF"
+  (memq char '(#\null #\space #\tab #\newline)))
 
-(defun* char-end-of-statement-p ((char rcharacter))
+(defun* char-end-of-statement-p ((char character))
   #M"return t if character is whitespace or nil or any 
      special symbol that signals about new statement. "
   (or (char-whitespace-p char) (memq char '(#\( #\) #\[ #\] #\" #\' #\` #\,))))
@@ -188,7 +186,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
            (parsed (make-array (length result-list) :initial-contents result-list)))
       (end-collector reader parsed mod-frame))))
 
-(defun* state/toplevel-transition ((reader reader) (char rcharacter))
+(defun* state/toplevel-transition ((reader reader) (char character))
   (with-slots (stack mod-stack) reader
     (let* ((current-modifiers (car mod-stack))
            (active-modifier (car current-modifiers)))
@@ -196,6 +194,43 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (unless (char-whitespace-p char)
         (init-stack reader))
       (cond
+        ((eq active-modifier '\#)
+         (cond
+           ((eq char #\') (push-modifier reader '\#\' :replace-last t))
+           ((eq char #\:) 
+            (pop (car mod-stack))
+            (start-collector reader)
+            (change-state reader state/symbol)
+            (push-modifier reader 'symbol)
+            (push-modifier reader '\#\:))
+           ((eq char #\#)
+            (pop (car mod-stack))
+            (push-extra-char reader char)
+            (push-extra-char reader char)
+            (start-collector reader)
+            (change-state reader state/symbol))
+           ((digit-char-p char)
+            (pop (car mod-stack))
+            (start-collector reader)
+            (change-state reader state/pointer)
+            (push-extra-char reader char))
+           ((memq char '(#\b #\B))
+            (pop (car mod-stack))
+            (start-collector reader)
+            (change-state reader state/radix-bin))
+           ((memq char '(#\o #\O))
+            (pop (car mod-stack))
+            (start-collector reader)
+            (change-state reader state/radix-oct))
+           ((memq char '(#\x #\X))
+            (pop (car mod-stack))
+            (start-collector reader)
+            (change-state reader state/radix-hex))
+           ((eq char #\!)
+            (pop (car mod-stack))
+            (change-state reader state/line-comment))
+           (t (error 'invalid-reader-input-error :details "unsupported character after #"))
+           ))
         ((eq char #\()
          (start-collector reader))
         ((eq char #\))
@@ -205,8 +240,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
         ((eq char #\])
          (end-vector reader))
         ((char-whitespace-p char)
-         (when active-modifier
-           (error 'eof-reader-error :details (format nil "~s without body" active-modifier)))
+         ;; (when active-modifier
+         ;;   (error 'eof-reader-error :details (format nil "~s without body" active-modifier)))
          ;; do nothing on whitespace
          )
         ((eq char #\;)
@@ -221,48 +256,14 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
          (start-collector reader)
          (change-state reader state/character))
         ((eq char #\')
-         (if (eq active-modifier '\#)
-             (push-modifier reader '\#\' :replace-last t)
-             (push-modifier reader '\')))
+         (push-modifier reader '\'))
         ((eq char #\`)
          (push-modifier reader '\`))
         ((eq char #\,)
          (push-modifier reader '\,))
         ((and (eq char #\@) (eq active-modifier '\,))
          (push-modifier reader '\,@ :replace-last t))
-        ((and (eq char #\:) (eq active-modifier '\#))
-         (pop (car mod-stack))
-         (start-collector reader)
-         (change-state reader state/symbol)
-         (push-modifier reader 'symbol)
-         (push-modifier reader '\#\:))
-        ((eq char #\#)
-         (if (eq active-modifier '\#)
-             (progn
-               (pop (car mod-stack))
-               (push-extra-char reader char)
-               (push-extra-char reader char)
-               (start-collector reader)
-               (change-state reader state/symbol))
-             (push-modifier reader '\#))
-         )
-        ((and (eq active-modifier '\#) (digit-char-p char))
-         (pop (car mod-stack))
-         (start-collector reader)
-         (change-state reader state/pointer)
-         (push-extra-char reader char))
-        ((and (eq active-modifier '\#) (memq char '(#\b #\B)))
-         (pop (car mod-stack))
-         (start-collector reader)
-         (change-state reader state/radix-bin))
-        ((and (eq active-modifier '\#) (memq char '(#\o #\O)))
-         (pop (car mod-stack))
-         (start-collector reader)
-         (change-state reader state/radix-oct))
-        ((and (eq active-modifier '\#) (memq char '(#\x #\X)))
-         (pop (car mod-stack))
-         (start-collector reader)
-         (change-state reader state/radix-hex))
+        ((eq char #\#) (push-modifier reader '\#))
         (t
          (start-collector reader)
          (change-state reader state/symbol)
@@ -273,10 +274,10 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (defun* end-string ((reader reader))
   (log-debug1 "end string")
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
-    (let ((parsed (char-list-to-string (nreverse stack-frame))))
+    (let ((parsed (char-list-to-el-string (nreverse stack-frame))))
       (end-collector reader parsed mod-frame))))
 
-(defun* state/string-transition ((reader reader) (char rcharacter))
+(defun* state/string-transition ((reader reader) (char character))
   (with-slots (stack) reader
     (cond
       ((memq char '(#\"))
@@ -291,7 +292,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (log-debug1 "end character")
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
     (with-slots (extra-buffer) reader
-      (let ((parsed (char-list-to-string (nreverse stack-frame)))
+      (let ((parsed (char-list-to-cl-string (nreverse stack-frame)))
             code)
         (handler-case
             (setq code (read-emacs-character parsed))
@@ -305,7 +306,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                 (setq code cl-emacs/character-reader::parsed-code)))))
         (end-collector reader code mod-frame)))))
 
-(defun* state/character-transition ((reader reader) (char rcharacter))
+(defun* state/character-transition ((reader reader) (char character))
   (with-slots (stack) reader
     (cond
       ((char-whitespace-p char)
@@ -329,7 +330,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (defun* end-symbol ((reader reader))
   (log-debug1 "end symbol")
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
-    (let* ((chardata (char-list-to-string (nreverse stack-frame)))
+    (let* ((chardata (char-list-to-cl-string (nreverse stack-frame)))
            (elisp-number (unless (memq 'symbol mod-frame)
                            (parse-elisp-number chardata)))
            parsed)
@@ -348,7 +349,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (with-slots (stack) reader
     (push char (car stack))))
 
-(defun* state/symbol-transition ((reader reader) (char rcharacter))
+(defun* state/symbol-transition ((reader reader) (char character))
   (with-slots (stack) reader
     (cond
       ((char-end-of-statement-p char)
@@ -368,14 +369,14 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (t
        (push-to-reader-stack reader char)))))
 
-(defun* state/symbol-escaped-transition ((reader reader) (char rcharacter))
+(defun* state/symbol-escaped-transition ((reader reader) (char character))
   (push-to-reader-stack reader char)
   (push-modifier reader 'symbol)
   (change-state reader state/symbol)
   )
 
 ;; comment
-(defun* state/line-comment-transition ((reader reader) (char rcharacter))
+(defun* state/line-comment-transition ((reader reader) (char character))
   (with-slots (stack) reader
     (cond
       ((eq char #\newline)
@@ -400,7 +401,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (log-debug1 "end pointer")
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
     (with-slots (pointers) reader
-      (let* ((chardata (char-list-to-string (nreverse stack-frame)))
+      (let* ((chardata (char-list-to-cl-string (nreverse stack-frame)))
              (pointer-number (parse-elisp-number chardata))
              )
         (unless pointer-number
@@ -411,7 +412,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
                    (change-state reader state/toplevel))
             (end-collector reader (cdr (get-pointer-cons reader pointer-number)) mod-frame))))))
 
-(defun* state/pointer-transition ((reader reader) (char rcharacter))
+(defun* state/pointer-transition ((reader reader) (char character))
   (with-slots (stack) reader
     (cond
       ((digit-char-p char)
@@ -433,7 +434,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (error 'invalid-reader-input-error :details "empty number definition"))
     (let ((parsed (reversed-list-to-number stack-frame radix-bits)))
       (end-collector reader parsed mod-frame))))
-(defun* generic-radix-transition ((reader reader) (char rcharacter) (radix-bits fixnum))
+(defun* generic-radix-transition ((reader reader) (char character) (radix-bits fixnum))
   (let* ((radix (ash 1 radix-bits))
          (parsed (and (characterp char) (digit-char-p char radix))))
     (with-slots (stack) reader
@@ -445,11 +446,11 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
          (change-state reader state/toplevel))
         (t
          (error 'invalid-reader-input-error :details (format nil "bad symbol ~s for radix ~a" char radix)))))))
-(defun* state/radix-bin-transition ((reader reader) (char rcharacter))
+(defun* state/radix-bin-transition ((reader reader) (char character))
   (generic-radix-transition reader char 1))
-(defun* state/radix-oct-transition ((reader reader) (char rcharacter))
+(defun* state/radix-oct-transition ((reader reader) (char character))
   (generic-radix-transition reader char 3))
-(defun* state/radix-hex-transition ((reader reader) (char rcharacter))
+(defun* state/radix-hex-transition ((reader reader) (char character))
   (generic-radix-transition reader char 4))
 
 ;; main part
@@ -487,6 +488,9 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   (when (memq tree stack)
     ;; protection from circles
     (return-from replace-placeholder-in-tree tree))
+  (when (eq old-value new-value)
+    (error 'invalid-reader-input-error
+           :details "self-referencing pointer found"))
   (push tree stack)
   (log-debug2 "replace-placeholder-in-tree old:~s new:~s type-of:~s tree:~s" old-value new-value (type-of tree) tree)
   (cond
@@ -513,8 +517,11 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
     (t
      tree)))
 
-(defun* apply-modifiers ((reader reader) something (modifiers list))
+(defun* apply-modifiers ((reader reader) something (modifiers list) &optional (nil-not-allowed t))
   (log-debug2 "applying modifiers ~s to:~s" modifiers something)
+  (when (and modifiers nil-not-allowed (null something))
+    (error 'invalid-reader-input-error
+           :details (format nil "can't apply modifiers ~s without actual body" modifiers)))
   (with-slots (pointers stack) reader
     (loop
       while modifiers
@@ -558,7 +565,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
     (log-debug2 "mod-stack: ~s" mod-stack)
     (log-debug2 "stack: ~s" stack)
     (setq state new-state)))
-(defun* process-char ((reader reader) (char rcharacter) &key new-state)
+(defun* process-char ((reader reader) (char character) &key new-state)
   (with-slots (state) reader
     (log-debug2 "process char ~s in state ~s" char state)
     (when new-state
@@ -578,7 +585,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (defun* read-internal (stream)
   (let ((reader (make-reader :state state/toplevel)))
-    (with-slots (state stack character-counter extra-buffer pointers) reader
+    (with-slots (state stack mod-stack character-counter extra-buffer pointers) reader
       (handler-case
           (handler-case
               (loop
@@ -590,7 +597,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
               (log-debug1 "end of file")
               (process-extra-buffer reader)
               ;; final whitespace to finish any structure
-              (process-char reader nil)
+              (process-char reader #\null)
               ;; and extra buffer finally
               (process-extra-buffer reader)))
         (reader-stopped-signal ()
@@ -598,6 +605,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (log-debug2 "stack: ~s" stack)
       (when (or (null stack) (cdr stack))
         (error 'eof-reader-error :details "Lisp structure is not complete"))
+      (when (car mod-stack)
+        (error 'eof-reader-error :details (format nil "modifiers ~s without defined body" (car mod-stack))))
       (loop for pointer-num being each hash-key in pointers using (hash-value cons)
             do (unless (car cons)
                  (error 'invalid-reader-input-error
@@ -673,9 +682,10 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
               (car (read-from-string "''test-sym"))))
   (is (equalp (quote (el::quote (el::test-symbol)))
               (car (read-from-string "'(test-symbol)"))))
-  (signals eof-reader-error (read-from-string "(' 3)"))
+  (is (equalp (quote ((el::quote 3)))
+              (car (read-from-string "(' 3)"))))
   (signals eof-reader-error (read-from-string "';; test comment"))
-  (is (equalp (quote (el::quote "abc ("))
+  (is (equalp `(el::quote ,(et:build-string "abc ("))
               (car (read-from-string "'\"abc (\""))))
   (is (equalp (quote (el::quote 66))
               (car (read-from-string "'?B"))))
@@ -690,7 +700,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
               (car (read-from-string "''(1 '('''(2 ''''3) 4) 5)"))))
   (is (equalp (quote (el::quote (el::a (el::quote el::b))))
               (car (read-from-string "'(a'b)"))))
-  (is (equalp (quote (el::quote ("a" (el::quote el::b))))
+  (is (equalp `(el::quote (,(et:build-string "a") (el::quote el::b)))
               (car (read-from-string "'(\"a\"'b)"))))
   (is (equalp (quote (el::quote (65 (el::quote el::b))))
               (car (read-from-string "'(?A'b)"))))
@@ -715,18 +725,18 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   )
 
 (test read-strings
-  (is (equalp (quote ("test" . 6))
+  (is (equalp `(,(et:build-string "test") . 6)
               (read-from-string "\"test\" ")))
-  (is (equalp (quote (el::defvar el::test-var el::nil
-                       #M"some 
-                          multiline docstring `with symbols'."))
+  (is (equalp `(el::defvar el::test-var el::nil
+                 ,(et:build-string #M"some 
+                                      multiline docstring `with symbols'."))
               (car (read-from-string #M"(defvar test-var nil \"some 
                                         multiline docstring `with symbols'.\")"))))
   )
 (test read-lists
-  (is (equalp (quote (el::a "b"))
+  (is (equalp `(el::a ,(et:build-string "b"))
               (car (read-from-string "(a\"b\") "))))
-  (is (equalp (quote (el::test 2 3 "A ( B"))
+  (is (equalp `(el::test 2 3 ,(et:build-string "A ( B"))
               (car (read-from-string "(test 2 3 \"A ( B\")"))))
   (is (equalp (quote (el::test (2 3) 4 ()))
               (car (read-from-string "(test (2 3) 4 ())"))))
@@ -762,7 +772,10 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (test reader-special-cases
   (signals eof-reader-error (read-from-string ""))
-  )
+  (is (equalp '(el::quote el::test)
+              (car (read-from-string #M" ' #!some-stuff
+                                        #!some-stuff
+                                        test")))))
 
 (test read-vectors
   (is (equalp (quote #(1 el::a))
@@ -784,9 +797,20 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   ;; #'test - symbol
   ;; #[1 2] - bytecode?
   ;; #\" eof?
-  ;; #o600
-  ;; #x000100
-
+  ;; #! skip rest of the line
+  ;; lisp_file_lexically_bound_p supports some lexical env while loading using lexical-binding variable
+  ;; #&N bool vector?
+  ;; #@number skip. #@00 - skip to eof/eob
+  ;; strings:
+  ;;  \s \  \\n ?\C-SPC ?\^SPC \C-SPC' and `\^SPC
+  ;; #s( record
+  ;; #^[ char table
+  ;; #^^[ sub-char table
+  ;; #[ byte code
+  ;; #( string props
+  ;; #$ ???
+  ;; #_X symbol without shorthand
+  ;; #NrDIGITS -- radix-N number, any radix 0-36, r or R
   )
 
 (test reader-functions

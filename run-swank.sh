@@ -7,6 +7,10 @@ rm -Rf $CCL_PATH || echo $CCL_PATH directory does not exist
 mkdir -p $CCL_PATH
 cp -R /ccl/* $CCL_PATH
 rm -Rf ./systems systems.csv
+
+mkdir -p $ASDF_DIR
+cp -R /asdf/* $ASDF_DIR
+
 if [ ! -z "$OCICL_REGISTRY" ]
 then
     echo using custom ocicl registry $OCICL_REGISTRY
