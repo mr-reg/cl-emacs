@@ -578,7 +578,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (defun* read-internal (stream)
   (let ((reader (make-reader :state state/toplevel)))
-    (with-slots (state stack character-counter extra-buffer) reader
+    (with-slots (state stack character-counter extra-buffer pointers) reader
       (handler-case
           (handler-case
               (loop
@@ -598,6 +598,10 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
       (log-debug2 "stack: ~s" stack)
       (when (or (null stack) (cdr stack))
         (error 'eof-reader-error :details "Lisp structure is not complete"))
+      (loop for pointer-num being each hash-key in pointers using (hash-value cons)
+            do (unless (car cons)
+                 (error 'invalid-reader-input-error
+                        :details (format nil "undefined pointer #~a" pointer-num))))
       (values (caar stack) reader))))
 
 (defun* read (stream)
@@ -818,6 +822,8 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
     (is (eq (aref (car sample) 1) (cdr (aref (car sample) 1)))))
   (is (equalp (quote ((el::quote (el::quote el::a)) (el::quote el::a)))
               (car (read-from-string "('#1='a #1#)"))))
+  (signals invalid-reader-input-error (read-from-string "#1=(#1# #2#)"))
+  (signals invalid-reader-input-error (read-from-string "#1=#1#"))
   ;; check in other collection types, like hashmap and string properties
   )
 
