@@ -16,17 +16,18 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/utils
-    (:use :common-lisp :cl-emacs/log)
-  )
-(in-package :cl-emacs/utils)
-(log-enable :cl-emacs/utils)
-;; (defun read-literal-string (stream delimiter arg)
-;;   (declare (ignore arg))
-;;   (loop for char = (read-char stream nil stream)
-;;         when (eq char stream)
-;;           do (error "hit end of stream")
-;;         until (char= char delimiter)
-;;         collect char into chars
-;;         finally (return (coerce chars 'string))))
-;; (set-dispatch-macro-character #\# #\" #'read-literal-string)
+(uiop:define-package :cl-emacs/emacs-module
+    (:use
+     :common-lisp
+     :defstar
+     :cl-emacs/log
+     :alexandria
+     :fiveam
+     :cl-emacs/commons))
+(in-package :cl-emacs/emacs-module)
+(log-enable :cl-emacs/emacs-module :debug2)
+(named-readtables:in-readtable mstrings:mstring-syntax)
+(defun* module-load () "Load module FILE.
+
+(fn FILE)"
+  (error ’unimplemented-error))

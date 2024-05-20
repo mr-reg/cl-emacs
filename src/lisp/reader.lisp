@@ -1,22 +1,21 @@
-#|
-Copyright (C) 2024 by Gleb Borodulia
-Author: Gleb Borodulia <mr.reg@mail.ru>
+;; Copyright (C) 2024 by Gleb Borodulia
+;; Author: Gleb Borodulia <mr.reg@mail.ru>
 
-This file is part of cl-emacs.
+;; This file is part of cl-emacs.
 
-cl-emacs is free software: you can redistribute it and/or modify it
-under the terms of the GNU General Public License as published by the
-Free Software Foundation, either version 3 of the License, or (at your
-option) any later version.
+;; cl-emacs is free software: you can redistribute it and/or modify it
+;; under the terms of the GNU General Public License as published by the
+;; Free Software Foundation, either version 3 of the License, or (at your
+;; option) any later version.
 
-cl-emacs is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-General Public License for more details.
+;; cl-emacs is distributed in the hope that it will be useful, but
+;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+;; General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
-|#
+;; You should have received a copy of the GNU General Public License
+;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
+
 (uiop:define-package :cl-emacs/reader
     (:use
      :common-lisp
@@ -117,7 +116,7 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 (defun* char-end-of-statement-p ((char character))
   #M"return t if character is whitespace or nil or any 
      special symbol that signals about new statement. "
-  (or (char-whitespace-p char) (memq char '(#\( #\) #\[ #\] #\" #\' #\` #\,))))
+  (or (char-whitespace-p char) (memq char '(#\( #\) #\[ #\] #\" #\' #\` #\, #\#))))
 
 (defun* start-collector ((reader reader))
   (log-debug1 "start collector")
@@ -229,6 +228,10 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
            ((eq char #\!)
             (pop (car mod-stack))
             (change-state reader state/line-comment))
+           ((eq char #\_)
+            (pop (car mod-stack))
+            (start-collector reader)
+            (change-state reader state/symbol))
            (t (error 'invalid-reader-input-error :details "unsupported character after #"))
            ))
         ((eq char #\()
@@ -671,7 +674,19 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
               (symbol-name (car (read-from-string "#:+1")))))
   (is (equalp ""
               (symbol-name (car (read-from-string "#:,")))))
+  (is (equalp 'el::test
+              (car (read-from-string "#_test"))))
+  (is (equalp (quote el::||) 
+              (car (read-from-string "#_"))))  )
+
+(test read-shorthands
+  ;; TODO
+  ;; (let ((read-symbol-shorthands
+  ;;         '(("s-" . "shorthand-longhand-"))))
+  ;; (read "#_s-test")
+  ;;   (read "#_s-test"))
   )
+
 (test read-integers
   (is (equalp 1 (car (read-from-string "+1")))))
 
@@ -797,7 +812,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   ;; #'test - symbol
   ;; #[1 2] - bytecode?
   ;; #\" eof?
-  ;; #! skip rest of the line
   ;; lisp_file_lexically_bound_p supports some lexical env while loading using lexical-binding variable
   ;; #&N bool vector?
   ;; #@number skip. #@00 - skip to eof/eob
@@ -809,7 +823,6 @@ along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
   ;; #[ byte code
   ;; #( string props
   ;; #$ ???
-  ;; #_X symbol without shorthand
   ;; #NrDIGITS -- radix-N number, any radix 0-36, r or R
   )
 

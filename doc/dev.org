@@ -185,3 +185,16 @@ color_run llvm-cov report ./temacs -instr-profile=default.profdata  | less -SR
 valgrind --fair-sched=yes --tool=callgrind ./temacs
 * reader notation
 https://www.emacswiki.org/emacs/EmacsSymbolNotation
+* run emacs cli
+./emacs --batch -nw -q -nl --eval '(print "123")'
+#+begin_src sh
+./emacs --batch -nw -q -nl --eval "(mapatoms (lambda (x)
+            (let ((subr (symbol-function x)))
+              (when (subrp subr)
+                (when (help-C-file-name (symbol-function x) 'subr)
+                  (ignore-errors
+                    (message (format \"%S (defun* %S () %S@@@n(error 'unimplemented-error))\"
+                                     (help-C-file-name (symbol-function x) 'subr)
+                                     x
+                                     (string-replace \"\\n\" \"@@@n\" (documentation x t))))))))))"
+#+end_src

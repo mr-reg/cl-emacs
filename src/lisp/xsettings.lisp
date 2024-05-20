@@ -16,32 +16,30 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/types
+(uiop:define-package :cl-emacs/xsettings
     (:use
      :common-lisp
      :defstar
      :cl-emacs/log
      :alexandria
      :fiveam
-     :cl-emacs/commons)
-  (:shadow #:string #:make-string)
-  (:export #:string
-           #:make-string
-           #:string-chardata
-           #:string-properties
-           #:build-string)
-  )
-(in-package :cl-emacs/types)
-(log-enable :cl-emacs/types :debug2)
+     :cl-emacs/commons))
+(in-package :cl-emacs/xsettings)
+(log-enable :cl-emacs/xsettings :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
+(defun* font-get-system-font () "Get the system default fixed width font.
+The font is returned as either a font-spec or font name.
 
-(defstruct string
-  (chardata "" :type cl:string)
-  (properties nil :type list))
+(fn)"
+  (error ’unimplemented-error))
+(defun* font-get-system-normal-font () "Get the system default application font.
+The font is returned as either a font-spec or font name.
 
-(defun* (build-string -> string) ((cl-string cl:string))
-  (make-string :chardata cl-string))
+(fn)"
+  (error ’unimplemented-error))
+(defun* tool-bar-get-system-style () "Get the system tool bar style.
+If no system tool bar style is known, return ‘tool-bar-style’ if set to a
+known style.  Otherwise return image.
 
-
-;; (in-package :cl-emacs/elisp)
-;; (reexport-symbols :cl-emacs/types)
+(fn)"
+  (error ’unimplemented-error))

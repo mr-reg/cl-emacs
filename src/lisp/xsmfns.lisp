@@ -16,32 +16,27 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/types
+(uiop:define-package :cl-emacs/xsmfns
     (:use
      :common-lisp
      :defstar
      :cl-emacs/log
      :alexandria
      :fiveam
-     :cl-emacs/commons)
-  (:shadow #:string #:make-string)
-  (:export #:string
-           #:make-string
-           #:string-chardata
-           #:string-properties
-           #:build-string)
-  )
-(in-package :cl-emacs/types)
-(log-enable :cl-emacs/types :debug2)
+     :cl-emacs/commons))
+(in-package :cl-emacs/xsmfns)
+(log-enable :cl-emacs/xsmfns :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
+(defun* handle-save-session () "Handle the save_yourself event from a session manager.
+A session manager can tell Emacs that the window system is shutting down
+by sending Emacs a save_yourself message.  Emacs executes this function when
+such an event occurs.  This function then executes ‘emacs-session-save’.
+After that, this function informs the session manager that it can continue
+or abort shutting down the window system depending on the return value
+from ‘emacs-session-save’  If the return value is non-nil the session manager
+is told to abort the window system shutdown.
 
-(defstruct string
-  (chardata "" :type cl:string)
-  (properties nil :type list))
+Do not call this function yourself.
 
-(defun* (build-string -> string) ((cl-string cl:string))
-  (make-string :chardata cl-string))
-
-
-;; (in-package :cl-emacs/elisp)
-;; (reexport-symbols :cl-emacs/types)
+(fn EVENT)"
+  (error ’unimplemented-error))

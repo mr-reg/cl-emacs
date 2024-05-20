@@ -16,32 +16,31 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/types
+(uiop:define-package :cl-emacs/decompress
     (:use
      :common-lisp
      :defstar
      :cl-emacs/log
      :alexandria
      :fiveam
-     :cl-emacs/commons)
-  (:shadow #:string #:make-string)
-  (:export #:string
-           #:make-string
-           #:string-chardata
-           #:string-properties
-           #:build-string)
-  )
-(in-package :cl-emacs/types)
-(log-enable :cl-emacs/types :debug2)
+     :cl-emacs/commons))
+(in-package :cl-emacs/decompress)
+(log-enable :cl-emacs/decompress :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
+(defun* zlib-available-p () "Return t if zlib decompression is available in this instance of Emacs.
 
-(defstruct string
-  (chardata "" :type cl:string)
-  (properties nil :type list))
+(fn)"
+  (error ’unimplemented-error))
+(defun* zlib-decompress-region () "Decompress a gzip- or zlib-compressed region.
+Replace the text in the region by the decompressed data.
 
-(defun* (build-string -> string) ((cl-string cl:string))
-  (make-string :chardata cl-string))
+If optional parameter ALLOW-PARTIAL is nil or omitted, then on
+failure, return nil and leave the data in place.  Otherwise, return
+the number of bytes that were not decompressed and replace the region
+text by whatever data was successfully decompressed (similar to gzip).
+If decompression is completely successful return t.
 
+This function can be called only in unibyte buffers.
 
-;; (in-package :cl-emacs/elisp)
-;; (reexport-symbols :cl-emacs/types)
+(fn START END &optional ALLOW-PARTIAL)"
+  (error ’unimplemented-error))
