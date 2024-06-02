@@ -27,7 +27,8 @@
 (in-package :cl-emacs/emacs-module)
 (log-enable :cl-emacs/emacs-module :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* module-load () "Load module FILE.
+(defun* module-load ()
+  #M"Load module FILE.
 
 (fn FILE)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

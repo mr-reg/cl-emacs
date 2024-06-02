@@ -27,22 +27,26 @@
 (in-package :cl-emacs/pdumper)
 (log-enable :cl-emacs/pdumper :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* dump-emacs-portable () "Dump current state of Emacs into dump file FILENAME.
+(defun* dump-emacs-portable ()
+  #M"Dump current state of Emacs into dump file FILENAME.
 If TRACK-REFERRERS is non-nil, keep additional debugging information
 that can help track down the provenance of unsupported object
 types.
 
 (fn FILENAME &optional TRACK-REFERRERS)"
-  (error ’unimplemented-error))
-(defun* dump-emacs-portable--sort-predicate () "Internal relocation sorting function.
+  (error 'unimplemented-error))
+(defun* dump-emacs-portable--sort-predicate ()
+  #M"Internal relocation sorting function.
 
 (fn A B)"
-  (error ’unimplemented-error))
-(defun* dump-emacs-portable--sort-predicate-copied () "Internal relocation sorting function.
+  (error 'unimplemented-error))
+(defun* dump-emacs-portable--sort-predicate-copied ()
+  #M"Internal relocation sorting function.
 
 (fn A B)"
-  (error ’unimplemented-error))
-(defun* pdumper-stats () "Return statistics about portable dumping used by this session.
+  (error 'unimplemented-error))
+(defun* pdumper-stats ()
+  #M"Return statistics about portable dumping used by this session.
 If this Emacs session was started from a dump file,
 the return value is an alist of the form:
 
@@ -53,4 +57,4 @@ from the dump file, and FILE is the name of the dump file.
 Value is nil if this session was not started using a dump file.
 
 (fn)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

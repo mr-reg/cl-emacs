@@ -47,6 +47,8 @@
 (cl:defun reexport-symbols (package)
   (cl-emacs/commons:reexport-symbols package))
 
-(unless t
-  (do-symbols (symbol :cl-emacs/elisp)
-    (format t "~s~%" symbol)))
+(cl:import '(cl::nil
+             cl::t))
+;; (unless t
+;;   (do-symbols (symbol :cl-emacs/elisp)
+;;     (format t "~s~%" symbol)))

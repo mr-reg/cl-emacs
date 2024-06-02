@@ -27,7 +27,8 @@
 (in-package :cl-emacs/treesit)
 (log-enable :cl-emacs/treesit :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* treesit-available-p () "Return non-nil if tree-sitter support is built-in and available.
+(defun* treesit-available-p ()
+  #M"Return non-nil if tree-sitter support is built-in and available.
 
 (fn)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

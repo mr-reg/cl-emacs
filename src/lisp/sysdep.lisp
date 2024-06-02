@@ -27,11 +27,12 @@
 (in-package :cl-emacs/sysdep)
 (log-enable :cl-emacs/sysdep :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* get-internal-run-time () "Return the current run time used by Emacs.
-The time is returned as in the style of ‘current-time’.
+(defun* get-internal-run-time ()
+  #M"Return the current run time used by Emacs.
+The time is returned as in the style of ‘current-time'.
 
-On systems that can’t determine the run time, ‘get-internal-run-time’
-does the same thing as ‘current-time’.
+On systems that can't determine the run time, ‘get-internal-run-time'
+does the same thing as ‘current-time'.
 
 (fn)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

@@ -27,16 +27,17 @@
 (in-package :cl-emacs/xsmfns)
 (log-enable :cl-emacs/xsmfns :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* handle-save-session () "Handle the save_yourself event from a session manager.
+(defun* handle-save-session ()
+  #M"Handle the save_yourself event from a session manager.
 A session manager can tell Emacs that the window system is shutting down
 by sending Emacs a save_yourself message.  Emacs executes this function when
-such an event occurs.  This function then executes ‘emacs-session-save’.
+such an event occurs.  This function then executes ‘emacs-session-save'.
 After that, this function informs the session manager that it can continue
 or abort shutting down the window system depending on the return value
-from ‘emacs-session-save’  If the return value is non-nil the session manager
+from ‘emacs-session-save'  If the return value is non-nil the session manager
 is told to abort the window system shutdown.
 
 Do not call this function yourself.
 
 (fn EVENT)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

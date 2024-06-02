@@ -33,7 +33,7 @@ Used to determine if different closures are just different instances of
 the same lambda expression, or are really unrelated function.
 
 (fn F1 F2)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))
 (defun* profiler-cpu-log ()
   #M"Return the current cpu profiler log.
 The log is a hash-table mapping backtraces to counters which represent
@@ -42,25 +42,25 @@ of functions, where the last few elements may be nil.
 Before returning, a new log is allocated for future samples.
 
 (fn)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))
 (defun* profiler-cpu-running-p ()
   #M"Return non-nil if cpu profiler is running.
 
 (fn)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))
 (defun* profiler-cpu-start ()
   #M"Start or restart the cpu profiler.
 It takes call-stack samples each SAMPLING-INTERVAL nanoseconds, approximately.
-See also ‘profiler-log-size’ and ‘profiler-max-stack-depth’.
+See also ‘profiler-log-size' and ‘profiler-max-stack-depth'.
 
 (fn SAMPLING-INTERVAL)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))
 (defun* profiler-cpu-stop ()
   #M"Stop the cpu profiler.  The profiler log is not affected.
 Return non-nil if the profiler was running.
 
 (fn)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))
 (defun* profiler-memory-log ()
   #M"Return the current memory profiler log.
 The log is a hash-table mapping backtraces to counters which represent
@@ -69,24 +69,24 @@ of functions, where the last few elements may be nil.
 Before returning, a new log is allocated for future samples.
 
 (fn)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))
 (defun* profiler-memory-running-p ()
   #M"Return non-nil if memory profiler is running.
 
 (fn)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))
 (defun* profiler-memory-start ()
   #M"Start/restart the memory profiler.
 The memory profiler will take samples of the call-stack whenever a new
 allocation takes place.  Note that most small allocations only trigger
 the profiler occasionally.
-See also ‘profiler-log-size’ and ‘profiler-max-stack-depth’.
+See also ‘profiler-log-size' and ‘profiler-max-stack-depth'.
 
 (fn)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))
 (defun* profiler-memory-stop ()
   #M"Stop the memory profiler.  The profiler log is not affected.
 Return non-nil if the profiler was running.
 
 (fn)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

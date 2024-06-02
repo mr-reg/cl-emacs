@@ -9,7 +9,8 @@ RUN curl -OL https://github.com/Clozure/ccl/releases/download/v$CCL_VERSION/ccl-
     && curl -OL https://github.com/Clozure/ccl/releases/download/v$CCL_VERSION/linuxx86.tar.gz \
     && tar xf linuxx86.tar.gz
 ENV OCICL_VERSION=1.0.19
-RUN aptitude install -y make less sbcl procps apt-file net-tools clang git
+RUN aptitude update \
+    && aptitude install -y make less sbcl procps apt-file net-tools clang git
 COPY src/docker/ocicl-patch.lisp /tmp/ocicl-patch.lisp
 
 RUN curl -OL https://github.com/ocicl/ocicl/archive/refs/tags/v$OCICL_VERSION.tar.gz \
@@ -28,13 +29,11 @@ ENV ASDF_VERSION=3.3.6.7 \
     ASDF_DIR=/asdf
 RUN git clone --depth 1 -b $ASDF_VERSION https://gitlab.common-lisp.net/asdf/asdf.git /asdf \
     && cd /asdf \
-    && make 
+    && make
 COPY src/docker/ccl-init.lisp /root/ccl-init.lisp
 COPY run-swank* /cl-emacs/
 #/COPY src /cl-emacs/src
 WORKDIR /cl-emacs
-ENV PATH=/ccl/:/root/.local/bin/:$PATH 
+ENV PATH=/ccl/:/root/.local/bin/:$PATH
 
 # RUN ASDF_ONLY=1 ./run-swank.sh
-
-

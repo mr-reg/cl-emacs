@@ -27,7 +27,8 @@
 (in-package :cl-emacs/comp)
 (log-enable :cl-emacs/comp :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* native-comp-available-p () "Return non-nil if native compilation support is built-in.
+(defun* native-comp-available-p ()
+  #M"Return non-nil if native compilation support is built-in.
 
 (fn)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

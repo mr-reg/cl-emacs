@@ -27,9 +27,10 @@
 (in-package :cl-emacs/undo)
 (log-enable :cl-emacs/undo :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* undo-boundary () "Mark a boundary between units of undo.
+(defun* undo-boundary ()
+  #M"Mark a boundary between units of undo.
 An undo command will stop at this point,
 but another undo command will undo to the previous boundary.
 
 (fn)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

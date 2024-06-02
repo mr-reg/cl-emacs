@@ -27,7 +27,8 @@
 (in-package :cl-emacs/macros)
 (log-enable :cl-emacs/macros :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* call-last-kbd-macro () "Call the last keyboard macro that you defined with \\[start-kbd-macro].
+(defun* call-last-kbd-macro ()
+  #M"Call the last keyboard macro that you defined with \\[start-kbd-macro].
 
 A prefix argument serves as a repeat count.  Zero means repeat until error.
 
@@ -38,12 +39,14 @@ In Lisp, optional second arg LOOPFUNC may be a function that is called prior to
 each iteration of the macro.  Iteration stops if LOOPFUNC returns nil.
 
 (fn &optional PREFIX LOOPFUNC)"
-  (error ’unimplemented-error))
-(defun* cancel-kbd-macro-events () "Cancel the events added to a keyboard macro for this command.
+  (error 'unimplemented-error))
+(defun* cancel-kbd-macro-events ()
+  #M"Cancel the events added to a keyboard macro for this command.
 
 (fn)"
-  (error ’unimplemented-error))
-(defun* defining-kbd-macro () "Record subsequent keyboard input, defining a keyboard macro.
+  (error 'unimplemented-error))
+(defun* defining-kbd-macro ()
+  #M"Record subsequent keyboard input, defining a keyboard macro.
 The commands are recorded even as they are executed.
 Use \\[end-kbd-macro] to finish recording and make the macro available.
 Use \\[name-last-kbd-macro] to give it a permanent name.
@@ -53,8 +56,9 @@ If optional second arg, NO-EXEC, is non-nil, do not re-execute last
 macro before appending to it.
 
 (fn APPEND &optional NO-EXEC)"
-  (error ’unimplemented-error))
-(defun* end-kbd-macro () "Finish defining a keyboard macro.
+  (error 'unimplemented-error))
+(defun* end-kbd-macro ()
+  #M"Finish defining a keyboard macro.
 The definition was started by \\[start-kbd-macro].
 The macro is now available for use via \\[call-last-kbd-macro],
 or it can be given a name with \\[name-last-kbd-macro] and then invoked
@@ -68,8 +72,9 @@ In Lisp, optional second arg LOOPFUNC may be a function that is called prior to
 each iteration of the macro.  Iteration stops if LOOPFUNC returns nil.
 
 (fn &optional REPEAT LOOPFUNC)"
-  (error ’unimplemented-error))
-(defun* execute-kbd-macro () "Execute MACRO as a sequence of events.
+  (error 'unimplemented-error))
+(defun* execute-kbd-macro ()
+  #M"Execute MACRO as a sequence of events.
 If MACRO is a string or vector, then the events in it are executed
 exactly as if they had been input by the user.
 
@@ -87,8 +92,9 @@ The buffer shown in the currently selected window will be made the current
 buffer before the macro is executed.
 
 (fn MACRO &optional COUNT LOOPFUNC)"
-  (error ’unimplemented-error))
-(defun* start-kbd-macro () "Record subsequent keyboard input, defining a keyboard macro.
+  (error 'unimplemented-error))
+(defun* start-kbd-macro ()
+  #M"Record subsequent keyboard input, defining a keyboard macro.
 The commands are recorded even as they are executed.
 Use \\[end-kbd-macro] to finish recording and make the macro available.
 Use \\[name-last-kbd-macro] to give it a permanent name.
@@ -98,8 +104,9 @@ If optional second arg, NO-EXEC, is non-nil, do not re-execute last
 macro before appending to it.
 
 (fn APPEND &optional NO-EXEC)"
-  (error ’unimplemented-error))
-(defun* store-kbd-macro-event () "Store EVENT into the keyboard macro being defined.
+  (error 'unimplemented-error))
+(defun* store-kbd-macro-event ()
+  #M"Store EVENT into the keyboard macro being defined.
 
 (fn EVENT)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

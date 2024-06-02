@@ -27,7 +27,8 @@
 (in-package :cl-emacs/insdel)
 (log-enable :cl-emacs/insdel :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* combine-after-change-execute () "This function is for use internally in the function ‘combine-after-change-calls’.
+(defun* combine-after-change-execute ()
+  #M"This function is for use internally in the function ‘combine-after-change-calls'.
 
 (fn)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

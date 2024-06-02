@@ -27,34 +27,37 @@
 (in-package :cl-emacs/callint)
 (log-enable :cl-emacs/callint :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* call-interactively () "Call FUNCTION, providing args according to its interactive calling specs.
+(defun* call-interactively ()
+  #M"Call FUNCTION, providing args according to its interactive calling specs.
 Return the value FUNCTION returns.
 The function contains a specification of how to do the argument reading.
 In the case of user-defined functions, this is specified by placing a call
-to the function ‘interactive’ at the top level of the function body.
-See ‘interactive’.
+to the function ‘interactive' at the top level of the function body.
+See ‘interactive'.
 
 Optional second arg RECORD-FLAG non-nil
-means unconditionally put this command in the variable ‘command-history’.
+means unconditionally put this command in the variable ‘command-history'.
 Otherwise, this is done only if an arg is read using the minibuffer.
 
 Optional third arg KEYS, if given, specifies the sequence of events to
 supply, as a vector, if FUNCTION inquires which events were used to
-invoke it (via an ‘interactive’ spec that contains, for instance, an
+invoke it (via an ‘interactive' spec that contains, for instance, an
 \"e\" code letter).  If KEYS is omitted or nil, the return value of
-‘this-command-keys-vector’ is used.
+‘this-command-keys-vector' is used.
 
 (fn FUNCTION &optional RECORD-FLAG KEYS)"
-  (error ’unimplemented-error))
-(defun* funcall-interactively () "Like ‘funcall’ but marks the call as interactive.
-I.e. arrange that within the called function ‘called-interactively-p’ will
+  (error 'unimplemented-error))
+(defun* funcall-interactively ()
+  #M"Like ‘funcall' but marks the call as interactive.
+I.e. arrange that within the called function ‘called-interactively-p' will
 return non-nil.
 
 (fn FUNCTION &rest ARGUMENTS)"
-  (error ’unimplemented-error))
-(defun* prefix-numeric-value () "Return numeric meaning of raw prefix argument RAW.
-A raw prefix argument is what you get from ‘(interactive \"P\")’.
-Its numeric meaning is what you would get from ‘(interactive \"p\")’.
+  (error 'unimplemented-error))
+(defun* prefix-numeric-value ()
+  #M"Return numeric meaning of raw prefix argument RAW.
+A raw prefix argument is what you get from ‘(interactive \"P\")'.
+Its numeric meaning is what you would get from ‘(interactive \"p\")'.
 
 (fn RAW)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

@@ -27,16 +27,19 @@
 (in-package :cl-emacs/casetab)
 (log-enable :cl-emacs/casetab :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* case-table-p () "Return t if OBJECT is a case table.
-See ‘set-case-table’ for more information on these data structures.
+(defun* case-table-p ()
+  #M"Return t if OBJECT is a case table.
+See ‘set-case-table' for more information on these data structures.
 
 (fn OBJECT)"
-  (error ’unimplemented-error))
-(defun* current-case-table () "Return the case table of the current buffer.
+  (error 'unimplemented-error))
+(defun* current-case-table ()
+  #M"Return the case table of the current buffer.
 
 (fn)"
-  (error ’unimplemented-error))
-(defun* set-case-table () "Select a new case table for the current buffer.
+  (error 'unimplemented-error))
+(defun* set-case-table ()
+  #M"Select a new case table for the current buffer.
 A case table is a char-table which maps characters
 to their lower-case equivalents.  It also has three \"extra\" slots
 which may be additional char-tables or nil.
@@ -54,14 +57,16 @@ EQUIVALENCES is a map that cyclically permutes each equivalence class
  in which case it is deduced from CANONICALIZE.
 
 (fn TABLE)"
-  (error ’unimplemented-error))
-(defun* set-standard-case-table () "Select a new standard case table for new buffers.
-See ‘set-case-table’ for more info on case tables.
+  (error 'unimplemented-error))
+(defun* set-standard-case-table ()
+  #M"Select a new standard case table for new buffers.
+See ‘set-case-table' for more info on case tables.
 
 (fn TABLE)"
-  (error ’unimplemented-error))
-(defun* standard-case-table () "Return the standard case table.
+  (error 'unimplemented-error))
+(defun* standard-case-table ()
+  #M"Return the standard case table.
 This is the one used for new buffers.
 
 (fn)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

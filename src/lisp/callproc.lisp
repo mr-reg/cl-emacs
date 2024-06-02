@@ -27,22 +27,23 @@
 (in-package :cl-emacs/callproc)
 (log-enable :cl-emacs/callproc :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* call-process () "Call PROGRAM synchronously in separate process.
+(defun* call-process ()
+  #M"Call PROGRAM synchronously in separate process.
 The remaining arguments are optional.
 
-The program’s input comes from file INFILE (nil means ‘null-device’).
+The program's input comes from file INFILE (nil means ‘null-device').
 If INFILE is a relative path, it will be looked for relative to the
 directory where the process is run (see below).  If you want to make the
-input come from an Emacs buffer, use ‘call-process-region’ instead.
+input come from an Emacs buffer, use ‘call-process-region' instead.
 
-Third argument DESTINATION specifies how to handle program’s output.
+Third argument DESTINATION specifies how to handle program's output.
 (\"Output\" here means both standard output and standard error
 output.)
 If DESTINATION is a buffer or the name of a buffer, or t (which stands for
 the current buffer), it means insert output in that buffer before point.
 If DESTINATION is nil, it means discard output; 0 means discard
- and don’t wait for the program to terminate.
-If DESTINATION is ‘(:file FILE)’, where FILE is a file name string,
+ and don't wait for the program to terminate.
+If DESTINATION is ‘(:file FILE)', where FILE is a file name string,
  it means that output should be written to that file (if the file
  already exists it is overwritten).
 DESTINATION can also have the form (REAL-BUFFER STDERR-FILE); in that case,
@@ -54,25 +55,26 @@ DESTINATION can also have the form (REAL-BUFFER STDERR-FILE); in that case,
 Fourth arg DISPLAY non-nil means redisplay buffer as output is inserted.
 Remaining arguments ARGS are strings passed as command arguments to PROGRAM.
 
-If PROGRAM is not an absolute file name, ‘call-process’ will look for
-PROGRAM in ‘exec-path’ (which is a list of directories).
+If PROGRAM is not an absolute file name, ‘call-process' will look for
+PROGRAM in ‘exec-path' (which is a list of directories).
 
-If executable PROGRAM can’t be found as an executable, ‘call-process’
-signals a Lisp error.  ‘call-process’ reports errors in execution of
+If executable PROGRAM can't be found as an executable, ‘call-process'
+signals a Lisp error.  ‘call-process' reports errors in execution of
 the program only through its return and output.
 
-If DESTINATION is 0, ‘call-process’ returns immediately with value nil.
+If DESTINATION is 0, ‘call-process' returns immediately with value nil.
 Otherwise it waits for PROGRAM to terminate
 and returns a numeric exit status or a signal description string.
 If you quit, the process is killed with SIGINT, or SIGKILL if you quit again.
 
-The process runs in ‘default-directory’ if that is local (as
-determined by ‘unhandled-file-name-directory’), or \"~\" otherwise.  If
-you want to run a process in a remote directory use ‘process-file’.
+The process runs in ‘default-directory' if that is local (as
+determined by ‘unhandled-file-name-directory'), or \"~\" otherwise.  If
+you want to run a process in a remote directory use ‘process-file'.
 
 (fn PROGRAM &optional INFILE DESTINATION DISPLAY &rest ARGS)"
-  (error ’unimplemented-error))
-(defun* call-process-region () "Send text from START to END to a synchronous process running PROGRAM.
+  (error 'unimplemented-error))
+(defun* call-process-region ()
+  #M"Send text from START to END to a synchronous process running PROGRAM.
 
 START and END are normally buffer positions specifying the part of the
 buffer to send to the process.
@@ -84,8 +86,8 @@ The remaining arguments are optional.
 Delete the text if fourth arg DELETE is non-nil.
 
 Insert output in BUFFER before point; t means current buffer; nil for
- BUFFER means discard it; 0 means discard and don’t wait; and ‘(:file
- FILE)’, where FILE is a file name string, means that it should be
+ BUFFER means discard it; 0 means discard and don't wait; and ‘(:file
+ FILE)', where FILE is a file name string, means that it should be
  written to that file (if the file already exists it is overwritten).
 BUFFER can be a string which is the name of a buffer.
 BUFFER can also have the form (REAL-BUFFER STDERR-FILE); in that case,
@@ -98,25 +100,26 @@ Sixth arg DISPLAY non-nil means redisplay buffer as output is inserted.
 Remaining arguments ARGS are passed to PROGRAM at startup as command-line
 arguments.
 
-If PROGRAM is not an absolute file name, ‘call-process-region’ will
-look for PROGRAM in ‘exec-path’ (which is a list of directories).
+If PROGRAM is not an absolute file name, ‘call-process-region' will
+look for PROGRAM in ‘exec-path' (which is a list of directories).
 
-If BUFFER is 0, ‘call-process-region’ returns immediately with value nil.
+If BUFFER is 0, ‘call-process-region' returns immediately with value nil.
 Otherwise it waits for PROGRAM to terminate
 and returns a numeric exit status or a signal description string.
 If you quit, the process is killed with SIGINT, or SIGKILL if you quit again.
 
 (fn START END PROGRAM &optional DELETE BUFFER DISPLAY &rest ARGS)"
-  (error ’unimplemented-error))
-(defun* getenv-internal () "Get the value of environment variable VARIABLE.
+  (error 'unimplemented-error))
+(defun* getenv-internal ()
+  #M"Get the value of environment variable VARIABLE.
 VARIABLE should be a string.  Value is nil if VARIABLE is undefined in
 the environment.  Otherwise, value is a string.
 
-This function searches ‘process-environment’ for VARIABLE.
+This function searches ‘process-environment' for VARIABLE.
 
 If optional parameter ENV is a list, then search this list instead of
-‘process-environment’, and return t when encountering a negative entry
+‘process-environment', and return t when encountering a negative entry
 (an entry for a variable with no value).
 
 (fn VARIABLE &optional ENV)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

@@ -21,9 +21,9 @@
   (:export #:parse-elisp-number
            #:reversed-list-to-number
            #:char-list-to-cl-string
-           #:char-list-to-el-string)
+           #:char-list-to-pstring)
   (:local-nicknames (#:el #:cl-emacs/elisp)
-                    (#:et #:cl-emacs/types)))
+                    (#:pstrings #:cl-emacs/types/pstrings)))
 (in-package :cl-emacs/reader-utils)
 (log-enable :cl-emacs/reader-utils :debug1)
 (named-readtables:in-readtable mstrings:mstring-syntax)
@@ -39,7 +39,7 @@
 (defun* reversed-list-to-number ((digits list) (radix-bits fixnum))
   #M"internal function for readers
      Inputs:
-     digits - reversed list of digits in integer form, 
+     digits - reversed list of digits in integer form,
      radix - radix in power of 2, like 3 means 2^3 octal, 4 - 2^4 hex
      result - one big number"
   (loop for digit in digits
@@ -62,10 +62,10 @@
     (dolist (char char-list)
       (write-char char stream))))
 
-(defun* (char-list-to-el-string -> et:string) (char-list)
-  (et:make-string :chardata (with-output-to-string (stream)
-                              (dolist (char char-list)
-                                (write-char char stream)))))
+(defun* (char-list-to-pstring -> pstrings:pstring) (char-list)
+  (pstrings:build-pstring (with-output-to-string (stream)
+                            (dolist (char char-list)
+                              (write-char char stream)))))
 
 (test parse-elisp-number
   (is (= (parse-elisp-number "+1") 1))
@@ -81,4 +81,3 @@
   (is (= #o321 (reversed-list-to-number '(1 2 3) 3)))
   (is (= #x1fa (reversed-list-to-number '(10 15 1) 4)))
   )
-

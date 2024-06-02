@@ -1,4 +1,6 @@
 #-asdf3.1 (error "CL-EMACS requires ASDF 3.1 or later.")
+(load "elisp-packages.lisp")
+
 (asdf:defsystem :cl-emacs
   :version "0.0.1"
   :author "Gleb Borodulia <mr.reg@mail.ru>"
@@ -6,6 +8,7 @@
   :long-name "cl-emacs"
   :class :package-inferred-system
   :defsystem-depends-on (;; :cffi
+                         :cl-custom-hash-table
                          :cl-plumbing
                          :cl-ppcre
                          :defstar
@@ -17,7 +20,9 @@
                          :parse-number
                          ;; :pzmq
                          :serapeum
+                         :snakes
                          :str
+                         :trees
                          :vom
                          :uiop
                          ;; :usocket
@@ -38,6 +43,7 @@
                ;; :cl-emacs/elisp-tests
                ;; :cl-emacs/log
                :cl-emacs/commons
+               :cl-emacs/types/pstrings
                :cl-emacs/elisp
                :cl-emacs/reader
                :cl-emacs/main
@@ -49,7 +55,7 @@
   ;;                            (:file "log")
   ;;                            (:file "elisp-package" :depends-on ("log" "utils"))
   ;;                            (:file "elisp-fileio" :depends-on ("log"))
-  
+
   ;;                            ))
   ;;              )
   )

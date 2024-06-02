@@ -27,27 +27,32 @@
 (in-package :cl-emacs/emacs)
 (log-enable :cl-emacs/emacs :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* daemon-initialized () "Mark the Emacs daemon as being initialized.
+(defun* daemon-initialized ()
+  #M"Mark the Emacs daemon as being initialized.
 This finishes the daemonization process by doing the other half of detaching
 from the parent process and its tty file descriptors.
 
 (fn)"
-  (error ’unimplemented-error))
-(defun* daemonp () "Return non-nil if the current emacs process is a daemon.
+  (error 'unimplemented-error))
+(defun* daemonp ()
+  #M"Return non-nil if the current emacs process is a daemon.
 If the daemon was given a name argument, return that name.
 
 (fn)"
-  (error ’unimplemented-error))
-(defun* invocation-directory () "Return the directory name in which the Emacs executable was located.
+  (error 'unimplemented-error))
+(defun* invocation-directory ()
+  #M"Return the directory name in which the Emacs executable was located.
 
 (fn)"
-  (error ’unimplemented-error))
-(defun* invocation-name () "Return the program name that was used to run Emacs.
+  (error 'unimplemented-error))
+(defun* invocation-name ()
+  #M"Return the program name that was used to run Emacs.
 Any directory names are omitted.
 
 (fn)"
-  (error ’unimplemented-error))
-(defun* kill-emacs () "Exit the Emacs job and kill it.
+  (error 'unimplemented-error))
+(defun* kill-emacs ()
+  #M"Exit the Emacs job and kill it.
 If ARG is an integer, return ARG as the exit program code.
 If ARG is a string, stuff it as keyboard input.
 Any other value of ARG, or ARG omitted, means return an
@@ -60,9 +65,9 @@ running Emacs process.
 This function is called upon receipt of the signals SIGTERM
 or SIGHUP, and upon SIGINT in batch mode.
 
-The value of ‘kill-emacs-hook’, if not void, is a list of functions
+The value of ‘kill-emacs-hook', if not void, is a list of functions
 (of no args), all of which are called before Emacs is actually
 killed.
 
 (fn &optional ARG RESTART)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

@@ -16,22 +16,22 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/reader
+(cl-emacs/elisp-packages:define-elisp-package :cl-emacs/reader
     (:use
-     :common-lisp
      :defstar
      :cl-emacs/log
      :alexandria
      :fiveam
      :cl-emacs/reader-utils
      :cl-emacs/character-reader
+     :cl-emacs/data
+     :cl-emacs/alloc
+     :cl-emacs/fns
      :cl-emacs/commons)
-  (:shadow #:read #:read-from-string)
-  (:import-from #:common-lisp-user
-                #:memq
-                )
   (:local-nicknames (#:el #:cl-emacs/elisp)
-                    (#:et #:cl-emacs/types))
+                    (#:pstrings #:cl-emacs/types/pstrings)
+                    (#:textprop #:cl-emacs/textprop)
+                    )
   ;; (:use-reexport
   ;;  ;; :cl-emacs/elisp/alien-vars
   ;;  ;; :cl-emacs/elisp/alloc
@@ -42,30 +42,27 @@
   ;;  ;; :cl-emacs/elisp/font
   ;;  ;; :cl-emacs/elisp/xfns
   ;;  )
-  (:export #:read-from-string)
+  (:export #:read-cl-string)
   )
 (in-package :cl-emacs/reader)
 (log-enable :cl-emacs/reader :debug2)
 ;; (log-enable :cl-emacs/reader :info)
 (def-suite cl-emacs/reader)
 (in-suite cl-emacs/reader)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable pstrings:pstring-syntax)
 
-(defclass reader-signal (error)
-  ((details :initarg :details
-            :initform ""
-            :type string)))
+;; main reader documentation is here
+;; https://www.gnu.org/software/emacs/manual/html_mono/elisp.html#Lisp-Data-Types
+
+(define-condition reader-signal (error-with-description)
+  ())
 
 (define-condition invalid-reader-input-error (reader-signal)
   ())
 
 (define-condition eof-reader-error (reader-signal)
   ())
-(defmethod* print-object ((e reader-signal) stream)
-  (with-slots (details) e
-    (format stream "#<~a details:~s>"
-            (class-name (class-of e)) details))
-  )
+
 
 (define-condition reader-stopped-signal (reader-signal)
   ())
@@ -76,7 +73,7 @@
     state/symbol-escaped
     state/character
     state/line-comment
-    state/string
+    state/pstring
     state/pointer
     state/radix-bin
     state/radix-oct
@@ -86,7 +83,7 @@
 ;; using numeric states to select transition function faster
 (loop for state in *states*
       for id from 0
-      do (eval `(defparameter ,state ,id)))
+      do (cl:eval `(defparameter ,state ,id)))
 
 (defstruct reader
   (state 0 :type fixnum)
@@ -94,8 +91,9 @@
   (character-counter 0 :type fixnum)
   (extra-buffer nil :type list)
   (mod-stack nil :type list)
-  ;; key = pointer number, value = cons (nil . placeholder) or (t . real value) 
-  (pointers (make-hash-table :test #'eq) :type hash-table))
+  ;; key = pointer number, value = cons (nil . placeholder) or (t . real value)
+  (pointers (make-hash-table :test 'el::eq) :type hash-table))
+;; TODO: use hash function from emacs packages
 
 (defun* push-extra-char ((reader reader) (char character))
   (with-slots (extra-buffer) reader
@@ -109,12 +107,12 @@
       (values stack-frame mod-frame))))
 
 (defun* char-whitespace-p ((char character))
-  #M"return t if character is whitespace or #\null. 
+  #M"return t if character is whitespace or #\null.
      #\nullnil used for EOF"
   (memq char '(#\null #\space #\tab #\newline)))
 
 (defun* char-end-of-statement-p ((char character))
-  #M"return t if character is whitespace or nil or any 
+  #M"return t if character is whitespace or nil or any
      special symbol that signals about new statement. "
   (or (char-whitespace-p char) (memq char '(#\( #\) #\[ #\] #\" #\' #\` #\, #\#))))
 
@@ -182,7 +180,7 @@
           do (when (and (eq element 'el::.) (> pos 0))
                (error 'invalid-reader-input-error :details "dot makes no sense in vector")))
     (let* ((result-list (nreverse reversed-list))
-           (parsed (make-array (length result-list) :initial-contents result-list)))
+           (parsed (make-array (cl:length result-list) :initial-contents result-list)))
       (end-collector reader parsed mod-frame))))
 
 (defun* state/toplevel-transition ((reader reader) (char character))
@@ -196,7 +194,7 @@
         ((eq active-modifier '\#)
          (cond
            ((eq char #\') (push-modifier reader '\#\' :replace-last t))
-           ((eq char #\:) 
+           ((eq char #\:)
             (pop (car mod-stack))
             (start-collector reader)
             (change-state reader state/symbol)
@@ -232,6 +230,11 @@
             (pop (car mod-stack))
             (start-collector reader)
             (change-state reader state/symbol))
+           ((eq char #\()
+            (pop (car mod-stack))
+            (push-modifier reader 'pstring-full)
+            (start-collector reader)
+            )
            (t (error 'invalid-reader-input-error :details "unsupported character after #"))
            ))
         ((eq char #\()
@@ -249,12 +252,12 @@
          )
         ((eq char #\;)
          (when active-modifier
-           (error 'eof-reader-error :details (format nil "unexpected semicolon inside ~s" active-modifier)))
+           (error 'eof-reader-error :details (cl:format nil "unexpected semicolon inside ~s" active-modifier)))
          (change-state reader state/line-comment)
          (push-extra-char reader char))
         ((eq char #\")
          (start-collector reader)
-         (change-state reader state/string))
+         (change-state reader state/pstring))
         ((eq char #\?)
          (start-collector reader)
          (change-state reader state/character))
@@ -274,22 +277,21 @@
          )))))
 
 ;; string
-(defun* end-string ((reader reader))
+(defun* end-pstring ((reader reader))
   (log-debug1 "end string")
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
-    (let ((parsed (char-list-to-el-string (nreverse stack-frame))))
+    (let ((parsed (char-list-to-pstring (nreverse stack-frame))))
       (end-collector reader parsed mod-frame))))
 
-(defun* state/string-transition ((reader reader) (char character))
+(defun* state/pstring-transition ((reader reader) (char character))
   (with-slots (stack) reader
     (cond
       ((memq char '(#\"))
-       (end-string reader)
+       (end-pstring reader)
        (change-state reader state/toplevel))
       (t
        (push char (car stack)))
       )))
-
 ;; character
 (defun* end-character ((reader reader))
   (log-debug1 "end character")
@@ -304,7 +306,7 @@
               (let ((remainder (str:substring cl-emacs/character-reader::position t parsed)))
                 (log-debug2 "~s parsed:~s position:~s" e parsed cl-emacs/character-reader::position)
                 (log-debug1 "character definition remainder ~s" remainder)
-                (loop for idx from (1- (length remainder)) downto 0
+                (loop for idx from (1- (cl:length remainder)) downto 0
                       do (push (aref remainder idx) extra-buffer))
                 (setq code cl-emacs/character-reader::parsed-code)))))
         (end-collector reader code mod-frame)))))
@@ -326,8 +328,9 @@
                                   (write-char #\_ stream))
                                 (write-char (char-upcase char) stream)))))
     (if intern
-        (intern symbol-name :cl-emacs/elisp )
-        (make-symbol symbol-name))))
+        ;; TODO: use emacs functions here
+        (cl:intern symbol-name :cl-emacs/elisp )
+        (cl:make-symbol symbol-name))))
 
 ;; symbol
 (defun* end-symbol ((reader reader))
@@ -364,7 +367,7 @@
       ;; so "a.b" is a symbol, but .b is two symbols . and b
       ((and (eq char #\.) (null (car stack)))
                                         ; store dot as new symbol in stack and go look for new form
-       (push-to-reader-stack reader char) 
+       (push-to-reader-stack reader char)
        (end-symbol reader)
        (change-state reader state/toplevel))
       ((eq char #\\)
@@ -389,7 +392,7 @@
       (t (progn)))))
 
 (defun* get-pointer-cons ((reader reader) (pointer-number fixnum))
-  #M"return already defined pointer value if it exists, 
+  #M"return already defined pointer value if it exists,
      or creates empty placeholder and return it"
   (with-slots (pointers) reader
     (multiple-value-bind (cons found) (gethash pointer-number pointers)
@@ -448,7 +451,7 @@
          (end-radix reader radix-bits)
          (change-state reader state/toplevel))
         (t
-         (error 'invalid-reader-input-error :details (format nil "bad symbol ~s for radix ~a" char radix)))))))
+         (error 'invalid-reader-input-error :details (cl:format nil "bad symbol ~s for radix ~a" char radix)))))))
 (defun* state/radix-bin-transition ((reader reader) (char character))
   (generic-radix-transition reader char 1))
 (defun* state/radix-oct-transition ((reader reader) (char character))
@@ -461,18 +464,18 @@
 (defvar *transitions* nil)
 ;; (defvar *start-handlers* nil)
 ;; (defvar *stop-handlers* nil)
-(let ((n-states (length *states*)))
+(let ((n-states (cl:length *states*)))
   (setf *transitions* (make-array n-states))
   ;; (setf *start-handlers* (make-array n-states))
   ;; (setf *stop-handlers* (make-array n-states))
   )
 (dolist (state *states*)
-  (eval `(setf (aref *transitions* ,state)
-               ,(let* ((transition-function-name (concatenate 'string (symbol-name state) "-TRANSITION"))
-                       (transition-function-symbol (find-symbol transition-function-name)))
-                  (if transition-function-symbol
-                      (symbol-function transition-function-symbol)
-                      (error "can't find transition function ~a" transition-function-name)))))
+  (cl:eval `(setf (aref *transitions* ,state)
+                  ,(let* ((transition-function-name (concatenate 'string (cl:symbol-name state) "-TRANSITION"))
+                          (transition-function-symbol (find-symbol transition-function-name)))
+                     (if transition-function-symbol
+                         (cl:symbol-function transition-function-symbol)
+                         (error "can't find transition function ~a" transition-function-name)))))
   ;; (eval `(setf (aref *stop-handlers* ,state)
   ;;              ,(let* ((stop-function-name (concatenate 'string (symbol-name state) "-STOP-HANDLER"))
   ;;                      (stop-function-symbol (find-symbol stop-function-name)))
@@ -495,7 +498,7 @@
     (error 'invalid-reader-input-error
            :details "self-referencing pointer found"))
   (push tree stack)
-  (log-debug2 "replace-placeholder-in-tree old:~s new:~s type-of:~s tree:~s" old-value new-value (type-of tree) tree)
+  (log-debug2 "replace-placeholder-in-tree old:~s new:~s type-of:~s tree:~s" old-value new-value (cl:type-of tree) tree)
   (cond
     ((consp tree)
      (log-debug2 "cons iteration")
@@ -524,7 +527,7 @@
   (log-debug2 "applying modifiers ~s to:~s" modifiers something)
   (when (and modifiers nil-not-allowed (null something))
     (error 'invalid-reader-input-error
-           :details (format nil "can't apply modifiers ~s without actual body" modifiers)))
+           :details (cl:format nil "can't apply modifiers ~s without actual body" modifiers)))
   (with-slots (pointers stack) reader
     (loop
       while modifiers
@@ -543,20 +546,39 @@
               (setq something (list 'el::\,@ something)))
              (\#\'
               (setq something (list 'el::function something)))
-             ('new-pointer
+             (new-pointer
               (let* ((pointer-number (pop modifiers))
                      (actual-cons (get-pointer-cons reader pointer-number)))
                 (log-debug2 "actual-cons:~s" actual-cons)
                 (when (car actual-cons)
                   (error 'invalid-reader-input-error
-                         :details (format nil "pointer #~a already defined" pointer-number)))
+                         :details (cl:format nil "pointer #~a already defined" pointer-number)))
                 (log-debug2 "setting pointer #~a to current object ~s" pointer-number something)
                 (setf (gethash pointer-number pointers) (cons t something))
                 (setq something (replace-placeholder-in-tree something (cdr actual-cons) something))
                 (setq stack (replace-placeholder-in-tree stack (cdr actual-cons) something))
                 ))
+             (pstring-full
+              (log-debug2 "starting pstring-full transformation ~s" something)
+              (let ((pstr (pop something)))
+                (unless (pstrings:pstring-p pstr)
+                  (error 'invalid-reader-input-error
+                         :details "first element of property-string definition should be a string"))
+                (loop while something
+                      for start = (pop something)
+                      for end = (pop something)
+                      for plist = (pop something)
+                      do (unless (or (fixnump start) (fixnump end))
+                           (error 'invalid-reader-input-error
+                                  :details "index in property-string should be integer"))
+                         (textprop:set-text-properties start end plist pstr)
+                      )
+                (setq something pstr)
+                )
+
+              )
              (t (error 'invalid-reader-input-error
-                       :details (format nil "unexpected modifier ~s" modifier)))
+                       :details (cl:format nil "unexpected modifier ~s" modifier)))
              ))))
   ;; all modifiers processed
   (log-debug2 "modification result ~s" something)
@@ -609,27 +631,14 @@
       (when (or (null stack) (cdr stack))
         (error 'eof-reader-error :details "Lisp structure is not complete"))
       (when (car mod-stack)
-        (error 'eof-reader-error :details (format nil "modifiers ~s without defined body" (car mod-stack))))
+        (error 'eof-reader-error :details (cl:format nil "modifiers ~s without defined body" (car mod-stack))))
       (loop for pointer-num being each hash-key in pointers using (hash-value cons)
             do (unless (car cons)
                  (error 'invalid-reader-input-error
-                        :details (format nil "undefined pointer #~a" pointer-num))))
+                        :details (cl:format nil "undefined pointer #~a" pointer-num))))
       (values (caar stack) reader))))
 
-(defun* read (stream)
-  #M"Read one Lisp expression as text from STREAM, return as Lisp object.
-     If STREAM is nil, use the value of `standard-input' (which see).
-     STREAM or the value of `standard-input' may be:
-     a buffer (read from point and advance it)
-     a marker (read from where it points and advance it)
-     a function (call it with no arguments for each character,
-     call it with a char as argument to push a char back)
-     a string (takes text from string, starting at the beginning)
-     t (read text line using minibuffer and use it, or read from
-     standard input in batch mode)."
-  (multiple-value-bind (result) (read-internal stream)
-    result))
-(defun* read-from-string (string &optional (start 0) (end (length string)))
+(defun* read-cl-string (cl-string &optional (start 0) (end (cl:length cl-string)))
   #M"Read one Lisp expression which is represented as text by STRING.
      Returns a cons: (OBJECT-READ . FINAL-STRING-INDEX).
      FINAL-STRING-INDEX is an integer giving the position of the next
@@ -637,50 +646,50 @@
      a substring of STRING from which to read;  they default to 0 and
      \(length STRING) respectively.  Negative values are counted from
      the end of STRING."
-  (with-input-from-string (stream (str:substring start end string))
+  (with-input-from-string (stream (str:substring start end cl-string))
     (multiple-value-bind (result reader) (read-internal stream)
       (with-slots (character-counter) reader
         (cons result character-counter)))))
 
 (test read-symbols
-  (is (equalp (quote el::||) 
-              (car (read-from-string "##"))))
-  (is (equalp (quote (el::test . 4))
-              (read-from-string "test")))
-  (is (equalp (quote (el::test . 5))
-              (read-from-string "test two")))
-  (is (equalp (quote (el::\:test))
-              (car (read-from-string "(:test))"))))
-  (is (equalp (quote el::|AB123-+=*/C|)
-              (car (read-from-string "ab123-+=*/c"))))
-  (is (equalp (quote el::|AB__~!@$%^&:<>{}?C|)
-              (car (read-from-string "ab_~!@$%^&:<>{}?c"))))
-  (is-false (equalp (car (read-from-string "FOO"))
-                    (car (read-from-string "foo"))))
-  (is (equalp (quote el::_AB_CD)
-              (car (read-from-string "AbCd"))))
-  (is (equalp (quote el::nil)
-              (car (read-from-string "nil"))))
-  (is (equalp (quote el::|ABC, [/]'`|)
-              (car (read-from-string "a\\b\\c\\,\\ \\[\\/\\]\\'\\`"))))
-  (is (equalp (quote el::\,)
-              (car (read-from-string "\\,"))))
-  (is (equalp (quote el::+1)
-              (car (read-from-string "\\+1"))))
-  (is (equalp "NON-INTERN-SYMBOL"
-              (symbol-name (car (read-from-string "#:non-intern-symbol")))))
-  (is-false (find-symbol "NON-INTERN-SYMBOL" :el))
-  (is (equalp "+1"
-              (symbol-name (car (read-from-string "#:+1")))))
-  (is (equalp ""
-              (symbol-name (car (read-from-string "#:,")))))
-  (is (equalp 'el::test
-              (car (read-from-string "#_test"))))
-  (is (equalp (quote el::||) 
-              (car (read-from-string "#_"))))  )
+  (is (equal (quote el::||)
+             (car (read-cl-string "##"))))
+  (is (equal (quote (el::test . 4))
+             (read-cl-string "test")))
+  (is (equal (quote (el::test . 5))
+             (read-cl-string "test two")))
+  (is (equal (quote (el::\:test))
+             (car (read-cl-string "(:test))"))))
+  (is (equal (quote el::|AB123-+=*/C|)
+             (car (read-cl-string "ab123-+=*/c"))))
+  (is (equal (quote el::|AB__~!@$%^&:<>{}?C|)
+             (car (read-cl-string "ab_~!@$%^&:<>{}?c"))))
+  (is-false (equal (car (read-cl-string "FOO"))
+                   (car (read-cl-string "foo"))))
+  (is (equal (quote el::_AB_CD)
+             (car (read-cl-string "AbCd"))))
+  (is (equal (quote el::nil)
+             (car (read-cl-string "nil"))))
+  (is (equal (quote el::|ABC, [/]'`|)
+             (car (read-cl-string "a\\b\\c\\,\\ \\[\\/\\]\\'\\`"))))
+  (is (equal (quote el::\,)
+             (car (read-cl-string "\\,"))))
+  (is (equal (quote el::+1)
+             (car (read-cl-string "\\+1"))))
+  (is (equal #P"non-intern-symbol"
+             (symbol-name (car (read-cl-string "#:non-intern-symbol")))))
+  (is-false (find-symbol "non-intern-symbol" :el))
+  (is (equal #P"+1"
+             (symbol-name (car (read-cl-string "#:+1")))))
+  (is (equal #P""
+             (symbol-name (car (read-cl-string "#:,")))))
+  (is (equal 'el::test
+             (car (read-cl-string "#_test"))))
+  (is (equal (quote el::||)
+             (car (read-cl-string "#_"))))  )
 
 (test read-shorthands
-  ;; TODO
+  ;; TODO: add support for shorthands in reader
   ;; (let ((read-symbol-shorthands
   ;;         '(("s-" . "shorthand-longhand-"))))
   ;; (read "#_s-test")
@@ -688,125 +697,132 @@
   )
 
 (test read-integers
-  (is (equalp 1 (car (read-from-string "+1")))))
+  (is (equal 1 (car (read-cl-string "+1")))))
 
 (test read-quotes
-  (is (equalp (quote (el::quote el::test-symbol))
-              (car (read-from-string "'test-symbol"))))
-  (is (equalp (quote (el::quote (el::quote el::test-sym)))
-              (car (read-from-string "''test-sym"))))
-  (is (equalp (quote (el::quote (el::test-symbol)))
-              (car (read-from-string "'(test-symbol)"))))
-  (is (equalp (quote ((el::quote 3)))
-              (car (read-from-string "(' 3)"))))
-  (signals eof-reader-error (read-from-string "';; test comment"))
-  (is (equalp `(el::quote ,(et:build-string "abc ("))
-              (car (read-from-string "'\"abc (\""))))
-  (is (equalp (quote (el::quote 66))
-              (car (read-from-string "'?B"))))
+  (is (equal (quote (el::quote el::test-symbol))
+              (car (read-cl-string "'test-symbol"))))
+  (is (equal (quote (el::quote (el::quote el::test-sym)))
+              (car (read-cl-string "''test-sym"))))
+  (is (equal (quote (el::quote (el::test-symbol)))
+              (car (read-cl-string "'(test-symbol)"))))
+  (is (equal (quote ((el::quote 3)))
+              (car (read-cl-string "(' 3)"))))
+  (signals eof-reader-error (read-cl-string "';; test comment"))
+  (is (equal `(el::quote ,#P"abc (")
+              (car (read-cl-string "'\"abc (\""))))
+  (is (equal (quote (el::quote 66))
+              (car (read-cl-string "'?B"))))
 
-  (is (equalp (quote (el::quote
+  (is (equal (quote (el::quote
                       (el::quote
                        (1 (el::quote
                            ((el::quote
                              (el::quote
                               (el::quote
                                (2 (el::quote (el::quote (el::quote (el::quote 3)))))))) 4)) 5))))
-              (car (read-from-string "''(1 '('''(2 ''''3) 4) 5)"))))
-  (is (equalp (quote (el::quote (el::a (el::quote el::b))))
-              (car (read-from-string "'(a'b)"))))
-  (is (equalp `(el::quote (,(et:build-string "a") (el::quote el::b)))
-              (car (read-from-string "'(\"a\"'b)"))))
-  (is (equalp (quote (el::quote (65 (el::quote el::b))))
-              (car (read-from-string "'(?A'b)"))))
-  (is (equalp (quote (el::\` el::test-symbol))
-              (car (read-from-string "`test-symbol"))))
-  (is (equalp (quote (el::\` (el::test-symbol)))
-              (car (read-from-string "`(test-symbol)"))))
-  (is (equalp (quote (el::\` (el::\` el::test-symbol)))
-              (car (read-from-string "``test-symbol"))))
-  (is (equalp (quote ((el::\` el::test-symbol) (el::\, 3)))
-              (car (read-from-string "(`test-symbol ,3)"))))
-  ;; real emacs test (equal (quote (\` (form ((\, a) (\, ((\` (b (\, c))))))))) (car (read-from-string "`(form (,a ,(`(b ,c))))")))
-  (is (equalp (quote (el::\` (el::form ((el::\, el::a) (el::\, ((el::\` (el::b (el::\, el::c)))))))))
-              (car (read-from-string "`(form (,a ,(`(b ,c))))"))))
-  (signals eof-reader-error (read-from-string "'"))
-  (signals eof-reader-error (read-from-string "`,"))
+              (car (read-cl-string "''(1 '('''(2 ''''3) 4) 5)"))))
+  (is (equal (quote (el::quote (el::a (el::quote el::b))))
+              (car (read-cl-string "'(a'b)"))))
+  (is (equal `(el::quote (,#P"a" (el::quote el::b)))
+              (car (read-cl-string "'(\"a\"'b)"))))
+  (is (equal (quote (el::quote (65 (el::quote el::b))))
+              (car (read-cl-string "'(?A'b)"))))
+  (is (equal (quote (el::\` el::test-symbol))
+              (car (read-cl-string "`test-symbol"))))
+  (is (equal (quote (el::\` (el::test-symbol)))
+              (car (read-cl-string "`(test-symbol)"))))
+  (is (equal (quote (el::\` (el::\` el::test-symbol)))
+              (car (read-cl-string "``test-symbol"))))
+  (is (equal (quote ((el::\` el::test-symbol) (el::\, 3)))
+              (car (read-cl-string "(`test-symbol ,3)"))))
+  ;; real emacs test (equal (quote (\` (form ((\, a) (\, ((\` (b (\, c))))))))) (car (read-cl-string "`(form (,a ,(`(b ,c))))")))
+  (is (equal (quote (el::\` (el::form ((el::\, el::a) (el::\, ((el::\` (el::b (el::\, el::c)))))))))
+              (car (read-cl-string "`(form (,a ,(`(b ,c))))"))))
+  (signals eof-reader-error (read-cl-string "'"))
+  (signals eof-reader-error (read-cl-string "`,"))
 
-  (is (equalp (quote (el::quote el::\,))
-              (car (read-from-string "'\\,"))))
-  (is (equalp (quote (el::\` (el::a (el::\,@ el::b))))
-              (car (read-from-string "`(a ,@b)"))))
+  (is (equal (quote (el::quote el::\,))
+              (car (read-cl-string "'\\,"))))
+  (is (equal (quote (el::\` (el::a (el::\,@ el::b))))
+              (car (read-cl-string "`(a ,@b)"))))
   )
 
 (test read-strings
-  (is (equalp `(,(et:build-string "test") . 6)
-              (read-from-string "\"test\" ")))
-  (is (equalp `(el::defvar el::test-var el::nil
-                 ,(et:build-string #M"some 
-                                      multiline docstring `with symbols'."))
-              (car (read-from-string #M"(defvar test-var nil \"some 
-                                        multiline docstring `with symbols'.\")"))))
+  (is (equal `(,#P"test" . 6)
+             (read-cl-string "\"test\" ")))
+  (is (equal `(el::defvar el::test-var el::nil
+                ,(pstrings:build-pstring #M"some
+                                            multiline docstring `with symbols'."))
+             (car (read-cl-string #M"(defvar test-var nil \"some
+                                     multiline docstring `with symbols'.\")"))))
+  ;; TODO: add better pstring property validation after more complicated reads
+  ;; TODO: research corner cases
+  (is (equal
+       (quote #P" ")
+       (car (read-cl-string "#(\" \" 0 1 (invisible t))"))))
+  (is (equal
+       (quote #P"foo bar")
+       (car (read-cl-string "#(\"foo bar\" 0 3 (face bold) 3 4 nil 4 7 (face italic))"))))
+
   )
 (test read-lists
-  (is (equalp `(el::a ,(et:build-string "b"))
-              (car (read-from-string "(a\"b\") "))))
-  (is (equalp `(el::test 2 3 ,(et:build-string "A ( B"))
-              (car (read-from-string "(test 2 3 \"A ( B\")"))))
-  (is (equalp (quote (el::test (2 3) 4 ()))
-              (car (read-from-string "(test (2 3) 4 ())"))))
-  (is (equalp (quote (el::.))
-              (car (read-from-string "(.)"))))
-  (is (equalp (quote (el::a el::.))
-              (car (read-from-string "(a .)"))))
-  (is (equalp (quote (3 . 4))
-              (car (read-from-string "(3 .  4)"))))
-  (is (equalp (quote 4)
-              (car (read-from-string "(. 4)"))))
-  (signals invalid-reader-input-error (read-from-string "(a b . c d)"))
-  (is (equalp (quote (65 . 66))
-              (car (read-from-string "(?A.?B)"))))
-  (is (equalp (quote (65 . 66))
-              (car (read-from-string "(?A. ?B))"))))
-  (is (equalp nil (car (read-from-string "()"))))
-  (signals eof-reader-error (read-from-string "("))
-  (is (equalp (quote (1 2 3))
-              (car (read-from-string "(1 . (2 . (3 . nil)))"))))
+  (is (equal `(el::a ,#P"b")
+              (car (read-cl-string "(a\"b\") "))))
+  (is (equal `(el::test 2 3 ,#P"A ( B")
+              (car (read-cl-string "(test 2 3 \"A ( B\")"))))
+  (is (equal (quote (el::test (2 3) 4 ()))
+              (car (read-cl-string "(test (2 3) 4 ())"))))
+  (is (equal (quote (el::.))
+              (car (read-cl-string "(.)"))))
+  (is (equal (quote (el::a el::.))
+              (car (read-cl-string "(a .)"))))
+  (is (equal (quote (3 . 4))
+              (car (read-cl-string "(3 .  4)"))))
+  (is (equal (quote 4)
+              (car (read-cl-string "(. 4)"))))
+  (signals invalid-reader-input-error (read-cl-string "(a b . c d)"))
+  (is (equal (quote (65 . 66))
+              (car (read-cl-string "(?A.?B)"))))
+  (is (equal (quote (65 . 66))
+              (car (read-cl-string "(?A. ?B))"))))
+  (is (equal nil (car (read-cl-string "()"))))
+  (signals eof-reader-error (read-cl-string "("))
+  (is (equal (quote (1 2 3))
+              (car (read-cl-string "(1 . (2 . (3 . nil)))"))))
   )
 (test read-comments
-  (is (equalp 'el::test
-              (car (read-from-string #M";;; comment line
+  (is (equal 'el::test
+              (car (read-cl-string #M";;; comment line
                                         test symbol"))))
   )
 (test read-characters
-  (is (equalp '(65 66)
-              (car (read-from-string "(?A?B))"))))
-  (is (equalp '(el::a 92 65 66 65 32 . 3)
-              (car (read-from-string "(a ?\\\\ ?A?B ?A?\\s. 3)")))))
-;;https://www.gnu.org/software/emacs/manual/html_mono/elisp.html#Lisp-Data-Types
+  (is (equal '(65 66)
+             (car (read-cl-string "(?A?B))"))))
+  (is (equal '(el::a 92 65 66 65 32 . 3)
+             (car (read-cl-string "(a ?\\\\ ?A?B ?A?\\s. 3)")))))
 
 (test reader-special-cases
-  (signals eof-reader-error (read-from-string ""))
-  (is (equalp '(el::quote el::test)
-              (car (read-from-string #M" ' #!some-stuff
+  (signals eof-reader-error (read-cl-string ""))
+  (is (equal '(el::quote el::test)
+             (car (read-cl-string #M" ' #!some-stuff
                                         #!some-stuff
                                         test")))))
 
 (test read-vectors
-  (is (equalp (quote #(1 el::a))
-              (car (read-from-string "[1 a]"))))
-  (is (equalp (quote #(el::a el::b el::c el::.))
-              (car (read-from-string "[a b c .]"))))
-  (signals invalid-reader-input-error (read-from-string "[1 . a]"))
+  (is (equal (quote #(1 el::a))
+             (car (read-cl-string "[1 a]"))))
+  (is (equal (quote #(el::a el::b el::c el::.))
+             (car (read-cl-string "[a b c .]"))))
+  (signals invalid-reader-input-error (read-cl-string "[1 . a]"))
   )
-(test read-from-string
+(test read-cl-string
 ;;;###autoload
   ;; #'test
   ;; #'(lambda (x) (use-package-require-after-load x body))
   ;; #'*
   ;; #'.
   ;; #'gnus-article-jump-to-part
-  ;; #(" " 0 1 (invisible t))
   ;; #+A invalid syntax
   ;; '#'test - function
   ;; #'test - symbol
@@ -827,70 +843,70 @@
   )
 
 (test reader-functions
-  (is (equalp (quote (el::function el::a))
-              (car (read-from-string "#'a"))))
+  (is (equal (quote (el::function el::a))
+             (car (read-cl-string "#'a"))))
   )
 
 (test read-circles
-  (let ((sample (car (read-from-string "#1=(a #1#)"))))
+  (let ((sample (car (read-cl-string "#1=(a #1#)"))))
     (is (eq sample (second sample))))
-  (let ((sample (car (read-from-string "#1=[a #1#]"))))
+  (let ((sample (car (read-cl-string "#1=[a #1#]"))))
     (is (eq sample (aref sample 1))))
-  (let ((sample (car (read-from-string "#1=[#1# a #1#]"))))
+  (let ((sample (car (read-cl-string "#1=[#1# a #1#]"))))
     (is (eq sample (aref sample 0)))
     (is (eq sample (aref sample 2))))
-  (let ((sample (car (read-from-string "#1=(a . #1#)"))))
+  (let ((sample (car (read-cl-string "#1=(a . #1#)"))))
     (is (eq sample (cdr sample))))
-  (let ((sample (car (read-from-string "#1=(#2=[#1# #2#] . #1#)"))))
+  (let ((sample (car (read-cl-string "#1=(#2=[#1# #2#] . #1#)"))))
     (is (eq sample (cdr sample)))
     (is (eq sample (aref (car sample) 0)))
     (is (eq (car sample) (aref (car sample) 1))))
-  (let ((sample (car (read-from-string "#1=(#2=[#1# #2#] . #2#)"))))
+  (let ((sample (car (read-cl-string "#1=(#2=[#1# #2#] . #2#)"))))
     (is (eq sample (aref (car sample) 0)))
     (is (eq (car sample) (cdr sample)))
     (is (eq (car sample) (aref (car sample) 1))))
-  (let ((sample (car (read-from-string "#1=[#2=(#1# . #2#)]"))))
+  (let ((sample (car (read-cl-string "#1=[#2=(#1# . #2#)]"))))
     (is (eq sample (car (aref sample 0))))
     (is (eq (aref sample 0) (cdr (aref sample 0)))))
-  (let ((sample (car (read-from-string "#1=(#2=[#3=(#1# . #2#) #4=(#3# . #4#)])"))))
+  (let ((sample (car (read-cl-string "#1=(#2=[#3=(#1# . #2#) #4=(#3# . #4#)])"))))
     (is (eq sample (car (aref (car sample) 0))))
     (is (eq (car sample) (cdr (aref (car sample) 0))))
     (is (eq (aref (car sample) 0) (car (aref (car sample) 1))))
     (is (eq (aref (car sample) 1) (cdr (aref (car sample) 1)))))
-  (is (equalp (quote ((el::quote (el::quote el::a)) (el::quote el::a)))
-              (car (read-from-string "('#1='a #1#)"))))
-  (signals invalid-reader-input-error (read-from-string "#1=(#1# #2#)"))
-  (signals invalid-reader-input-error (read-from-string "#1=#1#"))
+  (is (equal (quote ((el::quote (el::quote el::a)) (el::quote el::a)))
+             (car (read-cl-string "('#1='a #1#)"))))
+  (signals invalid-reader-input-error (read-cl-string "#1=(#1# #2#)"))
+  (signals invalid-reader-input-error (read-cl-string "#1=#1#"))
   ;; check in other collection types, like hashmap and string properties
   )
 
 (test read-radix
-  (signals invalid-reader-input-error (read-from-string "#b"))
-  (is (equalp (quote #b10)
-              (car (read-from-string "#b010"))))
-  (is (equalp (quote #b1010)
-              (car (read-from-string "#B01010"))))
-  (signals invalid-reader-input-error (read-from-string "#b013"))
+  (signals invalid-reader-input-error (read-cl-string "#b"))
+  (is (equal (quote #b10)
+             (car (read-cl-string "#b010"))))
+  (is (equal (quote #b1010)
+             (car (read-cl-string "#B01010"))))
+  (signals invalid-reader-input-error (read-cl-string "#b013"))
 
-  (signals invalid-reader-input-error (read-from-string "#o"))
-  (is (equalp (quote #o10)
-              (car (read-from-string "#o010"))))
-  (is (equalp (quote #o1010) 
-              (car (read-from-string "#O01010"))))
-  (signals invalid-reader-input-error (read-from-string "#o013a"))
-  
-  (signals invalid-reader-input-error (read-from-string "#x"))
-  (is (equalp (quote #x010aaf)
-              (car (read-from-string "#x010aAF"))))
-  (is (equalp (quote #x010aaf)
-              (car (read-from-string "#X010aAF"))))
-  (signals invalid-reader-input-error (read-from-string "#x013aw"))
+  (signals invalid-reader-input-error (read-cl-string "#o"))
+  (is (equal (quote #o10)
+             (car (read-cl-string "#o010"))))
+  (is (equal (quote #o1010)
+             (car (read-cl-string "#O01010"))))
+  (signals invalid-reader-input-error (read-cl-string "#o013a"))
+
+  (signals invalid-reader-input-error (read-cl-string "#x"))
+  (is (equal (quote #x010aaf)
+             (car (read-cl-string "#x010aAF"))))
+  (is (equal (quote #x010aaf)
+             (car (read-cl-string "#X010aAF"))))
+  (signals invalid-reader-input-error (read-cl-string "#x013aw"))
   )
 
-(defun* real-file-test ()
-  (with-open-file (stream "../emacs/lisp/master.el" :direction :input)
-    (read stream)
-    (read stream)))
+;; (defun* real-file-test ()
+;;   (with-open-file (stream "../emacs/lisp/master.el" :direction :input)
+;;     (read stream)
+;;     (read stream)))
 
 (defun test-me ()
   (run! 'cl-emacs/reader))

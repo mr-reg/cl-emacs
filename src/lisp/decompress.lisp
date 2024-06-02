@@ -27,11 +27,13 @@
 (in-package :cl-emacs/decompress)
 (log-enable :cl-emacs/decompress :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* zlib-available-p () "Return t if zlib decompression is available in this instance of Emacs.
+(defun* zlib-available-p ()
+  #M"Return t if zlib decompression is available in this instance of Emacs.
 
 (fn)"
-  (error ’unimplemented-error))
-(defun* zlib-decompress-region () "Decompress a gzip- or zlib-compressed region.
+  (error 'unimplemented-error))
+(defun* zlib-decompress-region ()
+  #M"Decompress a gzip- or zlib-compressed region.
 Replace the text in the region by the decompressed data.
 
 If optional parameter ALLOW-PARTIAL is nil or omitted, then on
@@ -43,4 +45,4 @@ If decompression is completely successful return t.
 This function can be called only in unibyte buffers.
 
 (fn START END &optional ALLOW-PARTIAL)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

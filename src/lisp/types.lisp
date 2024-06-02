@@ -29,7 +29,8 @@
            #:make-string
            #:string-chardata
            #:string-properties
-           #:build-string)
+           #:build-string
+           #:buffer)
   )
 (in-package :cl-emacs/types)
 (log-enable :cl-emacs/types :debug2)
@@ -42,6 +43,8 @@
 (defun* (build-string -> string) ((cl-string cl:string))
   (make-string :chardata cl-string))
 
-
+(defstruct buffer
+  (unknown "" :type cl:string)
+  )
 ;; (in-package :cl-emacs/elisp)
 ;; (reexport-symbols :cl-emacs/types)

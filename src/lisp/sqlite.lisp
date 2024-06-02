@@ -27,23 +27,28 @@
 (in-package :cl-emacs/sqlite)
 (log-enable :cl-emacs/sqlite :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* sqlite-available-p () "Return t if sqlite3 support is available in this instance of Emacs.
+(defun* sqlite-available-p ()
+  #M"Return t if sqlite3 support is available in this instance of Emacs.
 
 (fn)"
-  (error ’unimplemented-error))
-(defun* sqlite-close () "Close the sqlite database DB.
+  (error 'unimplemented-error))
+(defun* sqlite-close ()
+  #M"Close the sqlite database DB.
 
 (fn DB)"
-  (error ’unimplemented-error))
-(defun* sqlite-columns () "Return the column names of SET.
+  (error 'unimplemented-error))
+(defun* sqlite-columns ()
+  #M"Return the column names of SET.
 
 (fn SET)"
-  (error ’unimplemented-error))
-(defun* sqlite-commit () "Commit a transaction in DB.
+  (error 'unimplemented-error))
+(defun* sqlite-commit ()
+  #M"Commit a transaction in DB.
 
 (fn DB)"
-  (error ’unimplemented-error))
-(defun* sqlite-execute () "Execute a non-select SQL statement.
+  (error 'unimplemented-error))
+(defun* sqlite-execute ()
+  #M"Execute a non-select SQL statement.
 If VALUES is non-nil, it should be a vector or a list of values
 to bind when executing a statement like
 
@@ -52,44 +57,52 @@ to bind when executing a statement like
 Value is the number of affected rows.
 
 (fn DB QUERY &optional VALUES)"
-  (error ’unimplemented-error))
-(defun* sqlite-finalize () "Mark this SET as being finished.
+  (error 'unimplemented-error))
+(defun* sqlite-finalize ()
+  #M"Mark this SET as being finished.
 This will free the resources held by SET.
 
 (fn SET)"
-  (error ’unimplemented-error))
-(defun* sqlite-load-extension () "Load an SQlite MODULE into DB.
-MODULE should be the name of an SQlite module’s file, a
+  (error 'unimplemented-error))
+(defun* sqlite-load-extension ()
+  #M"Load an SQlite MODULE into DB.
+MODULE should be the name of an SQlite module's file, a
 shared library in the system-dependent format and having a
 system-dependent file-name extension.
 
-Only modules on Emacs’ list of allowed modules can be loaded.
+Only modules on Emacs' list of allowed modules can be loaded.
 
 (fn DB MODULE)"
-  (error ’unimplemented-error))
-(defun* sqlite-more-p () "Say whether there are any further results in SET.
+  (error 'unimplemented-error))
+(defun* sqlite-more-p ()
+  #M"Say whether there are any further results in SET.
 
 (fn SET)"
-  (error ’unimplemented-error))
-(defun* sqlite-next () "Return the next result set from SET.
+  (error 'unimplemented-error))
+(defun* sqlite-next ()
+  #M"Return the next result set from SET.
 Return nil when the statement has finished executing successfully.
 
 (fn SET)"
-  (error ’unimplemented-error))
-(defun* sqlite-open () "Open FILE as an sqlite database.
+  (error 'unimplemented-error))
+(defun* sqlite-open ()
+  #M"Open FILE as an sqlite database.
 If FILE is nil, an in-memory database will be opened instead.
 
 (fn &optional FILE)"
-  (error ’unimplemented-error))
-(defun* sqlite-pragma () "Execute PRAGMA in DB.
+  (error 'unimplemented-error))
+(defun* sqlite-pragma ()
+  #M"Execute PRAGMA in DB.
 
 (fn DB PRAGMA)"
-  (error ’unimplemented-error))
-(defun* sqlite-rollback () "Roll back a transaction in DB.
+  (error 'unimplemented-error))
+(defun* sqlite-rollback ()
+  #M"Roll back a transaction in DB.
 
 (fn DB)"
-  (error ’unimplemented-error))
-(defun* sqlite-select () "Select data from the database DB that matches QUERY.
+  (error 'unimplemented-error))
+(defun* sqlite-select ()
+  #M"Select data from the database DB that matches QUERY.
 If VALUES is non-nil, it should be a list or a vector specifying the
 values that will be interpolated into a parameterized statement.
 
@@ -97,24 +110,27 @@ By default, the return value is a list, whose contents depend on
 the value of the optional argument RETURN-TYPE.
 
 If RETURN-TYPE is nil or omitted, the function returns a list of rows
-matching QUERY.  If RETURN-TYPE is ‘full’, the function returns a
+matching QUERY.  If RETURN-TYPE is ‘full', the function returns a
 list whose first element is the list of column names, and the rest
-of the elements are the rows matching QUERY.  If RETURN-TYPE is ‘set’,
+of the elements are the rows matching QUERY.  If RETURN-TYPE is ‘set',
 the function returns a set object that can be queried with functions
-like ‘sqlite-next’ etc., in order to get the data.
+like ‘sqlite-next' etc., in order to get the data.
 
 (fn DB QUERY &optional VALUES RETURN-TYPE)"
-  (error ’unimplemented-error))
-(defun* sqlite-transaction () "Start a transaction in DB.
+  (error 'unimplemented-error))
+(defun* sqlite-transaction ()
+  #M"Start a transaction in DB.
 
 (fn DB)"
-  (error ’unimplemented-error))
-(defun* sqlite-version () "Return the version string of the SQLite library.
+  (error 'unimplemented-error))
+(defun* sqlite-version ()
+  #M"Return the version string of the SQLite library.
 Signal an error if SQLite support is not available.
 
 (fn)"
-  (error ’unimplemented-error))
-(defun* sqlitep () "Say whether OBJECT is an SQlite object.
+  (error 'unimplemented-error))
+(defun* sqlitep ()
+  #M"Say whether OBJECT is an SQlite object.
 
 (fn OBJECT)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

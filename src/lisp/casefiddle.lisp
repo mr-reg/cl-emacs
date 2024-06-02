@@ -27,28 +27,31 @@
 (in-package :cl-emacs/casefiddle)
 (log-enable :cl-emacs/casefiddle :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* capitalize () "Convert argument to capitalized form and return that.
-This means that each word’s first character is converted to either
+(defun* capitalize ()
+  #M"Convert argument to capitalized form and return that.
+This means that each word's first character is converted to either
 title case or upper case, and the rest to lower case.
 
 The argument may be a character or string.  The result has the same
-type.  (See ‘downcase’ for further details about the type.)
+type.  (See ‘downcase' for further details about the type.)
 
 The argument object is not altered--the value is a copy.  If argument
 is a character, characters which map to multiple code points when
 cased, e.g. ﬁ, are returned unchanged.
 
 (fn OBJ)"
-  (error ’unimplemented-error))
-(defun* capitalize-region () "Convert the region to capitalized form.
-This means that each word’s first character is converted to either
+  (error 'unimplemented-error))
+(defun* capitalize-region ()
+  #M"Convert the region to capitalized form.
+This means that each word's first character is converted to either
 title case or upper case, and the rest to lower case.
 In programs, give two arguments, the starting and ending
 character positions to operate on.
 
 (fn BEG END &optional REGION-NONCONTIGUOUS-P)"
-  (error ’unimplemented-error))
-(defun* capitalize-word () "Capitalize from point to the end of word, moving over.
+  (error 'unimplemented-error))
+(defun* capitalize-word ()
+  #M"Capitalize from point to the end of word, moving over.
 With numerical argument ARG, capitalize the next ARG-1 words as well.
 This gives the word(s) a first character in upper case
 and the rest lower case.
@@ -59,8 +62,9 @@ is ignored when moving forward.
 With negative argument, capitalize previous words but do not move.
 
 (fn ARG)"
-  (error ’unimplemented-error))
-(defun* downcase () "Convert argument to lower case and return that.
+  (error 'unimplemented-error))
+(defun* downcase ()
+  #M"Convert argument to lower case and return that.
 The argument may be a character or string.  The result has the same type,
 including the multibyteness of the string.
 
@@ -73,15 +77,17 @@ locale, the string must be converted into multibyte first.
 The argument object is not altered--the value is a copy.
 
 (fn OBJ)"
-  (error ’unimplemented-error))
-(defun* downcase-region () "Convert the region to lower case.  In programs, wants two arguments.
+  (error 'unimplemented-error))
+(defun* downcase-region ()
+  #M"Convert the region to lower case.  In programs, wants two arguments.
 These arguments specify the starting and ending character numbers of
 the region to operate on.  When used as a command, the text between
 point and the mark is operated on.
 
 (fn BEG END &optional REGION-NONCONTIGUOUS-P)"
-  (error ’unimplemented-error))
-(defun* downcase-word () "Convert to lower case from point to end of word, moving over.
+  (error 'unimplemented-error))
+(defun* downcase-word ()
+  #M"Convert to lower case from point to end of word, moving over.
 
 If point is in the middle of a word, the part of that word before point
 is ignored when moving forward.
@@ -89,55 +95,60 @@ is ignored when moving forward.
 With negative argument, convert previous words but do not move.
 
 (fn ARG)"
-  (error ’unimplemented-error))
-(defun* upcase () "Convert argument to upper case and return that.
+  (error 'unimplemented-error))
+(defun* upcase ()
+  #M"Convert argument to upper case and return that.
 The argument may be a character or string.  The result has the same
-type.  (See ‘downcase’ for further details about the type.)
+type.  (See ‘downcase' for further details about the type.)
 
 The argument object is not altered--the value is a copy.  If argument
 is a character, characters which map to multiple code points when
 cased, e.g. ﬁ, are returned unchanged.
 
-See also ‘capitalize’, ‘downcase’ and ‘upcase-initials’.
+See also ‘capitalize', ‘downcase' and ‘upcase-initials'.
 
 (fn OBJ)"
-  (error ’unimplemented-error))
-(defun* upcase-initials () "Convert the initial of each word in the argument to upper case.
-This means that each word’s first character is converted to either
+  (error 'unimplemented-error))
+(defun* upcase-initials ()
+  #M"Convert the initial of each word in the argument to upper case.
+This means that each word's first character is converted to either
 title case or upper case, and the rest are left unchanged.
 
 The argument may be a character or string.  The result has the same
-type.  (See ‘downcase’ for further details about the type.)
+type.  (See ‘downcase' for further details about the type.)
 
 The argument object is not altered--the value is a copy.  If argument
 is a character, characters which map to multiple code points when
 cased, e.g. ﬁ, are returned unchanged.
 
 (fn OBJ)"
-  (error ’unimplemented-error))
-(defun* upcase-initials-region () "Upcase the initial of each word in the region.
-This means that each word’s first character is converted to either
+  (error 'unimplemented-error))
+(defun* upcase-initials-region ()
+  #M"Upcase the initial of each word in the region.
+This means that each word's first character is converted to either
 title case or upper case, and the rest are left unchanged.
 In programs, give two arguments, the starting and ending
 character positions to operate on.
 
 (fn BEG END &optional REGION-NONCONTIGUOUS-P)"
-  (error ’unimplemented-error))
-(defun* upcase-region () "Convert the region to upper case.  In programs, wants two arguments.
+  (error 'unimplemented-error))
+(defun* upcase-region ()
+  #M"Convert the region to upper case.  In programs, wants two arguments.
 These arguments specify the starting and ending character numbers of
 the region to operate on.  When used as a command, the text between
 point and the mark is operated on.
-See also ‘capitalize-region’.
+See also ‘capitalize-region'.
 
 (fn BEG END &optional REGION-NONCONTIGUOUS-P)"
-  (error ’unimplemented-error))
-(defun* upcase-word () "Convert to upper case from point to end of word, moving over.
+  (error 'unimplemented-error))
+(defun* upcase-word ()
+  #M"Convert to upper case from point to end of word, moving over.
 
 If point is in the middle of a word, the part of that word before point
 is ignored when moving forward.
 
 With negative argument, convert previous words but do not move.
-See also ‘capitalize-word’.
+See also ‘capitalize-word'.
 
 (fn ARG)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

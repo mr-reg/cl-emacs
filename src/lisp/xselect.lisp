@@ -27,7 +27,8 @@
 (in-package :cl-emacs/xselect)
 (log-enable :cl-emacs/xselect :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* x-disown-selection-internal () "If we own the selection SELECTION, disown it.
+(defun* x-disown-selection-internal ()
+  #M"If we own the selection SELECTION, disown it.
 Disowning it means there is no such selection.
 
 Sets the last-change time for the selection to TIME-OBJECT (by default
@@ -35,14 +36,15 @@ the time of the last event).
 
 TERMINAL should be a terminal object or a frame specifying the X
 server to query.  If omitted or nil, that stands for the selected
-frame’s display, or the first available X display.
+frame's display, or the first available X display.
 
 On Nextstep, the TIME-OBJECT and TERMINAL arguments are unused.
 On MS-DOS, all this does is return non-nil if we own the selection.
 
 (fn SELECTION &optional TIME-OBJECT TERMINAL)"
-  (error ’unimplemented-error))
-(defun* x-get-atom-name () "Return the X atom name for VALUE as a string.
+  (error 'unimplemented-error))
+(defun* x-get-atom-name ()
+  #M"Return the X atom name for VALUE as a string.
 VALUE may be a number or a cons where the car is the upper 16 bits and
 the cdr is the lower 16 bits of a 32 bit value.
 Use the display for FRAME or the current frame if FRAME is not given or nil.
@@ -50,8 +52,9 @@ Use the display for FRAME or the current frame if FRAME is not given or nil.
 If the value is 0 or the atom is not known, return the empty string.
 
 (fn VALUE &optional FRAME)"
-  (error ’unimplemented-error))
-(defun* x-get-local-selection () "Run selection converters for VALUE, and return the result.
+  (error 'unimplemented-error))
+(defun* x-get-local-selection ()
+  #M"Run selection converters for VALUE, and return the result.
 TARGET is the selection target that is used to find a suitable
 converter.  VALUE is a list of 4 values NAME, SELECTION-VALUE,
 TIMESTAMP and FRAME.  NAME is the name of the selection that will be
@@ -62,28 +65,30 @@ describing the terminal for which the selection converter will be
 run.
 
 (fn &optional VALUE TARGET)"
-  (error ’unimplemented-error))
-(defun* x-get-selection-internal () "Return text selected from some X window.
-SELECTION-SYMBOL is typically ‘PRIMARY’, ‘SECONDARY’, or ‘CLIPBOARD’.
-(Those are literal upper-case symbol names, since that’s what X expects.)
-TARGET-TYPE is the type of data desired, typically ‘STRING’.
+  (error 'unimplemented-error))
+(defun* x-get-selection-internal ()
+  #M"Return text selected from some X window.
+SELECTION-SYMBOL is typically ‘PRIMARY', ‘SECONDARY', or ‘CLIPBOARD'.
+(Those are literal upper-case symbol names, since that's what X expects.)
+TARGET-TYPE is the type of data desired, typically ‘STRING'.
 
 TIME-STAMP is the time to use in the XConvertSelection call for foreign
 selections.  If omitted, defaults to the time for the last event.
 
 TERMINAL should be a terminal object or a frame specifying the X
 server to query.  If omitted or nil, that stands for the selected
-frame’s display, or the first available X display.
+frame's display, or the first available X display.
 
 On Nextstep, TIME-STAMP and TERMINAL are unused.
 
 (fn SELECTION-SYMBOL TARGET-TYPE &optional TIME-STAMP TERMINAL)"
-  (error ’unimplemented-error))
-(defun* x-own-selection-internal () "Assert an X selection of type SELECTION and value VALUE.
-SELECTION is a symbol, typically ‘PRIMARY’, ‘SECONDARY’, or ‘CLIPBOARD’.
-(Those are literal upper-case symbol names, since that’s what X expects.)
+  (error 'unimplemented-error))
+(defun* x-own-selection-internal ()
+  #M"Assert an X selection of type SELECTION and value VALUE.
+SELECTION is a symbol, typically ‘PRIMARY', ‘SECONDARY', or ‘CLIPBOARD'.
+(Those are literal upper-case symbol names, since that's what X expects.)
 VALUE is typically a string, or a cons of two markers, but may be
-anything that the functions on ‘selection-converter-alist’ know about.
+anything that the functions on ‘selection-converter-alist' know about.
 
 FRAME should be a frame that should own the selection.  If omitted or
 nil, it defaults to the selected frame.
@@ -91,46 +96,50 @@ nil, it defaults to the selected frame.
 On Nextstep, FRAME is unused.
 
 (fn SELECTION VALUE &optional FRAME)"
-  (error ’unimplemented-error))
-(defun* x-register-dnd-atom () "Request that dnd events are made for ClientMessages with ATOM.
+  (error 'unimplemented-error))
+(defun* x-register-dnd-atom ()
+  #M"Request that dnd events are made for ClientMessages with ATOM.
 ATOM can be a symbol or a string.  The ATOM is interned on the display that
 FRAME is on.  If FRAME is nil, the selected frame is used.
 
 (fn ATOM &optional FRAME)"
-  (error ’unimplemented-error))
-(defun* x-selection-exists-p () "Whether there is an owner for the given X selection.
+  (error 'unimplemented-error))
+(defun* x-selection-exists-p ()
+  #M"Whether there is an owner for the given X selection.
 SELECTION should be the name of the selection in question, typically
-one of the symbols ‘PRIMARY’, ‘SECONDARY’, ‘CLIPBOARD’, or
-‘CLIPBOARD_MANAGER’ (X expects these literal upper-case names.)  The
-symbol nil is the same as ‘PRIMARY’, and t is the same as ‘SECONDARY’.
+one of the symbols ‘PRIMARY', ‘SECONDARY', ‘CLIPBOARD', or
+‘CLIPBOARD_MANAGER' (X expects these literal upper-case names.)  The
+symbol nil is the same as ‘PRIMARY', and t is the same as ‘SECONDARY'.
 
 TERMINAL should be a terminal object or a frame specifying the X
 server to query.  If omitted or nil, that stands for the selected
-frame’s display, or the first available X display.
+frame's display, or the first available X display.
 
 On Nextstep, TERMINAL is unused.
 
 (fn &optional SELECTION TERMINAL)"
-  (error ’unimplemented-error))
-(defun* x-selection-owner-p () "Whether the current Emacs process owns the given X Selection.
+  (error 'unimplemented-error))
+(defun* x-selection-owner-p ()
+  #M"Whether the current Emacs process owns the given X Selection.
 The arg should be the name of the selection in question, typically one of
-the symbols ‘PRIMARY’, ‘SECONDARY’, or ‘CLIPBOARD’.
-(Those are literal upper-case symbol names, since that’s what X expects.)
-For convenience, the symbol nil is the same as ‘PRIMARY’,
-and t is the same as ‘SECONDARY’.
+the symbols ‘PRIMARY', ‘SECONDARY', or ‘CLIPBOARD'.
+(Those are literal upper-case symbol names, since that's what X expects.)
+For convenience, the symbol nil is the same as ‘PRIMARY',
+and t is the same as ‘SECONDARY'.
 
 TERMINAL should be a terminal object or a frame specifying the X
 server to query.  If omitted or nil, that stands for the selected
-frame’s display, or the first available X display.
+frame's display, or the first available X display.
 
 On Nextstep, TERMINAL is unused.
 
 (fn &optional SELECTION TERMINAL)"
-  (error ’unimplemented-error))
-(defun* x-send-client-message () "Send a client message of MESSAGE-TYPE to window DEST on DISPLAY.
+  (error 'unimplemented-error))
+(defun* x-send-client-message ()
+  #M"Send a client message of MESSAGE-TYPE to window DEST on DISPLAY.
 
 For DISPLAY, specify either a frame or a display name (a string).
-If DISPLAY is nil, that stands for the selected frame’s display.
+If DISPLAY is nil, that stands for the selected frame's display.
 DEST may be a number, in which case it is a Window id.  The value 0 may
 be used to send to the root window of the DISPLAY.
 If DEST is a cons, it is converted to a 32 bit number
@@ -152,8 +161,8 @@ If more values than fits into the event is given, the excessive values
 are ignored.
 
 Wait for the event to be sent and signal any error, unless
-‘x-fast-protocol-requests’ is non-nil, in which case errors will be
+‘x-fast-protocol-requests' is non-nil, in which case errors will be
 silently ignored.
 
 (fn DISPLAY DEST FROM MESSAGE-TYPE FORMAT VALUES)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

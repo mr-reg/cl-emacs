@@ -27,7 +27,8 @@
 (in-package :cl-emacs/cmds)
 (log-enable :cl-emacs/cmds :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* backward-char () "Move point N characters backward (forward if N is negative).
+(defun* backward-char ()
+  #M"Move point N characters backward (forward if N is negative).
 On attempt to pass beginning or end of buffer, stop and signal error.
 Interactively, N is the numeric prefix argument.
 If N is omitted or nil, move point 1 character backward.
@@ -37,8 +38,9 @@ right or to the left on the screen.  This is in contrast with
 \\[left-char], which see.
 
 (fn &optional N)"
-  (error ’unimplemented-error))
-(defun* beginning-of-line () "Move point to beginning of current line (in the logical order).
+  (error 'unimplemented-error))
+(defun* beginning-of-line ()
+  #M"Move point to beginning of current line (in the logical order).
 With argument N not nil or 1, move forward N - 1 lines first.
 If point reaches the beginning or end of buffer, it stops there.
 
@@ -46,36 +48,39 @@ This function constrains point to the current field unless this moves
 point to a different line from the original, unconstrained result.
 If N is nil or 1, and a front-sticky field starts at point, the point
 does not move.  To ignore field boundaries bind
-‘inhibit-field-text-motion’ to t, or use the ‘forward-line’ function
-instead.  For instance, ‘(forward-line 0)’ does the same thing as
-‘(beginning-of-line)’, except that it ignores field boundaries.
+‘inhibit-field-text-motion' to t, or use the ‘forward-line' function
+instead.  For instance, ‘(forward-line 0)' does the same thing as
+‘(beginning-of-line)', except that it ignores field boundaries.
 
 (fn &optional N)"
-  (error ’unimplemented-error))
-(defun* delete-char () "Delete the following N characters (previous if N is negative).
+  (error 'unimplemented-error))
+(defun* delete-char ()
+  #M"Delete the following N characters (previous if N is negative).
 Optional second arg KILLFLAG non-nil means kill instead (save in kill ring).
 Interactively, N is the prefix arg, and KILLFLAG is set if
 N was explicitly specified.
 
-The command ‘delete-forward-char’ is preferable for interactive use, e.g.
-because it respects values of ‘delete-active-region’ and ‘overwrite-mode’.
+The command ‘delete-forward-char' is preferable for interactive use, e.g.
+because it respects values of ‘delete-active-region' and ‘overwrite-mode'.
 
 (fn N &optional KILLFLAG)"
-  (error ’unimplemented-error))
-(defun* end-of-line () "Move point to end of current line (in the logical order).
+  (error 'unimplemented-error))
+(defun* end-of-line ()
+  #M"Move point to end of current line (in the logical order).
 With argument N not nil or 1, move forward N - 1 lines first.
 If point reaches the beginning or end of buffer, it stops there.
-To ignore intangibility, bind ‘inhibit-point-motion-hooks’ to t.
+To ignore intangibility, bind ‘inhibit-point-motion-hooks' to t.
 
 This function constrains point to the current field unless this moves
 point to a different line from the original, unconstrained result.  If
 N is nil or 1, and a rear-sticky field ends at point, the point does
-not move.  To ignore field boundaries bind ‘inhibit-field-text-motion’
+not move.  To ignore field boundaries bind ‘inhibit-field-text-motion'
 to t.
 
 (fn &optional N)"
-  (error ’unimplemented-error))
-(defun* forward-char () "Move point N characters forward (backward if N is negative).
+  (error 'unimplemented-error))
+(defun* forward-char ()
+  #M"Move point N characters forward (backward if N is negative).
 On reaching end or beginning of buffer, stop and signal error.
 Interactively, N is the numeric prefix argument.
 If N is omitted or nil, move point 1 character forward.
@@ -85,11 +90,12 @@ right or to the left on the screen.  This is in contrast with
 \\[right-char], which see.
 
 (fn &optional N)"
-  (error ’unimplemented-error))
-(defun* forward-line () "Move N lines forward (backward if N is negative).
+  (error 'unimplemented-error))
+(defun* forward-line ()
+  #M"Move N lines forward (backward if N is negative).
 Precisely, if point is on line I, move to the start of line I + N
 (\"start of line\" in the logical order).
-If there isn’t room, go as far as possible (no error).
+If there isn't room, go as far as possible (no error).
 Interactively, N is the numeric prefix argument and defaults to 1.
 
 Returns the count of lines left to move.  If moving forward,
@@ -104,16 +110,17 @@ it as a line moved across, even though there is no next line to
 go to its beginning.
 
 (fn &optional N)"
-  (error ’unimplemented-error))
-(defun* self-insert-command () "Insert the character you type.
+  (error 'unimplemented-error))
+(defun* self-insert-command ()
+  #M"Insert the character you type.
 Whichever character C you type to run this command is inserted.
 The numeric prefix argument N says how many times to repeat the insertion.
-Before insertion, ‘expand-abbrev’ is executed if the inserted character does
+Before insertion, ‘expand-abbrev' is executed if the inserted character does
 not have word syntax and the previous character in the buffer does.
-After insertion, ‘internal-auto-fill’ is called if
-‘auto-fill-function’ is non-nil and if the ‘auto-fill-chars’ table has
+After insertion, ‘internal-auto-fill' is called if
+‘auto-fill-function' is non-nil and if the ‘auto-fill-chars' table has
 a non-nil value for the inserted character.  At the end, it runs
-‘post-self-insert-hook’.
+‘post-self-insert-hook'.
 
 (fn N &optional C)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

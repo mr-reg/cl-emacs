@@ -1,6 +1,27 @@
+# -*- org-log-done: nil; -*-
+#+TODO: TODO IN-PROGRESS | DONE
+
 * What is this?
 This is port of emacs from C to Common Lisp.
 
 * State
 Development just started
 
+* Progress
+** reader [3/9]
+*** DONE basic elisp reader 
+*** DONE character syntax reader
+*** DONE emacs property strings type
+*** IN-PROGRESS string reader
+**** support escape sequences
+**** support character syntax
+*** TODO emacs hashtable implementation
+*** TODO hashtable reader
+*** TODO char tables && sub-char tables
+*** TODO shorthands
+*** TODO other special reader syntax
+
+* Out of scope
+** any bytecode support
+** pdumper
+** gui implementation

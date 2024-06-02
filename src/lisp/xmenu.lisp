@@ -32,4 +32,4 @@
 (On MS Windows, this refers to the selected frame.)
 
 (fn)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

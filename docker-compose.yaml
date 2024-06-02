@@ -4,7 +4,7 @@ services:
     build:
       context: src/docker
       dockerfile: zot.Dockerfile
-    volumes: 
+    volumes:
       - ${PWD}/.volumes/zot-registry/:/var/lib/registry
     ports:
       - 5000:5000
@@ -22,7 +22,7 @@ services:
       - ASDF_DIR=${PWD}/.volumes/asdf/
     depends_on:
       - zot
-    volumes: 
+    volumes:
       - .volumes/cache-common-lisp/:/root/.cache/common-lisp/
       - ${PWD}/.volumes/cache-ocicl/:${PWD}/.volumes/cache-ocicl/
       - ${PWD}/:${PWD}/

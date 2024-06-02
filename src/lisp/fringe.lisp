@@ -27,13 +27,14 @@
 (in-package :cl-emacs/fringe)
 (log-enable :cl-emacs/fringe :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* define-fringe-bitmap () "Define fringe bitmap BITMAP from BITS of size HEIGHT x WIDTH.
+(defun* define-fringe-bitmap ()
+  #M"Define fringe bitmap BITMAP from BITS of size HEIGHT x WIDTH.
 BITMAP is a symbol identifying the new fringe bitmap.
 BITS is either a string or a vector of integers.
 HEIGHT is height of bitmap.  If HEIGHT is nil, use length of BITS.
 WIDTH must be an integer from 1 to 16, or nil which defaults to 8.  An
 error is signaled if WIDTH is outside this range.
-Optional fifth arg ALIGN may be one of ‘top’, ‘center’, or ‘bottom’,
+Optional fifth arg ALIGN may be one of ‘top', ‘center', or ‘bottom',
 indicating the positioning of the bitmap relative to the rows where it
 is used; the default is to center the bitmap.  Fifth arg may also be a
 list (ALIGN PERIODIC) where PERIODIC non-nil specifies that the bitmap
@@ -41,13 +42,15 @@ should be repeated.
 If BITMAP already exists, the existing definition is replaced.
 
 (fn BITMAP BITS &optional HEIGHT WIDTH ALIGN)"
-  (error ’unimplemented-error))
-(defun* destroy-fringe-bitmap () "Destroy fringe bitmap BITMAP.
+  (error 'unimplemented-error))
+(defun* destroy-fringe-bitmap ()
+  #M"Destroy fringe bitmap BITMAP.
 If BITMAP overrides a standard fringe bitmap, the original bitmap is restored.
 
 (fn BITMAP)"
-  (error ’unimplemented-error))
-(defun* fringe-bitmaps-at-pos () "Return fringe bitmaps of row containing position POS in window WINDOW.
+  (error 'unimplemented-error))
+(defun* fringe-bitmaps-at-pos ()
+  #M"Return fringe bitmaps of row containing position POS in window WINDOW.
 If WINDOW is nil, use selected window.  If POS is nil, use value of point
 in that window.  Return value is a list (LEFT RIGHT OV), where LEFT
 is the symbol for the bitmap in the left fringe (or nil if no bitmap),
@@ -56,11 +59,12 @@ overlay arrow in the left fringe.
 Return nil if POS is not visible in WINDOW.
 
 (fn &optional POS WINDOW)"
-  (error ’unimplemented-error))
-(defun* set-fringe-bitmap-face () "Set face for fringe bitmap BITMAP to FACE.
-FACE is merged with the ‘fringe’ face, so normally FACE should specify
+  (error 'unimplemented-error))
+(defun* set-fringe-bitmap-face ()
+  #M"Set face for fringe bitmap BITMAP to FACE.
+FACE is merged with the ‘fringe' face, so normally FACE should specify
 only the foreground color.
 If FACE is nil, reset face to default fringe face.
 
 (fn BITMAP &optional FACE)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

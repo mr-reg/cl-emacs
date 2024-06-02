@@ -27,19 +27,22 @@
 (in-package :cl-emacs/xsettings)
 (log-enable :cl-emacs/xsettings :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* font-get-system-font () "Get the system default fixed width font.
+(defun* font-get-system-font ()
+  #M"Get the system default fixed width font.
 The font is returned as either a font-spec or font name.
 
 (fn)"
-  (error ’unimplemented-error))
-(defun* font-get-system-normal-font () "Get the system default application font.
+  (error 'unimplemented-error))
+(defun* font-get-system-normal-font ()
+  #M"Get the system default application font.
 The font is returned as either a font-spec or font name.
 
 (fn)"
-  (error ’unimplemented-error))
-(defun* tool-bar-get-system-style () "Get the system tool bar style.
-If no system tool bar style is known, return ‘tool-bar-style’ if set to a
+  (error 'unimplemented-error))
+(defun* tool-bar-get-system-style ()
+  #M"Get the system tool bar style.
+If no system tool bar style is known, return ‘tool-bar-style' if set to a
 known style.  Otherwise return image.
 
 (fn)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

@@ -198,3 +198,8 @@ https://www.emacswiki.org/emacs/EmacsSymbolNotation
                                      x
                                      (string-replace \"\\n\" \"@@@n\" (documentation x t))))))))))"
 #+end_src
+* tree implementation
+avl-tree
+https://github.com/vy/avl-tree/tree/master
+https://github.com/glv2/bst
+basic https://github.com/ghollisjr/cl-ana/blob/master/binary-tree/binary-tree.lisp

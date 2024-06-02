@@ -27,7 +27,8 @@
 (in-package :cl-emacs/inotify)
 (log-enable :cl-emacs/inotify :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* inotify-add-watch () "Add a watch for FILE-NAME to inotify.
+(defun* inotify-add-watch ()
+  #M"Add a watch for FILE-NAME to inotify.
 
 Return a watch descriptor.  The watch will look for ASPECT events and
 invoke CALLBACK when an event occurs.
@@ -63,7 +64,7 @@ EVENT which contains an event structure of the format
 (WATCH-DESCRIPTOR ASPECTS NAME COOKIE)
 
 WATCH-DESCRIPTOR is the same object that was returned by this function.  It can
-be tested for equality using ‘equal’.  ASPECTS describes the event.  It is a
+be tested for equality using ‘equal'.  ASPECTS describes the event.  It is a
 list of ASPECT symbols described above and can also contain one of the following
 symbols
 
@@ -74,12 +75,12 @@ unmount
 
 If a directory is watched then NAME is the name of file that caused the event.
 
-COOKIE is an object that can be compared using ‘equal’ to identify two matching
+COOKIE is an object that can be compared using ‘equal' to identify two matching
 renames (moved-from and moved-to).
 
 See inotify(7) and inotify_add_watch(2) for further information.  The
 inotify fd is managed internally and there is no corresponding
-inotify_init.  Use ‘inotify-rm-watch’ to remove a watch.
+inotify_init.  Use ‘inotify-rm-watch' to remove a watch.
 
 The following inotify bit-masks cannot be used because descriptors are
 shared across different callers.
@@ -89,23 +90,25 @@ IN_MASK_ADD
 IN_ONESHOT
 
 (fn FILENAME ASPECT CALLBACK)"
-  (error ’unimplemented-error))
-(defun* inotify-rm-watch () "Remove an existing WATCH-DESCRIPTOR.
+  (error 'unimplemented-error))
+(defun* inotify-rm-watch ()
+  #M"Remove an existing WATCH-DESCRIPTOR.
 
-WATCH-DESCRIPTOR should be an object returned by ‘inotify-add-watch’.
+WATCH-DESCRIPTOR should be an object returned by ‘inotify-add-watch'.
 
 See inotify_rm_watch(2) for more information.
 
 (fn WATCH-DESCRIPTOR)"
-  (error ’unimplemented-error))
-(defun* inotify-valid-p () "Check a watch specified by its WATCH-DESCRIPTOR.
+  (error 'unimplemented-error))
+(defun* inotify-valid-p ()
+  #M"Check a watch specified by its WATCH-DESCRIPTOR.
 
-WATCH-DESCRIPTOR should be an object returned by ‘inotify-add-watch’.
+WATCH-DESCRIPTOR should be an object returned by ‘inotify-add-watch'.
 
 A watch can become invalid if the file or directory it watches is
 deleted, or if the watcher thread exits abnormally for any other
-reason.  Removing the watch by calling ‘inotify-rm-watch’ also makes
+reason.  Removing the watch by calling ‘inotify-rm-watch' also makes
 it invalid.
 
 (fn WATCH-DESCRIPTOR)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

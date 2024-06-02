@@ -27,35 +27,38 @@
 (in-package :cl-emacs/xml)
 (log-enable :cl-emacs/xml :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* libxml-available-p () "Return t if libxml2 support is available in this instance of Emacs.
+(defun* libxml-available-p ()
+  #M"Return t if libxml2 support is available in this instance of Emacs.
 
 (fn)"
-  (error ’unimplemented-error))
-(defun* libxml-parse-html-region () "Parse the region as an HTML document and return the parse tree.
-If START is nil, it defaults to ‘point-min’.  If END is nil, it
-defaults to ‘point-max’.
+  (error 'unimplemented-error))
+(defun* libxml-parse-html-region ()
+  #M"Parse the region as an HTML document and return the parse tree.
+If START is nil, it defaults to ‘point-min'.  If END is nil, it
+defaults to ‘point-max'.
 
 If BASE-URL is non-nil, it is used if and when reporting errors and
 warnings from the underlying libxml2 library.  Currently, errors and
 warnings from the library are suppressed, so this argument is largely
 ignored.
 
-If you want comments to be stripped, use the ‘xml-remove-comments’
+If you want comments to be stripped, use the ‘xml-remove-comments'
 function to strip comments before calling this function.
 
 (fn &optional START END BASE-URL DISCARD-COMMENTS)"
-  (error ’unimplemented-error))
-(defun* libxml-parse-xml-region () "Parse the region as an XML document and return the parse tree.
-If START is nil, it defaults to ‘point-min’.  If END is nil, it
-defaults to ‘point-max’.
+  (error 'unimplemented-error))
+(defun* libxml-parse-xml-region ()
+  #M"Parse the region as an XML document and return the parse tree.
+If START is nil, it defaults to ‘point-min'.  If END is nil, it
+defaults to ‘point-max'.
 
 If BASE-URL is non-nil, it is used if and when reporting errors and
 warnings from the underlying libxml2 library.  Currently, errors and
 warnings from the library are suppressed, so this argument is largely
 ignored.
 
-If you want comments to be stripped, use the ‘xml-remove-comments’
+If you want comments to be stripped, use the ‘xml-remove-comments'
 function to strip comments before calling this function.
 
 (fn &optional START END BASE-URL DISCARD-COMMENTS)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))

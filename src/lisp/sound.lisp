@@ -27,9 +27,10 @@
 (in-package :cl-emacs/sound)
 (log-enable :cl-emacs/sound :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* play-sound-internal () "Play sound SOUND.
+(defun* play-sound-internal ()
+  #M"Play sound SOUND.
 
-Internal use only, use ‘play-sound’ instead.
+Internal use only, use ‘play-sound' instead.
 
 (fn SOUND)"
-  (error ’unimplemented-error))
+  (error 'unimplemented-error))
