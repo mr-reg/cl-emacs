@@ -2,30 +2,31 @@ c# -*- org-log-done: nil; -*-
 #+TODO: TODO IN-PROGRESS | DONE
 
 * What is this?
-This is port of emacs from C to Common Lisp.
+This is port of the Beast from C to Common Lisp.
 
 * State
 Development just started
 
 * Progress
 ** reader [3/8]
-*** DONE basic elisp reader 
-*** DONE character syntax reader
-*** TODO string reader [2/4]
-**** DONE emacs property strings type
-**** DONE basic reader for pstrings
-**** TODO support escape sequences
-**** TODO support character syntax
-*** DONE hashtable reader
-*** TODO float number reader
-*** TODO char tables && sub-char tables
-*** TODO shorthands
-*** TODO other special reader syntax
-** print [0/2]
-*** TODO basic print implementation
-*** TODO format
+   * [X] basic elisp reader 
+   * [X] character syntax reader
+   * [-] string reader [2/4]
+     * [X] emacs property-string type
+     * [X] basic reader for pstrings
+     * [ ] support escape sequences
+     * [ ] support character syntax
+   * [X] hashtable reader
+   * [ ] float number reader
+   * [ ] char tables && sub-char tables
+   * [ ] shorthands
+   * [ ] other special reader syntax
+   * [ ] markers?
+** printer [0/2]
+   * [ ] basic print implementation
+   * [ ] format
 ** eval [0/1]
-*** TODO TBD
+   * [ ] TBD
 
 * Features
 ** full elisp compatibility claim
