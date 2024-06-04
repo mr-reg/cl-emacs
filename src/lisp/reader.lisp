@@ -95,7 +95,6 @@
   (mod-stack nil :type list)
   ;; key = pointer number, value = cons (nil . placeholder) or (t . real value)
   (pointers (make-hash-table :test 'el::eq) :type hash-table))
-;; TODO: use hash function from emacs packages
 
 (defun* push-extra-char ((reader reader) (char character))
   (with-slots (extra-buffer) reader
