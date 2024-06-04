@@ -16,16 +16,16 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/textprop
+(cl-emacs/elisp-packages:define-elisp-package :cl-emacs/textprop
     (:use
-     :common-lisp
      :defstar
      :cl-emacs/log
      :alexandria
      :fiveam
      :cl-emacs/commons)
   (:local-nicknames (#:pstrings #:cl-emacs/types/pstrings)                    )
-  (:export #:set-text-properties)
+  (:export #:set-text-properties
+           #:add-text-properties)
   )
 (in-package :cl-emacs/textprop)
 (log-enable :cl-emacs/textprop :debug2)
@@ -64,7 +64,18 @@
      Return t if any property value actually changed, nil otherwise.
 
      (fn START END PROPERTIES &optional OBJECT)"
-  (error 'unimplemented-error))
+  (assert (pstrings:pstring-p object))
+  (log-debug2 "add-text-properties start:~s end:~s props:~s object:~s"
+              start end props object)
+  (pstrings:set-properties object start end (alexandria:plist-alist props) nil)
+  (log-debug2 "add-text-properties result:~s" object)
+  )
+(test test-add-text-properties
+  (let ((pstr (pstrings:build-pstring "ab" '((p3 . v3)))))
+    (add-text-properties 1 2 '(p2 v2 p1 v1) pstr)
+    (is (string= "#(\"ab\" 0 1 (P3 V3) 1 2 (P1 V1 P2 V2 P3 V3))"
+                 (cl:format nil "~s" pstr)))
+    ))
 (defun* get-char-property ()
   #M"Return the value of POSITION's property PROP, in OBJECT.
      Both overlay properties and text properties are checked.
@@ -282,13 +293,13 @@ Use ‘set-text-properties' if you want to remove all text properties.
      (fn START END PROPERTIES &optional OBJECT)"
   ;; TODO: support buffers as parameter
   (assert (pstrings:pstring-p object))
-  (pstrings:set-properties object start end (alexandria:plist-alist props))
+  (pstrings:set-properties object start end (alexandria:plist-alist props) t)
   object)
 (test test-set-text-properties
-  (let ((pstr (pstrings:build-pstring "ab")))
+  (let ((pstr (pstrings:build-pstring "ab" '((p3 . v3)))))
     (set-text-properties 1 2 '(p2 v2 p1 v1) pstr)
-    (is (string= "#(\"ab\" 1 2 (P1 V1 P2 V2))"
-                 (format nil "~s" pstr)))
+    (is (string= "#(\"ab\" 0 1 (P3 V3) 1 2 (P1 V1 P2 V2))"
+                 (cl:format nil "~s" pstr)))
     ))
 (defun* text-properties-at ()
   #M"Return the list of properties of the character at POSITION in OBJECT.

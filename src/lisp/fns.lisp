@@ -24,24 +24,50 @@
      :alexandria
      :fiveam
      :cl-custom-hash-table
+     :cl-emacs/editfns
+     :cl-emacs/alloc
      :cl-emacs/commons)
   (:import-from #:cl
                 #:copy-alist
+                #:clrhash
                 #:gethash
+                #:hash-table-count
+                #:hash-table-p
+                #:hash-table-rehash-size
+                #:hash-table-rehash-threshold
+                #:hash-table-size
+                #:hash-table-test
+                #:identity
                 #:nreverse
                 #:nth
+                #:remhash
                 #:sort
                 )
+  (:import-from #:cl-user
+                #:hash-table-weak-p)
   (:import-from #:serapeum
                 #:memq
                 )
-  (:export #:copy-alist
+  (:export #:clrhash
+           #:copy-alist
+           #:copy-hash-table
+           #:eql
            #:equal
+           #:equal-including-properties
            #:gethash
+           #:hash-table-count
+           #:hash-table-p
+           #:hash-table-rehash-size
+           #:hash-table-rehash-threshold
+           #:hash-table-size
+           #:hash-table-test
+           #:identity
            #:memq
            #:make-hash-table
            #:nreverse
            #:nth
+           #:puthash
+           #:remhash
            #:sxhash-eq
            #:sxhash-eql
            #:sxhash-equal
@@ -56,10 +82,315 @@
 (log-enable :cl-emacs/fns :debug2)
 (def-suite cl-emacs/fns)
 (in-suite cl-emacs/fns)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable pstrings:pstring-syntax)
+
+
+;;; equality functions
+
+(defun* sxhash-eq (obj)
+  #M"Return an integer hash code for OBJ suitable for ‘eq'.
+     If (eq A B), then (= (sxhash-eq A) (sxhash-eq B)).
+
+     Hash codes are not guaranteed to be preserved across Emacs sessions.
+     "
+  (float-features:with-float-traps-masked (:invalid)
+    (cl:sxhash obj)))
+(test test-sxhash-eq
+  (is (= (sxhash-eq 340) (sxhash-eq 340)))
+  (is-false (= (sxhash-eq cl-emacs/data::*infinity-positive*)
+               (sxhash-eq cl-emacs/data::*infinity-negative*)))
+  (is (= (sxhash-eq cl-emacs/data::*nan*)
+         (sxhash-eq cl-emacs/data::*nan*)))
+  (is (= (sxhash-eq '#:symbol) (sxhash-eq '#:symbol)))
+  (is-false (= (sxhash-eq 345) (sxhash-eq 346))))
+
+(defun* eql (obj1 obj2)
+  #M"Return t if the two args are ‘eq' or are indistinguishable numbers.
+     Integers with the same value are ‘eql'.
+     Floating-point values with the same sign, exponent and fraction are ‘eql'.
+     This differs from numeric comparison: (eql 0.0 -0.0) returns nil and
+     (eql 0.0e+NaN 0.0e+NaN) returns t, whereas ‘=' does the opposite.
+
+     (fn OBJ1 OBJ2)"
+  (eq obj1 obj2))
+
+(defun* sxhash-eql (obj)
+  #M"Return an integer hash code for OBJ suitable for ‘eql'.
+     If (eql A B), then (= (sxhash-eql A) (sxhash-eql B)), but the opposite
+     isn't necessarily true.
+
+     Hash codes are not guaranteed to be preserved across Emacs sessions.
+     "
+  (* (sxhash-eq obj)
+     ;; awkward emulation of emacs binary access to sign bit
+     (if (and (floatp obj) (< (cl:float-sign obj) 0))
+         -1 1))
+  )
+
+(test test-eql
+  (is (eql 2 2))
+  (is (= (sxhash-eql 2) (sxhash-eql 2)))
+
+  (is (eql 'el::sym 'el::sym))
+  (is (= (sxhash-eql 'el::sym) (sxhash-eql 'el::sym)))
+
+  (is (eql 10e2 1000.0))
+  (is (= (sxhash-eql 10e2) (sxhash-eql 1000.0)))
+
+  (is-false (eql 10 10.0))
+  (is-false (= (sxhash-eql 10) (sxhash-eql 10.0)))
+
+  (is-false (cl:eql 0.0 -0.0))
+  (is-false (= (sxhash-eql 0.0) (sxhash-eql -0.0)))
+
+  (is (eql cl-emacs/data::*nan* (/ 0.0 0.0)))
+  (is (= (sxhash-eql cl-emacs/data::*nan*)
+         (sxhash-eql (/ 0.0 0.0))))
+  )
+
+(defun* equal (x y)
+  #M"Return t if two Lisp objects have similar structure and contents.
+     They must have the same data type.
+     Conses are compared by comparing the cars and the cdrs.
+     Vectors and strings are compared element by element.
+     Numbers are compared via ‘eql', so integers do not equal floats.
+     (Use ‘=' if you want integers and floats to be able to be equal.)
+     Symbols must match exactly."
+  (cond ((eql x y) t)
+        ((and (consp x) (consp y))
+         (and (equal (car x) (car y))
+              (equal (cdr x) (cdr y))))
+        ;; TODO: use emacs vector functions
+        ((and (vectorp x) (vectorp y))
+         (let ((length (cl:length x)))
+           (when (eq length (cl:length y))
+             (dotimes (i length t)
+               (declare (fixnum i))
+               (let ((x-el (cl:aref x i))
+                     (y-el (cl:aref y i)))
+                 (unless (or (eq x-el y-el) (equal x-el y-el))
+                   (return nil)))))))
+        ((and (pstrings:pstring-p x) (pstrings:pstring-p y))
+         (pstrings:pstring-char= x y))
+        (t nil)))
+(defun* sxhash-equal (obj)
+  #M"Return an integer hash code for OBJ suitable for ‘equal'.
+     If (equal A B), then (= (sxhash-equal A) (sxhash-equal B)), but the
+     opposite isn't necessarily true.
+
+     Hash codes are not guaranteed to be preserved across Emacs sessions.
+
+     "
+  (if (pstrings:pstring-p obj)
+      (pstrings:compute-hash obj nil)
+      (sxhash-eql obj))
+  )
+(test test-equal
+  (is (equal 'foo 'foo))
+  (is (= (sxhash-equal 'foo) (sxhash-equal 'foo)))
+
+  (is (equal 456 456))
+  (is (= (sxhash-equal 456) (sxhash-equal 456)))
+
+  (is (equal #P"asdf" #P"asdf"))
+  (is (= (sxhash-equal #P"asdf")
+         (sxhash-equal #P"asdf")))
+  (is-false (eq #P"asdf" #P"asdf"))
+
+  (is (equal '(1 (2 (3))) '(1 (2 (3)))))
+  (is (= (sxhash-equal '(1 (2 (3))))
+         (sxhash-equal '(1 (2 (3))))))
+  (is-false (eq '(1 (2 (3))) '(1 (2 (3)))))
+
+  (is (equal #((1 2) 3) #((1 2) 3)))
+  (is (= (sxhash-equal #((1 2) 3))
+         (sxhash-equal #((1 2) 3))))
+  (is-false (eq #((1 2) 3) #((1 2) 3)))
+
+  (is-false (equal "asdf" "ASDF"))
+  (is-false (= (sxhash-equal "asdf")
+               (sxhash-equal "ASDF")))
+
+  (is (equal #P"asdf" (propertize #P"asdf" 'asdf t)))
+  (is (equal (sxhash-equal #P"asdf")
+             (sxhash-equal (propertize #P"asdf" 'asdf t))))
+
+  ;; TODO: add tests for markers
+  ;; (is (equal (point-marker) (point-marker)))
+  ;; (is-false (eq (point-marker) (point-marker)))
+  )
+
+(defun* equal-including-properties (x y)
+  #M"Return t if two Lisp objects have similar structure and contents.
+     This is like ‘equal' except that it compares the text properties
+     of strings.  (‘equal' ignores text properties.)
+     "
+  (cond
+    ((and (pstrings:pstring-p x) (pstrings:pstring-p y))
+     (pstrings:pstring= x y))
+    (t (equal x y))))
+
+(defun* sxhash-equal-including-properties (obj)
+  #M"Return an integer hash code for OBJ suitable for
+     ‘equal-including-properties'.
+     If (sxhash-equal-including-properties A B), then
+     (= (sxhash-equal-including-properties A) (sxhash-equal-including-properties B)).
+
+     Hash codes are not guaranteed to be preserved across Emacs sessions.
+     "
+  (if (pstrings:pstring-p obj)
+      (pstrings:compute-hash obj t)
+      (sxhash-equal obj)
+      )
+
+  )
+
+(test test-equal-including-properties
+  (is-false (equal-including-properties
+             #P"asdf"
+             (propertize #P"asdf" 'asdf t)))
+  (is-false (=
+             (sxhash-equal-including-properties #P"asdf")
+             (sxhash-equal-including-properties (propertize #P"asdf" 'asdf t))))
+  (is (equal-including-properties
+       (pstrings:build-pstring "asdf" '((asdf . t)))
+       (propertize #P"asdf" 'asdf t)))
+  (is (=
+       (sxhash-equal-including-properties (pstrings:build-pstring "asdf" '((asdf . t))))
+       (sxhash-equal-including-properties (propertize #P"asdf" 'asdf t)))))
+
+;;; hashtables
 
 (define-custom-hash-table-constructor make-hash-table-eq
   :test eq :hash-function sxhash-eq)
+(define-custom-hash-table-constructor make-hash-table-eql
+  :test eql :hash-function sxhash-eql)
+(define-custom-hash-table-constructor make-hash-table-equal
+  :test equal :hash-function sxhash-equal)
+
+;; container to store user-defined hash-table-test-functions
+(defparameter *hash-constructors*
+  '((eq . make-hash-table-eq)
+    (eql . make-hash-table-eql)
+    (equal . make-hash-table-equal)
+    ))
+
+(define-condition hash-table-error (error-with-description)
+  ())
+
+(defun* make-hash-table (&key (test 'eql)
+                              (size 65)
+                              (rehash-size 1.5)
+                              (rehash-threshold 0.8125)
+                              (weakness))
+  #M"Create and return a new hash table.
+
+     Arguments are specified as keyword/argument pairs.  The following
+     arguments are defined:
+
+     :test TEST -- TEST must be a symbol that specifies how to compare
+     keys.  Default is ‘eql'.  Predefined are the tests ‘eq', ‘eql', and
+     ‘equal'.  User-supplied test and hash functions can be specified via
+     ‘define-hash-table-test'.
+
+     :size SIZE -- A hint as to how many elements will be put in the table.
+     Default is 65.
+
+     :rehash-size REHASH-SIZE - Indicates how to expand the table when it
+     fills up.  If REHASH-SIZE is an integer, increase the size by that
+     amount.  If it is a float, it must be > 1.0, and the new size is the
+     old size multiplied by that factor.  Default is 1.5.
+
+     :rehash-threshold THRESHOLD -- THRESHOLD must a float > 0, and <= 1.0.
+     Resize the hash table when the ratio (table entries / table size)
+     exceeds an approximation to THRESHOLD.  Default is 0.8125.
+
+     :weakness WEAK -- WEAK must be one of nil, t, ‘key', ‘value',
+     ‘key-or-value', or ‘key-and-value'.  If WEAK is not nil, the table
+     returned is a weak table.  Key/value pairs are removed from a weak
+     hash table when there are no non-weak references pointing to their
+     key, value, one of key or value, or both key and value, depending on
+     WEAK.  WEAK t is equivalent to ‘key-and-value'.  Default value of WEAK
+     is nil.
+
+     :purecopy PURECOPY -- If PURECOPY is non-nil, the table can be copied
+     to pure storage when Emacs is being dumped, making the contents of the
+     table read only. Any further changes to purified tables will result
+     in an error.
+     "
+  (unless (position weakness '(nil t el::key el::value el::key-or-value el::key-and-value))
+    (error 'hash-table-error :details
+           (cl:format nil "weakness value incorrect ~s" weakness)))
+  (let ((cl-weakness nil)
+        (constructor-sym (assoc-value *hash-constructors* test)))
+    (unless constructor-sym
+      (error 'hash-table-error :details
+             (cl:format nil "bad test function ~s" test)))
+    ;; CCL limitation: we support weakness only when test = eq
+    (when (and weakness (eq test 'el::eq))
+      (cond
+        ((null weakness) nil)
+        ((or (eq weakness t) (eq weakness 'el::value)) t)
+        ((eq weakness 'el::key) :key)
+        ((eq weakness 'el::key-and-value) :both)
+        ((eq weakness 'el::key-or-value) :one)
+        (t (error "unknown weakness ~s" weakness))
+        ))
+    (apply constructor-sym (list :size size
+                                 :rehash-size rehash-size
+                                 :rehash-threshold rehash-threshold
+                                 :weak cl-weakness))))
+
+(defun* puthash (key value (table hash-table))
+  #M"Associate KEY with VALUE in hash table TABLE.
+     If KEY is already present in table, replace its current value with
+     VALUE.  In any case, return VALUE."
+  (setf (gethash key table) value))
+
+(test test-hash-table
+  (let ((table (make-hash-table :test 'eq)))
+    (puthash 'key1 'value1 table)
+    (is (eq 'value1 (gethash 'key1 table)))
+    (puthash 'key2 'value2 table)
+    (puthash 'key1 'value3 table)
+    (is (eq 'value3 (gethash 'key1 table)))
+    (is (eq 'value2 (gethash 'key2 table)))
+    (is (= 2 (hash-table-count table)))
+    (puthash #P"abc" 1 table)
+    (puthash #P"abc" 1 table)
+    (is (= 4 (hash-table-count table)))
+    (is-false (gethash #P"abc" table))
+    )
+  (let ((table (make-hash-table :test 'equal)))
+    (puthash #P"abc" 1 table)
+    (puthash #P"abc" #P"mno" table)
+    (is (= 1 (hash-table-count table)))
+    (is (equal (gethash #P"abc" table) #P"mno"))
+    )
+  )
+
+(defun* copy-hash-table ((table hash-table))
+  #M"Return a copy of hash table TABLE."
+  (alexandria:copy-hash-table table))
+
+(defun* define-hash-table-test ()
+  #M"Define a new hash table test with name NAME, a symbol.
+
+In hash tables created with NAME specified as test, use TEST to
+compare keys, and HASH for computing hash codes of keys.
+
+TEST must be a function taking two arguments and returning non-nil if
+both arguments are the same.  HASH must be a function taking one
+argument and returning an object that is the hash code of the argument.
+It should be the case that if (eq (funcall HASH x1) (funcall HASH x2))
+returns nil, then (funcall TEST x1 x2) also returns nil.
+
+(fn NAME TEST HASH)"
+  (error 'unimplemented-error))
+
+(defun* hash-table-weakness ((table hash-table))
+  #M"Return the weakness of TABLE."
+  (hash-table-weak-p table))
 
 (defun* append ()
   #M"Concatenate all the arguments and make the result a list.
@@ -181,11 +512,7 @@ This makes STRING unibyte and may change its length.
 
 (fn STRING)"
   (error 'unimplemented-error))
-(defun* clrhash ()
-  #M"Clear hash table TABLE and return it.
 
-(fn TABLE)"
-  (error 'unimplemented-error))
 (defun* compare-strings ()
   #M"Compare the contents of two strings, converting to multibyte if needed.
 The arguments START1, END1, START2, and END2, if non-nil, are
@@ -221,11 +548,6 @@ to be ‘eq'.
 (fn &rest SEQUENCES)"
   (error 'unimplemented-error))
 
-(defun* copy-hash-table ()
-  #M"Return a copy of hash table TABLE.
-
-(fn TABLE)"
-  (error 'unimplemented-error))
 (defun* copy-sequence ()
   #M"Return a copy of a list, vector, string, char-table or record.
 The elements of a list, vector or record are not copied; they are
@@ -235,20 +557,7 @@ the same empty object instead of its copy.
 
 (fn ARG)"
   (error 'unimplemented-error))
-(defun* define-hash-table-test ()
-  #M"Define a new hash table test with name NAME, a symbol.
 
-In hash tables created with NAME specified as test, use TEST to
-compare keys, and HASH for computing hash codes of keys.
-
-TEST must be a function taking two arguments and returning non-nil if
-both arguments are the same.  HASH must be a function taking one
-argument and returning an object that is the hash code of the argument.
-It should be the case that if (eq (funcall HASH x1) (funcall HASH x2))
-returns nil, then (funcall TEST x1 x2) also returns nil.
-
-(fn NAME TEST HASH)"
-  (error 'unimplemented-error))
 (defun* delete ()
   #M"Delete members of SEQ which are ‘equal' to ELT, and return the result.
 SEQ must be a sequence (i.e. a list, a vector, or a string).
@@ -285,55 +594,7 @@ argument.
 
 (fn SEQUENCE N)"
   (error 'unimplemented-error))
-(defun* eql (obj1 obj2)
-  #M"Return t if the two args are ‘eq' or are indistinguishable numbers.
-     Integers with the same value are ‘eql'.
-     Floating-point values with the same sign, exponent and fraction are ‘eql'.
-     This differs from numeric comparison: (eql 0.0 -0.0) returns nil and
-     (eql 0.0e+NaN 0.0e+NaN) returns t, whereas ‘=' does the opposite.
 
-     (fn OBJ1 OBJ2)"
-  (eq obj1 obj2))
-;; TODO: add better implementation and testing for eql
-(test eql-test
-  (is (eq 2 2))
-  (is (eq 'el::sym 'el::sym))
-  )
-
-(defun* equal (x y)
-  #M"Return t if two Lisp objects have similar structure and contents.
-     They must have the same data type.
-     Conses are compared by comparing the cars and the cdrs.
-     Vectors and strings are compared element by element.
-     Numbers are compared via ‘eql', so integers do not equal floats.
-     (Use ‘=' if you want integers and floats to be able to be equal.)
-     Symbols must match exactly."
-  (cond ((eql x y) t)
-        ((and (consp x) (consp y))
-         (and (equal (car x) (car y))
-              (equal (cdr x) (cdr y))))
-        ;; TODO: use emacs vector functions
-        ((and (vectorp x) (vectorp y))
-         (let ((length (cl:length x)))
-           (when (eq length (cl:length y))
-             (dotimes (i length t)
-               (declare (fixnum i))
-               (let ((x-el (cl:aref x i))
-                     (y-el (cl:aref y i)))
-                 (unless (or (eq x-el y-el) (equal x-el y-el))
-                   (return nil)))))))
-        ((and (pstrings:pstring-p x) (pstrings:pstring-p y))
-         (pstrings:pstring-char= x y))
-        (t nil)))
-;; TODO: add proper (equal) tests
-
-(defun* equal-including-properties ()
-  #M"Return t if two Lisp objects have similar structure and contents.
-This is like ‘equal' except that it compares the text properties
-of strings.  (‘equal' ignores text properties.)
-
-(fn O1 O2)"
-  (error 'unimplemented-error))
 (defun* featurep ()
   #M"Return t if FEATURE is present in this Emacs.
 
@@ -358,49 +619,7 @@ This is the last value stored with ‘(put SYMBOL PROPNAME VALUE)'.
 (fn SYMBOL PROPNAME)"
   (error 'unimplemented-error))
 
-(defun* hash-table-count ()
-  #M"Return the number of elements in TABLE.
 
-(fn TABLE)"
-  (error 'unimplemented-error))
-(defun* hash-table-p ()
-  #M"Return t if OBJ is a Lisp hash table object.
-
-(fn OBJ)"
-  (error 'unimplemented-error))
-(defun* hash-table-rehash-size ()
-  #M"Return the current rehash size of TABLE.
-
-(fn TABLE)"
-  (error 'unimplemented-error))
-(defun* hash-table-rehash-threshold ()
-  #M"Return the current rehash threshold of TABLE.
-
-(fn TABLE)"
-  (error 'unimplemented-error))
-(defun* hash-table-size ()
-  #M"Return the size of TABLE.
-The size can be used as an argument to ‘make-hash-table' to create
-a hash table than can hold as many elements as TABLE holds
-without need for resizing.
-
-(fn TABLE)"
-  (error 'unimplemented-error))
-(defun* hash-table-test ()
-  #M"Return the test TABLE uses.
-
-(fn TABLE)"
-  (error 'unimplemented-error))
-(defun* hash-table-weakness ()
-  #M"Return the weakness of TABLE.
-
-(fn TABLE)"
-  (error 'unimplemented-error))
-(defun* identity ()
-  #M"Return the ARGUMENT unchanged.
-
-(fn ARGUMENT)"
-  (error 'unimplemented-error))
 (defun* length ()
   #M"Return the length of vector, list or string SEQUENCE.
 A byte-code function object is also allowed.
@@ -415,6 +634,7 @@ efficient.
 
 (fn SEQUENCE)"
   (error 'unimplemented-error))
+
 (defun* length< ()
   #M"Return non-nil if SEQUENCE is shorter than LENGTH.
 See ‘length' for allowed values of SEQUENCE and how elements are
@@ -422,6 +642,7 @@ counted.
 
 (fn SEQUENCE LENGTH)"
   (error 'unimplemented-error))
+
 (defun* length= ()
   #M"Return non-nil if SEQUENCE has length equal to LENGTH.
 See ‘length' for allowed values of SEQUENCE and how elements are
@@ -429,6 +650,7 @@ counted.
 
 (fn SEQUENCE LENGTH)"
   (error 'unimplemented-error))
+
 (defun* length> ()
   #M"Return non-nil if SEQUENCE is longer than LENGTH.
 See ‘length' for allowed values of SEQUENCE and how elements are
@@ -436,6 +658,7 @@ counted.
 
 (fn SEQUENCE LENGTH)"
   (error 'unimplemented-error))
+
 (defun* line-number-at-pos ()
   #M"Return the line number at POSITION in the current buffer.
 If POSITION is nil or omitted, it defaults to point's position in the
@@ -448,6 +671,7 @@ from the absolute start of the buffer, disregarding the narrowing.
 
 (fn &optional POSITION ABSOLUTE)"
   (error 'unimplemented-error))
+
 (defun* load-average ()
   #M"Return list of 1 minute, 5 minute and 15 minute load averages.
 
@@ -490,68 +714,7 @@ The data read from the system are decoded using ‘locale-coding-system'.
 
 (fn ITEM)"
   (error 'unimplemented-error))
-(defun* make-hash-table (&key (test 'el::eql)
-                              (size 65)
-                              (rehash-size 1.5)
-                              (rehash-threshold 0.8125)
-                              (weakness))
-  #M"Create and return a new hash table.
 
-     Arguments are specified as keyword/argument pairs.  The following
-     arguments are defined:
-
-     :test TEST -- TEST must be a symbol that specifies how to compare
-     keys.  Default is ‘eql'.  Predefined are the tests ‘eq', ‘eql', and
-     ‘equal'.  User-supplied test and hash functions can be specified via
-     ‘define-hash-table-test'.
-
-     :size SIZE -- A hint as to how many elements will be put in the table.
-     Default is 65.
-
-     :rehash-size REHASH-SIZE - Indicates how to expand the table when it
-     fills up.  If REHASH-SIZE is an integer, increase the size by that
-     amount.  If it is a float, it must be > 1.0, and the new size is the
-     old size multiplied by that factor.  Default is 1.5.
-
-     :rehash-threshold THRESHOLD -- THRESHOLD must a float > 0, and <= 1.0.
-     Resize the hash table when the ratio (table entries / table size)
-     exceeds an approximation to THRESHOLD.  Default is 0.8125.
-
-     :weakness WEAK -- WEAK must be one of nil, t, ‘key', ‘value',
-     ‘key-or-value', or ‘key-and-value'.  If WEAK is not nil, the table
-     returned is a weak table.  Key/value pairs are removed from a weak
-     hash table when there are no non-weak references pointing to their
-     key, value, one of key or value, or both key and value, depending on
-     WEAK.  WEAK t is equivalent to ‘key-and-value'.  Default value of WEAK
-     is nil.
-
-     :purecopy PURECOPY -- If PURECOPY is non-nil, the table can be copied
-     to pure storage when Emacs is being dumped, making the contents of the
-     table read only. Any further changes to purified tables will result
-     in an error.
-
-     (fn &rest KEYWORD-ARGS)"
-  (assert (position test '(el::eq el::eql el::equal)))
-  (assert (position weakness '(nil t el::key el::value el::key-or-value el::key-and-value)))
-  (let ((cl-weakness nil)
-        (cl-test (case test
-                   (el::eq 'cl:eq)
-                   (el::eql 'cl:eql)
-                   (el::equal 'cl:equal))))
-    (when (and weakness (eq test 'el::eq))
-      (cond
-        ((null weakness) nil)
-        ((or (eq weakness t) (eq weakness 'el::value)) t)
-        ((eq weakness 'el::key) :key)
-        ((eq weakness 'el::key-and-value) :both)
-        ((eq weakness 'el::key-or-value) :one)
-        (t (error "unknown weakness ~s" weakness))
-        ))
-    ;; TODO: we need custom hashtable implementation here to support emacs native functions
-    (cl:make-hash-table :test cl-test :size size :rehash-size rehash-size
-                        :rehash-threshold rehash-threshold :weak cl-weakness))
-
-  )
 (defun* mapc ()
   #M"Apply FUNCTION to each element of SEQUENCE for side effects only.
 Unlike ‘mapcar', don't accumulate the results.  Return SEQUENCE.
@@ -733,13 +896,7 @@ It can be retrieved with ‘(get SYMBOL PROPNAME)'.
 
 (fn SYMBOL PROPNAME VALUE)"
   (error 'unimplemented-error))
-(defun* puthash ()
-  #M"Associate KEY with VALUE in hash table TABLE.
-If KEY is already present in table, replace its current value with
-VALUE.  In any case, return VALUE.
 
-(fn KEY VALUE TABLE)"
-  (error 'unimplemented-error))
 (defun* random ()
   #M"Return a pseudo-random integer.
 By default, return a fixnum; all fixnums are equally likely.
@@ -764,11 +921,7 @@ The value is actually the first element of ALIST whose cdr is KEY.
 
 (fn KEY ALIST)"
   (error 'unimplemented-error))
-(defun* remhash ()
-  #M"Remove KEY from TABLE.
 
-(fn KEY TABLE)"
-  (error 'unimplemented-error))
 (defun* require ()
   #M"If FEATURE is not already loaded, load it from FILENAME.
 If FEATURE is not a member of the list ‘features', then the feature was
@@ -1054,48 +1207,7 @@ With one argument, just copy STRING without its properties.
 
 (fn STRING &optional FROM TO)"
   (error 'unimplemented-error))
-(defun* sxhash-eq (obj)
-  #M"Return an integer hash code for OBJ suitable for ‘eq'.
-If (eq A B), then (= (sxhash-eq A) (sxhash-eq B)).
 
-Hash codes are not guaranteed to be preserved across Emacs sessions.
-
-(fn OBJ)"
-  (cl:sxhash obj))
-
-(defun* sxhash-eql ()
-  #M"Return an integer hash code for OBJ suitable for ‘eql'.
-If (eql A B), then (= (sxhash-eql A) (sxhash-eql B)), but the opposite
-isn't necessarily true.
-
-Hash codes are not guaranteed to be preserved across Emacs sessions.
-
-(fn OBJ)"
-  (error 'unimplemented-error))
-(defun* sxhash-equal ()
-  #M"Return an integer hash code for OBJ suitable for ‘equal'.
-If (equal A B), then (= (sxhash-equal A) (sxhash-equal B)), but the
-opposite isn't necessarily true.
-
-Hash codes are not guaranteed to be preserved across Emacs sessions.
-
-(fn OBJ)"
-  (error 'unimplemented-error))
-(defun* sxhash-equal-including-properties ()
-  #M"Return an integer hash code for OBJ suitable for
-‘equal-including-properties'.
-If (sxhash-equal-including-properties A B), then
-(= (sxhash-equal-including-properties A) (sxhash-equal-including-properties B)).
-
-Hash codes are not guaranteed to be preserved across Emacs sessions.
-
-(fn OBJ)"
-  (error 'unimplemented-error))
-
-(test test-sxhash
-  (is (eq (sxhash-eq 340) (sxhash-eq 340)))
-  (is (eq (sxhash-eq '#:symbol) (sxhash-eq '#:symbol)))
-  (is-false (eq (sxhash-eq 345) (sxhash-eq 346))))
 (defun* take ()
   #M"Return the first N elements of LIST.
 If N is zero or negative, return nil.

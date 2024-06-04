@@ -25,14 +25,18 @@
      :snakes
      :cl-emacs/commons)
   (:export #:build-pstring
+           #:compute-hash
+           #:copy-pstring
            #:do-char
-           #:pstring
            #:ninsert
-           #:set-properties
+           #:pstring
            #:pstring-syntax
            #:pstring-p
            #:pstring-char=
-           #:pstring=)
+           #:pstring=
+           #:pstring-len
+           #:set-properties
+           )
   )
 (in-package :cl-emacs/types/pstrings)
 (log-enable :cl-emacs/types/pstrings :debug2)
@@ -81,7 +85,8 @@
                     (declare (symbol key1 key2))
                     (string< (symbol-name key1) (symbol-name key2))))))
 
-(defstruct (pstring (:print-function print-pstring))
+(defstruct (pstring (:print-function print-pstring)
+                    (:copier nil))
   (tree nil :type trees:binary-tree)
   (len 0 :type fixnum)
   (first nil :type (or interval null)))
@@ -345,14 +350,17 @@
           (setq right-interval modified-interval))
         (when (> right-len 0)
           (setq right-interval (split-interval pstr modified-interval (- full-len right-len left-len))))
-        (log-debug2 "modified interval:~s" modified-interval)
+        (log-debug2 "selected interval for modification:~s" modified-interval)
         (let ((modified-alist (unless overwrite (interval-alist modified-interval))))
           (dolist (cons alist)
             (setf (alexandria:assoc-value modified-alist (car cons)) (cdr cons)))
           (setf (interval-alist modified-interval) (nsorted-alist modified-alist)))
+        (log-debug2 "interval after modification:~s" modified-interval)
         (log-debug2 "remainder:~s" remainder)
         (when (and (> remainder 0) (interval-next right-interval))
-          (set-properties pstr (+ start (interval-len modified-interval)) end alist overwrite (interval-next right-interval)))))))
+          (set-properties pstr (+ start (interval-len modified-interval)) end alist overwrite (interval-next right-interval))
+          )
+        (log-debug2 "set-properties result: ~s" pstr)))))
 
 (defun* (build-pstring -> pstring) ((cl-string string) &optional (alist nil))
   #M"basic function to create one simple pstring, alist will be sorted"
@@ -410,6 +418,49 @@
 (defun* (pstring= -> boolean) ((pstr1 pstring) (pstr2 pstring))
   (and (pstring-char= pstr1 pstr2)
        (pstring-properties= pstr1 pstr2)))
+
+(defun* (copy-pstring -> pstring) ((pstr pstring))
+  (let ((result (make-empty-pstring)))
+    (ninsert pstr result)
+    result))
+
+(test test-copy-pstring
+  (let* ((pstr1 (build-pstring "abc" '((a . 3))))
+         (pstr1-c (copy-pstring pstr1))
+         (pstr2 (make-empty-pstring))
+         (pstr3 (build-pstring "")))
+    (is (pstring= pstr1 pstr1-c))
+    (is-false (eq pstr1 pstr1-c))
+    (is (pstring= pstr2 (copy-pstring pstr2)))
+    (is (pstring= pstr3 (copy-pstring pstr3)))))
+
+(defun* (to-cl-string -> string) ((pstr pstring))
+  (with-output-to-string (stream)
+    (do-generator (char (generate-chars pstr))
+      (write-char char stream))))
+
+(defun* compute-hash ((pstr pstring) &optional with-properties)
+  (let* ((cl-string (to-cl-string pstr))
+         (obj (list cl-string)))
+    (when with-properties
+      (do-generator (start end alist (generate-property-intervals pstr))
+        (push (sxhash (list start end alist)) obj)))
+    (sxhash obj)))
+
+(test test-compute-hash
+  (let ((pstr1 (build-pstring "asdf"))
+        (pstr2 (build-pstring "asdf" '((asdf . t))))
+        (pstr3 (build-pstring "asdf" '((asdf . t))))
+        )
+    (is-false (= (compute-hash pstr1 t)
+                 (compute-hash pstr2 t)))
+    (is-true (= (compute-hash pstr1 nil)
+                (compute-hash pstr2 nil)))
+    (is-true (= (compute-hash pstr2 t)
+                (compute-hash pstr3 t)
+                ))))
+
+;;; reader for common lisp
 
 (defun* (pstring-reader -> pstring) ((stream stream) (subchar character) arg)
   #M"simple pstring reader, supports strings without properties

@@ -16,17 +16,23 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/editfns
+(cl-emacs/elisp-packages:define-elisp-package :cl-emacs/editfns
     (:use
-     :common-lisp
      :defstar
      :cl-emacs/log
      :alexandria
      :fiveam
-     :cl-emacs/commons))
+     :cl-emacs/textprop
+     :cl-emacs/commons)
+  (:export #:propertize)
+  (:local-nicknames (#:el #:cl-emacs/elisp)
+                    (#:pstrings #:cl-emacs/types/pstrings)
+                    )  )
 (in-package :cl-emacs/editfns)
 (log-enable :cl-emacs/editfns :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable pstrings:pstring-syntax)
+(def-suite cl-emacs/editfns)
+(in-suite cl-emacs/editfns)
 
 (defun* bobp ()
   "Return t if point is at the beginning of the buffer.
@@ -280,8 +286,8 @@ width, and precision specifiers, as follows:
 
   %<field><flags><width><precision>character
 
-where field is [0-9]+ followed by a literal dollar "$", flags is
-[+ #0-]+, width is [0-9]+, and precision is a literal period "."
+where field is [0-9]+ followed by a literal dollar \"$\", flags is
+[+ #0-]+, width is [0-9]+, and precision is a literal period \".\"
 followed by [0-9]+.
 
 If a %-sequence is numbered with a field with positive value N, the
@@ -309,7 +315,7 @@ character is normally a space, but it is 0 if the 0 flag is present.
 The 0 flag is ignored if the - flag is present, or the format sequence
 is something other than %d, %o, %x, %e, %f, and %g.
 
-For %e and %f sequences, the number after the "." in the precision
+For %e and %f sequences, the number after the \".\" in the precision
 specifier says how many decimal places to show; if zero, the decimal
 point itself is omitted.  For %g, the precision specifies how many
 significant digits to produce; zero or omitted are treated as 1.
@@ -686,15 +692,30 @@ At the beginning of the buffer or accessible region, return 0.
 
 (fn)"
   (error 'unimplemented-error))
-(defun* propertize (string &rest properties) "Return a copy of STRING with text properties added.
-First argument is the string to copy.
-Remaining arguments form a sequence of PROPERTY VALUE pairs for text
-properties to add to the result.
+(defun* (propertize -> pstrings:pstring) ((pstr pstrings:pstring) &rest properties)
+  #M"Return a copy of STRING with text properties added.
+     First argument is the string to copy.
+     Remaining arguments form a sequence of PROPERTY VALUE pairs for text
+     properties to add to the result.
 
-See Info node ‘(elisp) Text Properties' for more information.
+     See Info node ‘(elisp) Text Properties' for more information.
+     "
+  (let ((result (pstrings:copy-pstring pstr)))
+    (add-text-properties 0 (pstrings:pstring-len pstr)
+                         properties result)
+    result))
 
-(fn STRING &rest PROPERTIES)"
-  (error 'unimplemented-error))
+(test test-propertize
+  (is (string= "#(\"abc\" 0 3 (P1 V1 P2 V2))"
+               (cl:format nil "~s"
+                          (propertize #P"abc" 'p1 'v1 'p2 'v2))))
+  (let ((pstr #P"abc"))
+    (add-text-properties 0 1 '(p3 v3) pstr)
+    (is (string= "#(\"abc\" 0 1 (P1 V1 P2 V2 P3 V3) 1 3 (P1 V1 P2 V2))"
+                 (cl:format nil "~s"
+                            (propertize pstr 'p1 'v1 'p2 'v2)))))
+  )
+
 (defun* region-beginning ()
   #M"Return the integer value of point or mark, whichever is smaller.
 
@@ -878,3 +899,6 @@ To gain access to other portions of the buffer, use
 
 (fn)"
   (error 'unimplemented-error))
+
+(defun test-me ()
+  (run! 'cl-emacs/editfns))

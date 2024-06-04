@@ -1,4 +1,4 @@
-# -*- org-log-done: nil; -*-
+c# -*- org-log-done: nil; -*-
 #+TODO: TODO IN-PROGRESS | DONE
 
 * What is this?
@@ -8,20 +8,69 @@ This is port of emacs from C to Common Lisp.
 Development just started
 
 * Progress
-** reader [3/9]
+** reader [3/8]
 *** DONE basic elisp reader 
 *** DONE character syntax reader
-*** DONE emacs property strings type
-*** IN-PROGRESS string reader
-**** support escape sequences
-**** support character syntax
-*** TODO emacs hashtable implementation
-*** TODO hashtable reader
+*** TODO string reader [2/4]
+**** DONE emacs property strings type
+**** DONE basic reader for pstrings
+**** TODO support escape sequences
+**** TODO support character syntax
+*** DONE hashtable reader
+*** TODO float number reader
 *** TODO char tables && sub-char tables
 *** TODO shorthands
 *** TODO other special reader syntax
+** print [0/2]
+*** TODO basic print implementation
+*** TODO format
+** eval [0/1]
+*** TODO TBD
+
+* Features
+** full elisp compatibility claim
+
+I'm carefully porting all elisp behaviour with all it's weird
+exceptions and logic.
+
+** use as more native common lisp as possible
+
+I assume that native common lisp functions are the fastest way to do
+the job. Sometimes it will add more functionality to elisp, than
+original Emacs has. I don't care if final product will work and we can
+pass all tests.
+
+** use common lisp community libraries if required
+
+Why do we need to reinvent the wheel? Common lisp standard is old and
+we need some modern features, even if they are not very portable
+between implementations.
+
+** common lisp implementations support
+
+Main implementation goes on CCL + ocicl setup.
+
+SBCL + quicklisp port is inevitable in future.
 
 * Out of scope
-** any bytecode support
-** pdumper
-** gui implementation
+  * any bytecode support: 
+
+    you can use common lisp memory image system to speedup loading.
+
+  * gui implementation:
+
+    current plan is to implement terminal UI as basic fallback
+    mode. Other UI will be designed later as libraries, so everybody
+    will be able to extend UI on any platform.
+
+  * xwidgets:
+
+    It is very strange part of original Emacs architecture. I believe
+    that GUI integration with other applications can't be unified and
+    it should be somehow implemented very close to UI library.
+
+* License
+
+Code in this repo will always complain with GPLv3, as original Emacs
+source code does. All dependency libraries should have compatible
+licenses.

@@ -15,6 +15,7 @@
                          ;; :osicat
                          :fiveam
                          :flexi-streams
+                         :float-features
                          ;; :lisp-binary
                          :mstrings
                          :parse-number

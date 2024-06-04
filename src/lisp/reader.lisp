@@ -44,6 +44,7 @@
   ;;  )
   (:export #:read-cl-string)
   )
+
 (in-package :cl-emacs/reader)
 (log-enable :cl-emacs/reader :debug2)
 ;; (log-enable :cl-emacs/reader :info)
@@ -53,6 +54,7 @@
 
 ;; main reader documentation is here
 ;; https://www.gnu.org/software/emacs/manual/html_mono/elisp.html#Lisp-Data-Types
+
 
 (define-condition reader-signal (error-with-description)
   ())
@@ -233,7 +235,10 @@
            ((eq char #\()
             (pop (car mod-stack))
             (push-modifier reader 'pstring-full)
-            (start-collector reader)
+            (start-collector reader))
+           ((eq char #\s)
+            (pop (car mod-stack))
+            (push-modifier reader 'hash-table)
             )
            (t (error 'invalid-reader-input-error :details "unsupported character after #"))
            ))
@@ -403,6 +408,7 @@
       cons)))
 
 ;; pointer
+
 (defun* end-pointer ((reader reader) &key new-pointer)
   (log-debug1 "end pointer")
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
@@ -432,7 +438,7 @@
       (t
        (error 'invalid-reader-input-error :details "non-digital character inside pointer definition")))))
 
-;;; radix
+                ;;; radix
 (defun* end-radix ((reader reader) (radix-bits fixnum))
   (log-debug1 "end radix")
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
@@ -523,6 +529,64 @@
     (t
      tree)))
 
+(defun* transform-to-new-pointer (something
+                                  &key
+                                  pointer-number
+                                  actual-cons
+                                  pointers-hash
+                                  )
+  (log-debug2 "actual-cons:~s" actual-cons)
+  (when (car actual-cons)
+    (error 'invalid-reader-input-error
+           :details (cl:format nil "pointer #~a already defined" pointer-number)))
+  (log-debug2 "setting pointer #~a to current object ~s" pointer-number something)
+  (setf (gethash pointer-number pointers-hash) (cons t something))
+  (replace-placeholder-in-tree something (cdr actual-cons) something))
+
+(defun* transform-to-pstring (something)
+  (log-debug2 "starting pstring-full transformation ~s" something)
+  (let ((pstr (pop something)))
+    (unless (pstrings:pstring-p pstr)
+      (error 'invalid-reader-input-error
+             :details "first element of property-string definition should be a string"))
+    (loop while something
+          for start = (pop something)
+          for end = (pop something)
+          for plist = (pop something)
+          do (unless (or (fixnump start) (fixnump end))
+               (error 'invalid-reader-input-error
+                      :details "index in property-string should be integer"))
+             (textprop:set-text-properties start end plist pstr))
+    pstr)
+  )
+
+(defun* transform-to-hash-table (something)
+  (log-debug2 "starting hash-table parsing ~s" something)
+  (unless (eq (pop something) 'el::hash-table)
+    (error 'invalid-reader-input-error :details
+           "hash-table definition should start from the word \"hash-table\""))
+  (let (args data ht)
+    (ignore-errors ;; like emacs does
+     (doplist (key val something)
+       (case key
+         (el::size (push val args)
+          (push :size args))
+         (el::test (push val args)
+           (push :test args))
+         (el::rehash-size (push val args)
+          (push :rehash-size args))
+         (el::rehash-threshold (push val args)
+          (push :rehash-threshold args))
+         (el::data (setq data val))
+         (t ;; just silently ignore bad parameter, like emacs does
+          ))))
+    (log-debug2 "args: ~s" args)
+    (setq ht (apply 'make-hash-table args))
+    (doplist (key val data)
+      (puthash key val ht))
+    ht)
+  )
+
 (defun* apply-modifiers ((reader reader) something (modifiers list) &optional (nil-not-allowed t))
   (log-debug2 "applying modifiers ~s to:~s" modifiers something)
   (when (and modifiers nil-not-allowed (null something))
@@ -549,34 +613,18 @@
              (new-pointer
               (let* ((pointer-number (pop modifiers))
                      (actual-cons (get-pointer-cons reader pointer-number)))
-                (log-debug2 "actual-cons:~s" actual-cons)
-                (when (car actual-cons)
-                  (error 'invalid-reader-input-error
-                         :details (cl:format nil "pointer #~a already defined" pointer-number)))
-                (log-debug2 "setting pointer #~a to current object ~s" pointer-number something)
-                (setf (gethash pointer-number pointers) (cons t something))
-                (setq something (replace-placeholder-in-tree something (cdr actual-cons) something))
+                (setq something
+                      (transform-to-new-pointer
+                       something
+                       :pointer-number pointer-number
+                       :actual-cons actual-cons
+                       :pointers-hash pointers))
                 (setq stack (replace-placeholder-in-tree stack (cdr actual-cons) something))
                 ))
              (pstring-full
-              (log-debug2 "starting pstring-full transformation ~s" something)
-              (let ((pstr (pop something)))
-                (unless (pstrings:pstring-p pstr)
-                  (error 'invalid-reader-input-error
-                         :details "first element of property-string definition should be a string"))
-                (loop while something
-                      for start = (pop something)
-                      for end = (pop something)
-                      for plist = (pop something)
-                      do (unless (or (fixnump start) (fixnump end))
-                           (error 'invalid-reader-input-error
-                                  :details "index in property-string should be integer"))
-                         (textprop:set-text-properties start end plist pstr)
-                      )
-                (setq something pstr)
-                )
-
-              )
+              (setq something (transform-to-pstring something)))
+             (hash-table
+              (setq something (transform-to-hash-table something)))
              (t (error 'invalid-reader-input-error
                        :details (cl:format nil "unexpected modifier ~s" modifier)))
              ))))
@@ -640,12 +688,12 @@
 
 (defun* read-cl-string (cl-string &optional (start 0) (end (cl:length cl-string)))
   #M"Read one Lisp expression which is represented as text by STRING.
-     Returns a cons: (OBJECT-READ . FINAL-STRING-INDEX).
-     FINAL-STRING-INDEX is an integer giving the position of the next
-     remaining character in STRING.  START and END optionally delimit
-     a substring of STRING from which to read;  they default to 0 and
-     \(length STRING) respectively.  Negative values are counted from
-     the end of STRING."
+                     Returns a cons: (OBJECT-READ . FINAL-STRING-INDEX).
+                     FINAL-STRING-INDEX is an integer giving the position of the next
+                     remaining character in STRING.  START and END optionally delimit
+                     a substring of STRING from which to read;  they default to 0 and
+                     \(length STRING) respectively.  Negative values are counted from
+                     the end of STRING."
   (with-input-from-string (stream (str:substring start end cl-string))
     (multiple-value-bind (result reader) (read-internal stream)
       (with-slots (character-counter) reader
@@ -697,55 +745,64 @@
   )
 
 (test read-integers
-  (is (equal 1 (car (read-cl-string "+1")))))
+  (is (= 1 (car (read-cl-string "1"))))
+  (is (= 1 (car (read-cl-string "1."))))
+  (is (= 1 (car (read-cl-string "+1"))))
+  (is (= -1 (car (read-cl-string "-1"))))
+  (is (= 0 (car (read-cl-string "+0"))))
+  (is (= 0 (car (read-cl-string "-0"))))
+  (is (= 0 (car (read-cl-string "-0.0"))))
 
+  ;; ‘1500.0’, ‘+15e2’, ‘15.0e+2’, ‘+1500000e-3’, and
+  ;; ‘.15e4’
+  )
 (test read-quotes
   (is (equal (quote (el::quote el::test-symbol))
-              (car (read-cl-string "'test-symbol"))))
+             (car (read-cl-string "'test-symbol"))))
   (is (equal (quote (el::quote (el::quote el::test-sym)))
-              (car (read-cl-string "''test-sym"))))
+             (car (read-cl-string "''test-sym"))))
   (is (equal (quote (el::quote (el::test-symbol)))
-              (car (read-cl-string "'(test-symbol)"))))
+             (car (read-cl-string "'(test-symbol)"))))
   (is (equal (quote ((el::quote 3)))
-              (car (read-cl-string "(' 3)"))))
+             (car (read-cl-string "(' 3)"))))
   (signals eof-reader-error (read-cl-string "';; test comment"))
   (is (equal `(el::quote ,#P"abc (")
-              (car (read-cl-string "'\"abc (\""))))
+             (car (read-cl-string "'\"abc (\""))))
   (is (equal (quote (el::quote 66))
-              (car (read-cl-string "'?B"))))
+             (car (read-cl-string "'?B"))))
 
   (is (equal (quote (el::quote
-                      (el::quote
-                       (1 (el::quote
-                           ((el::quote
+                     (el::quote
+                      (1 (el::quote
+                          ((el::quote
+                            (el::quote
                              (el::quote
-                              (el::quote
-                               (2 (el::quote (el::quote (el::quote (el::quote 3)))))))) 4)) 5))))
-              (car (read-cl-string "''(1 '('''(2 ''''3) 4) 5)"))))
+                              (2 (el::quote (el::quote (el::quote (el::quote 3)))))))) 4)) 5))))
+             (car (read-cl-string "''(1 '('''(2 ''''3) 4) 5)"))))
   (is (equal (quote (el::quote (el::a (el::quote el::b))))
-              (car (read-cl-string "'(a'b)"))))
+             (car (read-cl-string "'(a'b)"))))
   (is (equal `(el::quote (,#P"a" (el::quote el::b)))
-              (car (read-cl-string "'(\"a\"'b)"))))
+             (car (read-cl-string "'(\"a\"'b)"))))
   (is (equal (quote (el::quote (65 (el::quote el::b))))
-              (car (read-cl-string "'(?A'b)"))))
+             (car (read-cl-string "'(?A'b)"))))
   (is (equal (quote (el::\` el::test-symbol))
-              (car (read-cl-string "`test-symbol"))))
+             (car (read-cl-string "`test-symbol"))))
   (is (equal (quote (el::\` (el::test-symbol)))
-              (car (read-cl-string "`(test-symbol)"))))
+             (car (read-cl-string "`(test-symbol)"))))
   (is (equal (quote (el::\` (el::\` el::test-symbol)))
-              (car (read-cl-string "``test-symbol"))))
+             (car (read-cl-string "``test-symbol"))))
   (is (equal (quote ((el::\` el::test-symbol) (el::\, 3)))
-              (car (read-cl-string "(`test-symbol ,3)"))))
+             (car (read-cl-string "(`test-symbol ,3)"))))
   ;; real emacs test (equal (quote (\` (form ((\, a) (\, ((\` (b (\, c))))))))) (car (read-cl-string "`(form (,a ,(`(b ,c))))")))
   (is (equal (quote (el::\` (el::form ((el::\, el::a) (el::\, ((el::\` (el::b (el::\, el::c)))))))))
-              (car (read-cl-string "`(form (,a ,(`(b ,c))))"))))
+             (car (read-cl-string "`(form (,a ,(`(b ,c))))"))))
   (signals eof-reader-error (read-cl-string "'"))
   (signals eof-reader-error (read-cl-string "`,"))
 
   (is (equal (quote (el::quote el::\,))
-              (car (read-cl-string "'\\,"))))
+             (car (read-cl-string "'\\,"))))
   (is (equal (quote (el::\` (el::a (el::\,@ el::b))))
-              (car (read-cl-string "`(a ,@b)"))))
+             (car (read-cl-string "`(a ,@b)"))))
   )
 
 (test read-strings
@@ -768,28 +825,28 @@
   )
 (test read-lists
   (is (equal `(el::a ,#P"b")
-              (car (read-cl-string "(a\"b\") "))))
+             (car (read-cl-string "(a\"b\") "))))
   (is (equal `(el::test 2 3 ,#P"A ( B")
-              (car (read-cl-string "(test 2 3 \"A ( B\")"))))
+             (car (read-cl-string "(test 2 3 \"A ( B\")"))))
   (is (equal (quote (el::test (2 3) 4 ()))
-              (car (read-cl-string "(test (2 3) 4 ())"))))
+             (car (read-cl-string "(test (2 3) 4 ())"))))
   (is (equal (quote (el::.))
-              (car (read-cl-string "(.)"))))
+             (car (read-cl-string "(.)"))))
   (is (equal (quote (el::a el::.))
-              (car (read-cl-string "(a .)"))))
+             (car (read-cl-string "(a .)"))))
   (is (equal (quote (3 . 4))
-              (car (read-cl-string "(3 .  4)"))))
+             (car (read-cl-string "(3 .  4)"))))
   (is (equal (quote 4)
-              (car (read-cl-string "(. 4)"))))
+             (car (read-cl-string "(. 4)"))))
   (signals invalid-reader-input-error (read-cl-string "(a b . c d)"))
   (is (equal (quote (65 . 66))
-              (car (read-cl-string "(?A.?B)"))))
+             (car (read-cl-string "(?A.?B)"))))
   (is (equal (quote (65 . 66))
-              (car (read-cl-string "(?A. ?B))"))))
+             (car (read-cl-string "(?A. ?B))"))))
   (is (equal nil (car (read-cl-string "()"))))
   (signals eof-reader-error (read-cl-string "("))
   (is (equal (quote (1 2 3))
-              (car (read-cl-string "(1 . (2 . (3 . nil)))"))))
+             (car (read-cl-string "(1 . (2 . (3 . nil)))"))))
   )
 (test read-comments
   (is (equal 'el::test
@@ -840,6 +897,7 @@
   ;; #( string props
   ;; #$ ???
   ;; #NrDIGITS -- radix-N number, any radix 0-36, r or R
+  ;; obarrays?
   )
 
 (test reader-functions
@@ -902,6 +960,24 @@
              (car (read-cl-string "#X010aAF"))))
   (signals invalid-reader-input-error (read-cl-string "#x013aw"))
   )
+
+(test read-hash-tables
+  (let ((ht (car (read-cl-string
+                  #M"#s(hash-table
+                     size 1000 test eq
+                     rehash-size 1.3
+                     rehash-threshold 0.6
+                     data (a 2 b 3))"))))
+    (is (= 1000 (hash-table-size ht)))
+    (is (eq 'el::eq (hash-table-test ht)))
+    (is (= 1.3 (hash-table-rehash-size ht)))
+    (is (= 0.6 (hash-table-rehash-threshold ht)))
+    (is (= 2 (gethash 'el::a ht)))
+    (is (= 3 (gethash 'el::b ht))))
+  (let ((ht (car (read-cl-string
+                  "#s(hash-table bad-parameter some-value test equal data)"))))
+    (is (eq 'el::equal (hash-table-test ht)))
+    (is (= 0 (hash-table-count ht)))))
 
 ;; (defun* real-file-test ()
 ;;   (with-open-file (stream "../emacs/lisp/master.el" :direction :input)

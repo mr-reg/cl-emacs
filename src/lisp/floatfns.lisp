@@ -16,93 +16,73 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/floatfns
+(cl-emacs/elisp-packages:define-elisp-package :cl-emacs/floatfns
     (:use
-     :common-lisp
      :defstar
      :cl-emacs/log
      :alexandria
      :fiveam
-     :cl-emacs/commons))
+     :cl-emacs/data
+     :cl-emacs/commons)
+  (:import-from #:cl
+                #:abs
+                #:acos
+                #:asin
+                #:atan
+                #:ceiling
+                #:cos
+                #:exp
+                #:expt
+                #:fceiling
+                #:ffloor
+                #:float
+                #:floor
+                #:fround
+                #:ftruncate
+                #:log
+                #:round
+                #:sin
+                #:sqrt
+                #:tan
+                #:truncate
+
+                )
+  (:export
+   #:abs
+   #:acos
+   #:asin
+   #:atan
+   #:ceiling
+   #:cos
+   #:exp
+   #:expt
+   #:fceiling
+   #:ffloor
+   #:float
+   #:floor
+   #:fround
+   #:ftruncate
+   #:log
+   #:round
+   #:sin
+   #:sqrt
+   #:tan
+   #:truncate
+   )  )
 (in-package :cl-emacs/floatfns)
 (log-enable :cl-emacs/floatfns :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* abs ()
-  #M"Return the absolute value of ARG.
+(def-suite cl-emacs/floatfns)
+(in-suite cl-emacs/floatfns)
 
-(fn ARG)"
-  (error 'unimplemented-error))
-(defun* acos ()
-  #M"Return the inverse cosine of ARG.
 
-(fn ARG)"
-  (error 'unimplemented-error))
-(defun* asin ()
-  #M"Return the inverse sine of ARG.
-
-(fn ARG)"
-  (error 'unimplemented-error))
-(defun* atan ()
-  #M"Return the inverse tangent of the arguments.
-If only one argument Y is given, return the inverse tangent of Y.
-If two arguments Y and X are given, return the inverse tangent of Y
-divided by X, i.e. the angle in radians between the vector (X, Y)
-and the x-axis.
-
-(fn Y &optional X)"
-  (error 'unimplemented-error))
-(defun* ceiling ()
-  #M"Return the smallest integer no less than ARG.
-This rounds the value towards +inf.
-With optional DIVISOR, return the smallest integer no less than ARG/DIVISOR.
-
-(fn ARG &optional DIVISOR)"
-  (error 'unimplemented-error))
 (defun* copysign ()
   #M"Copy sign of X2 to value of X1, and return the result.
 Cause an error if X1 or X2 is not a float.
 
 (fn X1 X2)"
   (error 'unimplemented-error))
-(defun* cos ()
-  #M"Return the cosine of ARG.
 
-(fn ARG)"
-  (error 'unimplemented-error))
-(defun* exp ()
-  #M"Return the exponential base e of ARG.
-
-(fn ARG)"
-  (error 'unimplemented-error))
-(defun* expt ()
-  #M"Return the exponential ARG1 ** ARG2.
-
-(fn ARG1 ARG2)"
-  (error 'unimplemented-error))
-(defun* fceiling ()
-  #M"Return the smallest integer no less than ARG, as a float.
-(Round toward +inf.)
-
-(fn ARG)"
-  (error 'unimplemented-error))
-(defun* ffloor ()
-  #M"Return the largest integer no greater than ARG, as a float.
-(Round toward -inf.)
-
-(fn ARG)"
-  (error 'unimplemented-error))
-(defun* float ()
-  #M"Return the floating point number equal to ARG.
-
-(fn ARG)"
-  (error 'unimplemented-error))
-(defun* floor ()
-  #M"Return the largest integer no greater than ARG.
-This rounds the value towards -inf.
-With optional DIVISOR, return the largest integer no greater than ARG/DIVISOR.
-
-(fn ARG &optional DIVISOR)"
-  (error 'unimplemented-error))
 (defun* frexp ()
   #M"Get significand and exponent of a floating point number.
 Breaks the floating point number X into its binary significand SGNFCAND
@@ -116,33 +96,15 @@ If X is zero, both parts (SGNFCAND and EXP) are zero.
 
 (fn X)"
   (error 'unimplemented-error))
-(defun* fround ()
-  #M"Return the nearest integer to ARG, as a float.
 
-(fn ARG)"
-  (error 'unimplemented-error))
-(defun* ftruncate ()
-  #M"Truncate a floating point number to an integral float value.
-(Round toward zero.)
 
-(fn ARG)"
-  (error 'unimplemented-error))
-(defun* isnan ()
-  #M"Return non-nil if argument X is a NaN.
 
-(fn X)"
-  (error 'unimplemented-error))
+
 (defun* ldexp ()
   #M"Return SGNFCAND * 2**EXPONENT, as a floating point number.
 EXPONENT must be an integer.
 
 (fn SGNFCAND EXPONENT)"
-  (error 'unimplemented-error))
-(defun* log ()
-  #M"Return the natural logarithm of ARG.
-If the optional argument BASE is given, return log ARG using that base.
-
-(fn ARG &optional BASE)"
   (error 'unimplemented-error))
 (defun* logb ()
   #M"Returns largest integer <= the base 2 log of the magnitude of ARG.
@@ -150,36 +112,9 @@ This is the same as the exponent of a float.
 
 (fn ARG)"
   (error 'unimplemented-error))
-(defun* round ()
-  #M"Return the nearest integer to ARG.
-With optional DIVISOR, return the nearest integer to ARG/DIVISOR.
 
-Rounding a value equidistant between two integers may choose the
-integer closer to zero, or it may prefer an even integer, depending on
-your machine.  For example, (round 2.5) can return 3 on some
-systems, but 2 on others.
+(defun test-me ()
+  (run! 'cl-emacs/fns))
 
-(fn ARG &optional DIVISOR)"
-  (error 'unimplemented-error))
-(defun* sin ()
-  #M"Return the sine of ARG.
-
-(fn ARG)"
-  (error 'unimplemented-error))
-(defun* sqrt ()
-  #M"Return the square root of ARG.
-
-(fn ARG)"
-  (error 'unimplemented-error))
-(defun* tan ()
-  #M"Return the tangent of ARG.
-
-(fn ARG)"
-  (error 'unimplemented-error))
-(defun* truncate ()
-  #M"Truncate a floating point number to an int.
-Rounds ARG toward zero.
-With optional DIVISOR, truncate ARG/DIVISOR.
-
-(fn ARG &optional DIVISOR)"
-  (error 'unimplemented-error))
+;; (in-package :cl-emacs/elisp)
+;; (reexport-symbols :cl-emacs/floatfns)

@@ -9,8 +9,10 @@
                         #:fixnump)
                        (:import-from #:cl
                         #:and
+                        #:apply
                         #:aref
                         #:assert
+                        #:boolean
                         #:break
                         #:caar
                         #:case
@@ -42,8 +44,10 @@
                         #:find-symbol
                         #:fixnum
                         #:funcall
+                        #:hash-table
                         #:handler-case
                         #:if
+                        #:ignore-errors
                         #:in-package
                         #:incf
                         #:inline
@@ -56,6 +60,7 @@
                         #:make-load-form-saving-slots
                         #:multiple-value-bind
                         #:nil
+                        #:not
                         #:or
                         #:pop
                         #:position

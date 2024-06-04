@@ -22,18 +22,16 @@
      :cl-emacs/log
      :fiveam
      :cl-emacs/commons
+     :cl-emacs/alloc
      )
   (:import-from #:cl
                 #:+
                 #:*
                 #:-
-                #:/
-                #:/=
                 #:1+
                 #:1-
                 #:<
                 #:<=
-                #:=
                 #:>
                 #:>=
                 #:aref
@@ -41,6 +39,8 @@
                 #:car
                 #:cdr
                 #:consp
+                #:floatp
+                #:integerp
                 #:null
                 #:vectorp
                 )
@@ -63,6 +63,9 @@
    #:car
    #:cdr
    #:consp
+   #:floatp
+   #:integerp
+   #:isnan
    #:null
    #:vectorp
    #:symbol-name
@@ -75,6 +78,103 @@
 (named-readtables:in-readtable pstrings:pstring-syntax)
 (def-suite cl-emacs/data)
 (in-suite cl-emacs/data)
+
+
+
+(define-condition arith-error (error-with-description)
+  ())
+
+;; TODO: marker support in numeric functions, whatever it is
+(defun* / (number &rest divisors)
+  #M"Divide number by divisors and return the result.
+     With two or more arguments, return first argument divided by the rest.
+     With one argument, return 1 divided by the argument.
+     The arguments must be numbers or markers.
+     usage: (/ NUMBER &rest DIVISORS)"
+  (float-features:with-float-traps-masked (:divide-by-zero :invalid)
+    (unless divisors
+      (cond
+        ((integerp number)
+         (when (cl:zerop number)
+           (error 'arith-error :details "integer division by zero not allowed"))
+         (return-from / (cl:identity (cl:truncate 1 number))))
+        ((floatp number)
+         (return-from / (cl:/ 1.0 number)))
+        (t (error 'arith-error :details
+                  (cl:format nil "unsupported number format: ~s" number)))))
+    (let ((floatp-mode (floatp number))
+          (accum number))
+      (dolist (arg divisors)
+        (cond
+          ((floatp arg) (setq floatp-mode t))
+          ((integerp arg))
+          (t (error 'arith-error :details
+                    (cl:format nil "unsupported number format: ~s" arg) ))))
+      (dolist (arg divisors)
+        (if floatp-mode
+            (setq accum (cl:/ accum arg))
+            (setq accum (cl:truncate accum arg))))
+      accum)))
+
+;; this symbol will stay internal, because it should not be
+;; visible in elisp
+(defparameter *nan* (/ 0.0 0.0))
+(defparameter *infinity-positive* (/ 1.0 0.0))
+(defparameter *infinity-negative* (/ -1.0 0.0))
+
+(defun* (isnan -> boolean) (x)
+  #M"Return non-nil if argument X is a NaN."
+  (float-features:float-nan-p x))
+(test test-isnan
+  (is (isnan cl-emacs/data::*nan*))
+  (is-false (isnan 100.0))
+  (signals error (isnan 0)))
+
+(test test-/
+  (is (= 0 (/ 2)))
+  (is (= 1 (/ 1)))
+  (signals arith-error (/ 0))
+  (is (= 0 (/ 104323300000000000000000)))
+  (signals error (/ 0 0))
+  (signals error (/ 1 0))
+  (is (= 10 (/ 20 2)))
+  (is (= 2 (/ 10 4)))
+  (is (= 0 (/ 1 3)))
+  (is-false (= 0 (/ 1.0 3)))
+  (is-false (= 0 (/ 1 3.0)))
+  (is (floatp (/ 20.0 2)))
+  (is-true (isnan (/ 0.0 0.0)))
+  (is (float-features:float-infinity-p (/ 1.0 0)))
+  (is (float-features:float-infinity-p (/ -1.0 0)))
+  (is (= 0 (/ 1 104323300000000000000000)))
+  (signals error (/ 104323300000000000000000 0))
+  (is (float-features:float-infinity-p (/ 104323300000000000000000.1 0)))
+  (is (floatp (/ 104323300000000000000000 100.0)))
+  (is-true (isnan (/ (/ 0.0 0.0) (/ 0.0 0.0))))
+  )
+
+(defun* (= -> boolean) (number &rest numbers)
+  #M"Return t if args, all numbers or markers, are equal."
+  (when (and (floatp number) (isnan number) numbers)
+    (return-from = nil))
+  (dolist (arg numbers)
+    (when (or (and (floatp number) (isnan arg)) (cl:/= number arg))
+      (return-from = nil)))
+  t)
+
+(test test-=
+  (is (= 1))
+  (is (= *nan*))
+  (is (= 1 1.0))
+  (is-false (= *nan*
+               *nan*))
+  (is-false (= *nan* 0.0))  )
+
+(defun* (/= -> boolean) (num1 num2)
+  #M"Return t if first arg is not equal to second arg.
+     Both must be numbers or markers."
+  (not (= num1 num2)))
+
 
 (defun* add-variable-watcher ()
   #M"Cause WATCH-FUNCTION to be called when SYMBOL is about to be set.
@@ -290,11 +390,7 @@ local bindings in certain buffers.
 
 (fn SYMBOL)"
   (error 'unimplemented-error))
-(defun* floatp ()
-  #M"Return t if OBJECT is a floating point number.
 
-(fn OBJECT)"
-  (error 'unimplemented-error))
 (defun* fmakunbound ()
   #M"Make SYMBOL's function definition be void.
 Return SYMBOL.
@@ -342,11 +438,7 @@ chain of aliases, signal a ‘cyclic-variable-indirection' error.
 
 (fn OBJECT)"
   (error 'unimplemented-error))
-(defun* integerp ()
-  #M"Return t if OBJECT is an integer.
 
-(fn OBJECT)"
-  (error 'unimplemented-error))
 (defun* interactive-form ()
   #M"Return the interactive form of CMD or nil if none.
 If CMD is not a command, the return value is nil.
