@@ -116,11 +116,11 @@
             (setq accum (cl:truncate accum arg))))
       accum)))
 
-;; this symbol will stay internal, because it should not be
-;; visible in elisp
+;; this symbol will stay internal, because it is not defined in elisp
+;; for some reason
 (defparameter *nan* (/ 0.0 0.0))
-(defparameter *infinity-positive* (/ 1.0 0.0))
-(defparameter *infinity-negative* (/ -1.0 0.0))
+;; emacs does not distinguish positive and negative inifinity, so do we
+(defparameter *infinity* (/ 1.0 0.0))
 
 (defun* (isnan -> boolean) (x)
   #M"Return non-nil if argument X is a NaN."

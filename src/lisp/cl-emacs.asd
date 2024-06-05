@@ -46,6 +46,7 @@
                :cl-emacs/commons
                :cl-emacs/types/pstrings
                :cl-emacs/elisp
+               :cl-emacs/data
                :cl-emacs/reader
                :cl-emacs/main
                )

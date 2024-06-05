@@ -97,8 +97,6 @@
     (cl:sxhash obj)))
 (test test-sxhash-eq
   (is (= (sxhash-eq 340) (sxhash-eq 340)))
-  (is-false (= (sxhash-eq cl-emacs/data::*infinity-positive*)
-               (sxhash-eq cl-emacs/data::*infinity-negative*)))
   (is (= (sxhash-eq cl-emacs/data::*nan*)
          (sxhash-eq cl-emacs/data::*nan*)))
   (is (= (sxhash-eq '#:symbol) (sxhash-eq '#:symbol)))
@@ -215,6 +213,14 @@
   (is (equal (sxhash-equal #P"asdf")
              (sxhash-equal (propertize #P"asdf" 'asdf t))))
 
+  (is (equal cl-emacs/data::*nan*
+             (/ 0.0 0.0)))
+  (is (= (sxhash-equal cl-emacs/data::*nan*)
+         (sxhash-equal (/ 0.0 0.0))))
+
+  (is-false (equal 0.0 -0.0))
+  (is-false (= (sxhash-equal 0.0)
+               (sxhash-equal -0.0)))
   ;; TODO: add tests for markers
   ;; (is (equal (point-marker) (point-marker)))
   ;; (is-false (eq (point-marker) (point-marker)))

@@ -9,13 +9,15 @@
            #:log-enable
            #:log-disable
            #:log-reset
+           #:*loglevel-file*
+           #:*loglevel-stdout*
            )
   )
 (in-package :cl-emacs/log)
 
 (defparameter *log-filename* "cl-emacs.log")
 (defvar *log-file-stream* nil)
-;; 8 = debug, 9 = debug1, 10 = debug2
+;; 4 = error, 7 = info, 8 = debug, 9 = debug1, 10 = debug2
 (defparameter *loglevel-file* 10)
 (defparameter *loglevel-stdout* 8)
 
@@ -96,30 +98,29 @@
   )
 
 (defmacro log-debug2 (format &rest args)
-  (when (>= (get-max-loglevel) 10)
-    `(let ((*print-circle* t))
+  `(when (>= ,(get-max-loglevel) 10)
+     (let ((*print-circle* t))
        (vom:debug2 ,format ,@args))))
 (defmacro log-debug1 (format &rest args)
-  (when (>= (get-max-loglevel) 9)
-    `(let ((*print-circle* t))
+  `(when (>= ,(get-max-loglevel) 9)
+     (let ((*print-circle* t))
        (vom:debug1 ,format ,@args))))
 
 (defmacro log-debug (format &rest args)
-  (when (>= (get-max-loglevel) 8)
-    `(let ((*print-circle* t))
+  `(when (>= ,(get-max-loglevel) 8)
+     (let ((*print-circle* t))
        (vom:debug ,format ,@args))))
 
 (defmacro log-error (format &rest args)
-  (when (>= (get-max-loglevel) 4)
-    `(let ((*print-circle* t))
+  `(when (>= ,(get-max-loglevel) 4)
+     (let ((*print-circle* t))
        (vom:error ,format ,@args))))
 
 (defmacro log-info (format &rest args)
-  (when (>= (get-max-loglevel) 7)
-    `(let ((*print-circle* t))
+  `(when (>= ,(get-max-loglevel) 7)
+     (let ((*print-circle* t))
        (vom:info ,format ,@args))))
 
 (log-reset)
 (log-enable :cl-emacs/log)
 (log-enable :common-lisp-user :debug1)
-

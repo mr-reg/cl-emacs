@@ -367,11 +367,10 @@
        (change-state reader state/toplevel)
        (push-extra-char reader char))
 
-      ;; if we have dot and nothing has been read yet
-      ;; so "a.b" is a symbol, but .b is two symbols . and b
-      ((and (eq char #\.) (null (car stack)))
-                                        ; store dot as new symbol in stack and go look for new form
-       (push-to-reader-stack reader char)
+      ;; if we have dot and nothing has been read yet, maybe it is end of symbol
+      ;; known special case is .?a
+      ((and (eq char #\?) (equal (car stack) '(#\.)))
+       (push-extra-char reader char)
        (end-symbol reader)
        (change-state reader state/toplevel))
       ((eq char #\\)
@@ -743,7 +742,7 @@
   ;;   (read "#_s-test"))
   )
 
-(test read-integers
+(test read-numbers
   (is (= 1 (car (read-cl-string "1"))))
   (is (= 1 (car (read-cl-string "1."))))
   (is (= 1 (car (read-cl-string "+1"))))
@@ -752,8 +751,16 @@
   (is (= 0 (car (read-cl-string "-0"))))
   (is (= 0 (car (read-cl-string "-0.0"))))
 
-  ;; ‘1500.0’, ‘+15e2’, ‘15.0e+2’, ‘+1500000e-3’, and
-  ;; ‘.15e4’
+  (is (= 1500 (car (read-cl-string "1500.0"))))
+  (is (= 1500 (car (read-cl-string "+15E2"))))
+  (is (= 1500 (car (read-cl-string "+1500000e-3"))))
+  (is (= 1500 (car (read-cl-string "15.0e+2"))))
+  (is (= 12.34 (car (read-cl-string "1.234e+01"))))
+  (is (= 1500 (car (read-cl-string ".15e4"))))
+  (is (equal cl-emacs/data::*nan* (car (read-cl-string "0.0e+NaN"))))
+  (is (equal cl-emacs/data::*nan* (car (read-cl-string "-4.5E+NaN"))))
+  (is (equal cl-emacs/data::*infinity* (car (read-cl-string "1.0e+INF"))))
+  (is (equal cl-emacs/data::*infinity* (car (read-cl-string "-4.0e+INF"))))
   )
 (test read-quotes
   (is (equal (quote (el::quote el::test-symbol))
@@ -833,6 +840,8 @@
              (car (read-cl-string "(.)"))))
   (is (equal (quote (el::a el::.))
              (car (read-cl-string "(a .)"))))
+  (is (equal (quote (el::a el::.b))
+             (car (read-cl-string "(a .b)"))))
   (is (equal (quote (3 . 4))
              (car (read-cl-string "(3 .  4)"))))
   (is (equal (quote 4)
@@ -893,7 +902,6 @@
   ;; #^[ char table
   ;; #^^[ sub-char table
   ;; #[ byte code
-  ;; #( string props
   ;; #$ ???
   ;; #NrDIGITS -- radix-N number, any radix 0-36, r or R
   ;; obarrays?

@@ -25,16 +25,27 @@
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:pstrings #:cl-emacs/types/pstrings)))
 (in-package :cl-emacs/reader-utils)
-(log-enable :cl-emacs/reader-utils :debug1)
+(log-enable :cl-emacs/reader-utils :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
 (def-suite cl-emacs/reader-utils)
 (in-suite cl-emacs/reader-utils)
 
 (defun* parse-elisp-number (chardata)
-  (handler-case
-      (parse-number:parse-real-number chardata)
-    (parse-error ()
-      nil)))
+  (let ((has-nan (str:ends-with-p "NaN" chardata))
+        (has-inf (str:ends-with-p "INF" chardata))
+        (to-parse chardata))
+    (when (or has-nan has-inf)
+      (setq to-parse (str:concat (str:substring 0 -3 chardata) "0")))
+    (log-debug2 "parsing number from chardata ~s" to-parse)
+    (handler-case
+        (let ((parsed (parse-number:parse-real-number to-parse)))
+          ;; here we know that number notation is correct
+          (cond
+            (has-nan cl-emacs/data::*nan*)
+            (has-inf cl-emacs/data::*infinity*)
+            (t parsed)))
+      (parse-error ()
+        nil))))
 
 (defun* reversed-list-to-number ((digits list) (radix-bits fixnum))
   #M"internal function for readers
