@@ -16,9 +16,8 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/chartab
+(cl-emacs/elisp-packages:define-elisp-package :cl-emacs/chartab
     (:use
-     :common-lisp
      :defstar
      :cl-emacs/log
      :alexandria
@@ -119,3 +118,11 @@ and put an element value.
 
 (fn PROP)"
   (error 'unimplemented-error))
+
+;; (let ((ct (make-char-table 'test 10)))
+;;   (set-char-table-range ct nil 3)
+;;   (prin1 ct)
+;;   ;; (map-char-table '(lambda (x y)
+;;   ;;                    (message "%s=%s" x y))
+;;   ;;                 ct)
+;;   )

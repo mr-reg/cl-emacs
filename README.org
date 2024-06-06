@@ -72,6 +72,8 @@ SBCL + quicklisp port is inevitable in future.
 
 * License
 
+The best things in life are free: GPLv3.
+
 Code in this repo will always complain with GPLv3, as original Emacs
 source code does. All dependency libraries should have compatible
 licenses.

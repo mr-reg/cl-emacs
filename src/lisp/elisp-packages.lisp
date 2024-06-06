@@ -55,6 +55,7 @@
                         #:lambda
                         #:let
                         #:let*
+                        #:list
                         #:loop
                         #:make-array
                         #:make-load-form-saving-slots
