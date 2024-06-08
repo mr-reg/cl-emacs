@@ -23,6 +23,7 @@
      :fiveam
      :cl-emacs/commons
      :cl-emacs/alloc
+     :cl-emacs/eval
      )
   (:import-from #:cl
                 #:+

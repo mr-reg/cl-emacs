@@ -26,6 +26,7 @@
      :cl-custom-hash-table
      :cl-emacs/editfns
      :cl-emacs/alloc
+     :cl-emacs/eval
      :cl-emacs/commons)
   (:import-from #:cl
                 #:copy-alist
@@ -342,10 +343,10 @@
         ((eq weakness 'el::key-or-value) :one)
         (t (error "unknown weakness ~s" weakness))
         ))
-    (apply constructor-sym (list :size size
-                                 :rehash-size rehash-size
-                                 :rehash-threshold rehash-threshold
-                                 :weak cl-weakness))))
+    (cl:apply constructor-sym (list :size size
+                                    :rehash-size rehash-size
+                                    :rehash-threshold rehash-threshold
+                                    :weak cl-weakness))))
 
 (defun* puthash (key value (table hash-table))
   #M"Associate KEY with VALUE in hash table TABLE.

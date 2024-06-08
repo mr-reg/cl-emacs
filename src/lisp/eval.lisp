@@ -16,33 +16,44 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/eval
+(cl-emacs/elisp-packages:define-elisp-package :cl-emacs/eval
     (:use
-     :common-lisp
      :defstar
      :cl-emacs/log
      :alexandria
      :fiveam
-     :cl-emacs/commons))
+     :cl-emacs/commons)
+  (:import-from #:cl
+                #:and
+                #:apply
+                #:cond
+                #:defvar
+                #:funcall
+                #:if
+                #:let
+                #:let*
+                #:or
+                #:progn
+                #:quote
+                #:setq
+                )
+  (:export #:and
+           #:apply
+           #:cond
+           #:defvar
+           #:funcall
+           #:if
+           #:let
+           #:let*
+           #:or
+           #:progn
+           #:quote
+           #:setq
+           ))
 (in-package :cl-emacs/eval)
 (log-enable :cl-emacs/eval :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* and ()
-  #M"Eval args until one of them yields nil, then return nil.
-The remaining args are not evalled at all.
-If no arg yields nil, return the last arg's value.
 
-(fn CONDITIONS...)"
-  (error 'unimplemented-error))
-(defun* apply ()
-  #M"Call FUNCTION with our remaining args, using our last arg as list of args.
-Then return the value FUNCTION returns.
-With a single argument, call the argument's first element using the
-other elements as args.
-Thus, (apply \\='+ 1 2 \\='(3 4)) returns 10.
-
-(fn FUNCTION &rest ARGUMENTS)"
-  (error 'unimplemented-error))
 (defun* autoload ()
   #M"Define FUNCTION to autoload from FILE.
 FUNCTION is a symbol; FILE is a file name string to pass to ‘load'.
@@ -140,18 +151,7 @@ then strings and vectors are not accepted.
 
 (fn FUNCTION &optional FOR-CALL-INTERACTIVELY)"
   (error 'unimplemented-error))
-(defun* cond ()
-  #M"Try each clause until one succeeds.
-Each clause looks like (CONDITION BODY...).  CONDITION is evaluated
-and, if the value is non-nil, this clause succeeds:
-then the expressions in BODY are evaluated and the last one's
-value is the value of the cond-form.
-If a clause has one element, as in (CONDITION), then the cond-form
-returns CONDITION's value, if that is non-nil.
-If no clause succeeds, cond returns nil.
 
-(fn CLAUSES...)"
-  (error 'unimplemented-error))
 (defun* condition-case ()
   #M"Regain control when an error is signaled.
 Executes BODYFORM and returns its value if no error happens.
@@ -216,34 +216,7 @@ More specifically, behaves like (defconst SYM 'INITVALUE DOCSTRING).
 
 (fn SYM INITVALUE &optional DOCSTRING)"
   (error 'unimplemented-error))
-(defun* defvar ()
-  #M"Define SYMBOL as a variable, and return SYMBOL.
-You are not required to define a variable in order to use it, but
-defining it lets you supply an initial value and documentation, which
-can be referred to by the Emacs help facilities and other programming
-tools.  The ‘defvar' form also declares the variable as \"special\",
-so that it is always dynamically bound even if ‘lexical-binding' is t.
 
-If SYMBOL's value is void and the optional argument INITVALUE is
-provided, INITVALUE is evaluated and the result used to set SYMBOL's
-value.  If SYMBOL is buffer-local, its default value is what is set;
-buffer-local values are not affected.  If INITVALUE is missing,
-SYMBOL's value is not set.
-
-If SYMBOL is let-bound, then this form does not affect the local let
-binding but the toplevel default binding instead, like
-‘set-toplevel-default-binding‘.
-(‘defcustom' behaves similarly in this respect.)
-
-The optional argument DOCSTRING is a documentation string for the
-variable.
-
-To define a user option, use ‘defcustom' instead of ‘defvar'.
-
-To define a buffer-local variable, use ‘defvar-local'.
-
-(fn SYMBOL &optional INITVALUE DOCSTRING)"
-  (error 'unimplemented-error))
 (defun* defvar-1 ()
   #M"Like ‘defvar' but as a function.
 More specifically behaves like (defvar SYM 'INITVALUE DOCSTRING).
@@ -284,13 +257,7 @@ function with ‘&rest' args, or ‘unevalled' for a special form.
 
 (fn FUNCTION)"
   (error 'unimplemented-error))
-(defun* funcall ()
-  #M"Call first argument as a function, passing remaining arguments to it.
-Return the value that function returns.
-Thus, (funcall \\='cons \\='x \\='y) returns (x . y).
 
-(fn FUNCTION &rest ARGUMENTS)"
-  (error 'unimplemented-error))
 (defun* funcall-with-delayed-message ()
   #M"Like ‘funcall', but display MESSAGE if FUNCTION takes longer than TIMEOUT.
 TIMEOUT is a number of seconds, and can be an integer or a floating
@@ -321,14 +288,7 @@ returned in rare cases.
 
 (fn OBJECT)"
   (error 'unimplemented-error))
-(defun* if ()
-  #M"If COND yields non-nil, do THEN, else do ELSE...
-Returns the value of THEN or the value of the last of the ELSE's.
-THEN must be one expression, but ELSE... can be zero or more expressions.
-If COND yields nil, and there are no ELSE's, the value is nil.
 
-(fn COND THEN ELSE...)"
-  (error 'unimplemented-error))
 (defun* internal--define-uninitialized-variable ()
   #M"Define SYMBOL as a variable, with DOC as its docstring.
 This is like ‘defvar' and ‘defconst' but without affecting the variable's
@@ -341,24 +301,7 @@ value.
 
 (fn SYMBOL)"
   (error 'unimplemented-error))
-(defun* let ()
-  #M"Bind variables according to VARLIST then eval BODY.
-The value of the last form in BODY is returned.
-Each element of VARLIST is a symbol (which is bound to nil)
-or a list (SYMBOL VALUEFORM) (which binds SYMBOL to the value of VALUEFORM).
-All the VALUEFORMs are evalled before any symbols are bound.
 
-(fn VARLIST BODY...)"
-  (error 'unimplemented-error))
-(defun* let* ()
-  #M"Bind variables according to VARLIST then eval BODY.
-The value of the last form in BODY is returned.
-Each element of VARLIST is a symbol (which is bound to nil)
-or a list (SYMBOL VALUEFORM) (which binds SYMBOL to the value of VALUEFORM).
-Each VALUEFORM can refer to the symbols already bound by this VARLIST.
-
-(fn VARLIST BODY...)"
-  (error 'unimplemented-error))
 (defun* macroexpand ()
   #M"Return result of expanding macros at top level of FORM.
 If FORM is not a macro call, it is returned unchanged.
@@ -385,13 +328,7 @@ returns nil.
 
 (fn FUNCTION &optional BASE)"
   (error 'unimplemented-error))
-(defun* or ()
-  #M"Eval args until one of them yields non-nil, then return that value.
-The remaining args are not evalled at all.
-If all args return nil, return nil.
 
-(fn CONDITIONS...)"
-  (error 'unimplemented-error))
 (defun* prog1 ()
   #M"Eval FIRST and BODY sequentially; return value from FIRST.
 The value of FIRST is saved during the evaluation of the remaining args,
@@ -399,24 +336,7 @@ whose values are discarded.
 
 (fn FIRST BODY...)"
   (error 'unimplemented-error))
-(defun* progn ()
-  #M"Eval BODY forms sequentially and return value of last one.
 
-(fn BODY...)"
-  (error 'unimplemented-error))
-(defun* quote ()
-  #M"Return the argument, without evaluating it.  ‘(quote x)' yields ‘x'.
-Warning: ‘quote' does not construct its return value, but just returns
-the value that was pre-constructed by the Lisp reader (see info node
-‘(elisp)Printed Representation').
-This means that \\='(a . b) is not identical to (cons \\='a \\='b): the former
-does not cons.  Quoting should be reserved for constants that will
-never be modified by side-effects, unless you like self-modifying code.
-See the common pitfall in info node ‘(elisp)Rearrangement' for an example
-of unexpected results when a quoted object is modified.
-
-(fn ARG)"
-  (error 'unimplemented-error))
 (defun* run-hook-with-args ()
   #M"Run HOOK with the specified arguments ARGS.
 HOOK should be a symbol, a hook variable.  The value of HOOK
@@ -489,17 +409,7 @@ Instead, use ‘add-hook' and specify t for the LOCAL argument.
 
 (fn SYMBOL VALUE)"
   (error 'unimplemented-error))
-(defun* setq ()
-  #M"Set each SYM to the value of its VAL.
-The symbols SYM are variables; they are literal (not evaluated).
-The values VAL are expressions; they are evaluated.
-Thus, (setq x (1+ y)) sets ‘x' to the value of ‘(1+ y)'.
-The second VAL is not computed until after the first SYM is set, and so on;
-each VAL can use the new value of variables set earlier in the ‘setq'.
-The return value of the ‘setq' form is the value of the last VAL.
 
-(fn [SYM VAL]...)"
-  (error 'unimplemented-error))
 (defun* signal ()
   #M"Signal an error.  Args are ERROR-SYMBOL and associated DATA.
 This function does not return.

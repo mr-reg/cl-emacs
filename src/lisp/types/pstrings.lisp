@@ -399,8 +399,8 @@
     with gen2 = (generate-property-intervals pstr2)
     with start1 and end1 and alist1
     with start2 and end2 and alist2
-    do (setf (values start1 end1 alist1) (funcall gen1))
-       (setf (values start2 end2 alist2) (funcall gen2))
+    do (setf (values start1 end1 alist1) (cl:funcall gen1))
+       (setf (values start2 end2 alist2) (cl:funcall gen2))
        ;; (log-debug "prop comparison ~s ~s"
        ;;            (list start1 end1 alist1)
        ;;            (list start2 end2 alist2))

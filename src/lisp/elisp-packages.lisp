@@ -8,9 +8,8 @@
         (append form '((:import-from #:serapeum
                         #:fixnump)
                        (:import-from #:cl
-                        #:and
-                        #:apply
                         #:aref
+                        #:ash
                         #:assert
                         #:boolean
                         #:break
@@ -23,19 +22,18 @@
                         #:class-name
                         #:class-of
                         #:concatenate
-                        #:cond
                         #:copy-alist
                         #:copy-seq
                         #:char-downcase
                         #:declaim
                         #:declare
-                        #:defstruct
                         #:defclass
+                        #:defconstant
                         #:define-condition
+                        #:defstruct
                         #:defmethod
                         #:defparameter
                         #:defun
-                        #:defvar
                         #:digit-char-p
                         #:dolist
                         #:dotimes
@@ -43,18 +41,15 @@
                         #:error
                         #:find-symbol
                         #:fixnum
-                        #:funcall
                         #:hash-table
                         #:handler-case
-                        #:if
+                        #:ignore
                         #:ignore-errors
                         #:in-package
                         #:incf
                         #:inline
                         #:labels
                         #:lambda
-                        #:let
-                        #:let*
                         #:list
                         #:loop
                         #:make-array
@@ -62,19 +57,16 @@
                         #:multiple-value-bind
                         #:nil
                         #:not
-                        #:or
                         #:pop
                         #:position
                         #:push
-                        #:progn
-                        #:quote
                         #:read-char
                         #:return
                         #:return-from
                         #:second
-                        #:setq
                         #:setf
                         #:sort
+                        #:stream
                         #:string
                         #:string<
                         #:string>

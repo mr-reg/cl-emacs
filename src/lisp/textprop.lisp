@@ -22,7 +22,8 @@
      :cl-emacs/log
      :alexandria
      :fiveam
-     :cl-emacs/commons)
+     :cl-emacs/commons
+     :cl-emacs/eval)
   (:local-nicknames (#:pstrings #:cl-emacs/types/pstrings)                    )
   (:export #:set-text-properties
            #:add-text-properties)

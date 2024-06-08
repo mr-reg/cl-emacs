@@ -25,6 +25,7 @@
      :cl-emacs/reader-utils
      :cl-emacs/character-reader
      :cl-emacs/data
+     :cl-emacs/eval
      :cl-emacs/alloc
      :cl-emacs/fns
      :cl-emacs/commons)
@@ -579,7 +580,7 @@
          (t ;; just silently ignore bad parameter, like emacs does
           ))))
     (log-debug2 "args: ~s" args)
-    (setq ht (apply 'make-hash-table args))
+    (setq ht (cl:apply 'make-hash-table args))
     (doplist (key val data)
       (puthash key val ht))
     ht)
@@ -642,7 +643,7 @@
     (when new-state
       (change-state reader new-state))
     (let ((handler (aref *transitions* state)))
-      (funcall handler reader char))))
+      (cl:funcall handler reader char))))
 
 (defun* process-extra-buffer ((reader reader))
   (with-slots (extra-buffer) reader
