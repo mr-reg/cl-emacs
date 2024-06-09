@@ -1,4 +1,4 @@
-c# -*- org-log-done: nil; -*-
+# -*- org-log-done: nil; -*-
 #+TODO: TODO IN-PROGRESS | DONE
 
 * What is this?
