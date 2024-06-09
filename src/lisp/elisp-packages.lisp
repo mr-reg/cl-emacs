@@ -21,6 +21,7 @@
                         #:characterp
                         #:class-name
                         #:class-of
+                        #:coerce
                         #:concatenate
                         #:copy-alist
                         #:copy-seq

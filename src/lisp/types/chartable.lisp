@@ -24,6 +24,7 @@
      :cl-emacs/fns
      :cl-emacs/eval
      :fiveam
+     :snakes
      :cl-emacs/commons)
   (:export )
   )
@@ -66,13 +67,8 @@
                    (aref +chartab-size-bits+ 3)))
          (ash 1  (aref +chartab-size-bits+ 3))
          1)))
-;; 0 . 4194303
 
-;; #^[10 nil test 10
-;; 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10
-;; 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10
-;; 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10
-;; 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10]
+;; each chartable covers range (0 . 4194303)
 
 (defstruct (chartable (:copier nil)
                       (:print-function print-chartable)                      )
@@ -331,7 +327,153 @@
     )
   )
 
-;; TODO: add support for map functions
+;; mapping functions use EQ in emacs code, we use EQUAL for simplicity
+(defgenerator generate-chartable-ranges-without-parents (ct)
+  #M"generates single list (start end value), returns all values including nil,
+     so there is no holes in ranges"
+  (with-slots (contents default) ct
+    (let ((current-start 0)
+          (current-value nil)
+          (element-size (aref +chars-per-element+ 0)))
+      (labels ((yield-position (position value &optional force)
+                 ;; (log-debug2 "yield position:~s value:~s"
+                 ;;             position value)
+                 (when (or force (not (equal value current-value)))
+                   (log-debug2 "start switch current-start:~s current-value:~s"
+                               current-start current-value)
+                   (let ((current-end (1- position)))
+                     (when  (> (- current-end current-start) 0)
+                       (yield (list current-start current-end current-value)))
+                     (setq current-start position)
+                     (setq current-value value))))
+               (process-sub-chartable (sub-ct)
+                 (with-slots (contents depth min-char) sub-ct
+                   (let ((element-size (aref +chars-per-element+ depth)))
+                     (loop for sub-sub-ct across contents
+                           for sub-from from min-char by element-size
+                           for sub-to = (1- (+ sub-from element-size))
+                           do (if (sub-chartable-p sub-sub-ct)
+                                  (process-sub-chartable sub-sub-ct)
+                                  (yield-position sub-to sub-sub-ct)))))))
+        (loop for sub-ct across contents
+              for sub-from from 0 by element-size
+              for sub-to = (1- (+ sub-from element-size))
+              do (if (sub-chartable-p sub-ct)
+                     (process-sub-chartable sub-ct)
+                     (yield-position sub-from sub-ct))
+              finally (yield-position (1+ sub-to) nil t))))))
+
+(defgenerator generate-chartable-ranges (ct)
+  #M"return ranges in form '(start end value) including
+     data from parent table hierarchy"
+  ;; code makes generators for all chartable parent tree
+  ;; and then does tricky parallel scrolling through all generators
+
+  ;; table with index 0 is the lowest child
+  (let* ((tables (loop with tables = (list ct)
+                       for parent = (chartable-parent (car tables))
+                       while parent
+                       do (push parent tables)
+                       finally (return (nreverse tables))))
+         ;; list of activated range generators
+         (generators (loop for ct in tables
+                           collect (generate-chartable-ranges-without-parents ct)))
+         ;; array of last generated positions (in 3-element lists
+         (positions (coerce
+                     (loop for gen in generators
+                           collect (funcall gen))
+                     'cl:vector))
+         )
+    (let ((current-start -1)
+          (current-value nil)
+          (last-max-position -1))
+      (labels ((yield-position (position value &optional force)
+                 (log-debug2 "yield position:~s value:~s"
+                             position value)
+                 (when (or force (not (equal value current-value)))
+                   (log-debug2 "start switch current-start:~s current-value:~s"
+                               current-start current-value)
+                   (let ((current-end (1- position)))
+                     (when (and (> (- current-end current-start) 0) current-value)
+                       ;; (log-debug "yield ~s" (list current-start current-end current-value))
+                       (yield (list current-start current-end current-value))
+                       )
+                     (setq current-start position)
+                     (setq current-value value)))))
+        (loop for minimal-position = nil
+              do ;; define minimal position across all tables
+                 (loop for position across positions
+                       do (unless (eq position 'generator-stop)
+                            (when (and
+                                   (> (car position) last-max-position)
+                                   (or (null minimal-position)
+                                       (<= (car position) minimal-position)))
+                              (setq minimal-position (car position)))))
+                 (log-debug2 "last-max-position ~s" last-max-position)
+                 (log-debug2 "minimal position ~s ~s" positions minimal-position)
+                 (unless minimal-position
+                   ;; no more positions from generators, end main loop
+                   (yield-position (1+ last-max-position) nil)
+                   (return))
+
+                 ;; define first non-nullvalue for minimal-position
+                 ;; according to hierarchy
+                 (loop
+                   with minimal-value = nil
+                   for position across positions
+                   do (unless (eq position 'generator-stop)
+                        (when (and (<= (car position) minimal-position (nth 1 position))
+                                   (nth 2 position))
+                          (setq minimal-value (nth 2 position))
+                          (yield-position minimal-position minimal-value)
+                          (return))))
+
+                 ;; define position intervals with smallest end,  and rotate it,
+                 ;; also set new last-max-position to move forward
+                 (setq last-max-position nil)
+                 (loop for position across positions
+                       do (unless (eq position 'generator-stop)
+                            (when (or (null last-max-position)
+                                      (<= (nth 1 position) last-max-position))
+                              (setq last-max-position (nth 1 position)))))
+                 (loop for gen in generators
+                       for position across positions
+                       for idx from 0
+                       do (unless (eq position 'generator-stop)
+                            (when (= last-max-position (nth 1 position))
+                              (log-debug2 "rotating position in table ~s" idx)
+                              (setf (aref positions idx) (funcall gen)))))
+                 ;; we strongly believe here that the next interval will start without hole
+                 (log-debug2 "new last-max-position ~s" last-max-position)
+                 (log-debug2 "new-positions ~s" positions)
+              )))))
+
+(test test-generate-ranges
+  (let* ((ct1 (make-simple-chartable :purpose 'test :default 1))
+         (ct2 (make-simple-chartable :purpose 'test :parent ct1))
+         (ct3 (make-simple-chartable :purpose 'test :parent ct2))
+         (ct4 (make-simple-chartable :purpose 'test :parent ct2 :default 4)))
+    (set-chartable-range ct2 4 15000 2)
+    (set-chartable-range ct3 10 15 3)
+    (set-chartable-range ct4 10 15 3)
+
+    (is (equal '((0 4194303 1))
+               (generator->list (generate-chartable-ranges ct1))))
+    (is (equal '((0 3 NIL) (4 15000 2) (15001 4194303 NIL))
+               (generator->list (generate-chartable-ranges-without-parents ct2))))
+    (is (equal '((0 3 1) (4 15000 2) (15001 4194303 1))
+               (generator->list (generate-chartable-ranges ct2))))
+    (is (equal '((0 9 4)
+                 (10 15 3)
+                 (16 4194303 4))
+               (generator->list (generate-chartable-ranges ct4))))
+    (is (equal '((0 3 1)
+                 (4 9 2)
+                 (10 15 3)
+                 (16 15000 2)
+                 (15001 4194303 1))
+               (generator->list (generate-chartable-ranges ct3))))))
+
 ;; TODO: add support for extra slots
 
 (defun test-me ()
