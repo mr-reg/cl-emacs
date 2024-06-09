@@ -8,7 +8,7 @@ This is port of the Beast from C to Common Lisp.
 Development just started
 
 * Progress
-** reader [4/9]
+** reader [5/9]
    * [X] basic elisp reader 
    * [X] character syntax reader
    * [-] string reader [2/4]
@@ -18,7 +18,7 @@ Development just started
      * [ ] support character syntax
    * [X] hashtable reader
    * [X] float number reader
-   * [ ] char tables && sub-char tables
+   * [X] char tables && sub-char tables
    * [ ] shorthands
    * [ ] other special reader syntax
    * [ ] markers?
@@ -26,7 +26,16 @@ Development just started
    * [ ] basic print implementation
    * [ ] format
 ** eval [0/1]
+   * [ ] lexical scope
+   * [ ] let/let*
+   * [ ] funcall/apply
+   * [ ] eval
+   * [ ] macroses
+   * [ ] TBD (should not be hard, ya? =)
+** other library functions implementation
+   * buffers
    * [ ] TBD
+** fallback text ui implementation  
 
 * Features
 ** full elisp compatibility claim
@@ -71,6 +80,8 @@ SBCL + quicklisp port is inevitable in future.
     it should be somehow implemented very close to UI library.
 
 * License
+
+The best things in life are free: GPLv3.
 
 Code in this repo will always complain with GPLv3, as original Emacs
 source code does. All dependency libraries should have compatible

@@ -23,6 +23,7 @@
      :alexandria
      :fiveam
      :cl-emacs/textprop
+     :cl-emacs/eval
      :cl-emacs/commons)
   (:export #:propertize)
   (:local-nicknames (#:el #:cl-emacs/elisp)
