@@ -16,7 +16,7 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/elisp-packages:define-elisp-package :cl-emacs/types/chartable
+(cl-emacs/elisp-packages:define-elisp-package :cl-emacs/types/chartables
     (:use
      :defstar
      :cl-emacs/data
@@ -26,13 +26,22 @@
      :fiveam
      :snakes
      :cl-emacs/commons)
-  (:export )
+  (:export #:+chartab-size+
+           #:chartable-extra-slots
+           #:generate-chartable-ranges
+           #:make-chartable
+           #:make-simple-chartable
+           #:make-sub-chartable
+           #:sub-chartable-contents
+           #:sub-chartable-depth
+           #:sub-chartable-min-char
+           )
   (:local-nicknames (#:el #:cl-emacs/elisp)))
-(in-package :cl-emacs/types/chartable)
-(log-enable :cl-emacs/types/chartable :debug2)
+(in-package :cl-emacs/types/chartables)
+(log-enable :cl-emacs/types/chartables :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(def-suite cl-emacs/types/chartable)
-(in-suite cl-emacs/types/chartable)
+(def-suite cl-emacs/types/chartables)
+(in-suite cl-emacs/types/chartables)
 
 ;;; sparse vector implementation with some business fields
 ;; leveled structure of the vector is hardcoded and designed
@@ -485,4 +494,4 @@
                (generator->list (generate-chartable-ranges ct3))))))
 
 (defun test-me ()
-  (run! 'cl-emacs/types/chartable))
+  (run! 'cl-emacs/types/chartables))

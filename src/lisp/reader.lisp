@@ -31,6 +31,7 @@
      :cl-emacs/commons)
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:pstrings #:cl-emacs/types/pstrings)
+                    (#:chartables #:cl-emacs/types/chartables)
                     (#:textprop #:cl-emacs/textprop)
                     )
   ;; (:use-reexport
@@ -47,7 +48,7 @@
   )
 
 (in-package :cl-emacs/reader)
-(log-enable :cl-emacs/reader :debug2)
+(log-enable :cl-emacs/reader :debug)
 ;; (log-enable :cl-emacs/reader :info)
 (def-suite cl-emacs/reader)
 (in-suite cl-emacs/reader)
@@ -238,10 +239,16 @@
             (start-collector reader))
            ((eq char #\s)
             (pop (car mod-stack))
-            (push-modifier reader 'hash-table)
-            )
+            (push-modifier reader 'hash-table))
+           ((eq char #\^)
+            (pop (car mod-stack))
+            (push-modifier reader 'chartable))
            (t (error 'invalid-reader-input-error :details "unsupported character after #"))
            ))
+        ((and (eq active-modifier 'chartable)
+              (eq char #\^))
+         (pop (car mod-stack))
+         (push-modifier reader 'sub-chartable))
         ((eq char #\()
          (start-collector reader))
         ((eq char #\))
@@ -586,6 +593,46 @@
     ht)
   )
 
+(defun* transform-to-chartable ((something cl:vector))
+  (let* ((normal-size (aref chartables:+chartab-size+ 0))
+         (num-extra-slots (- (cl:length something) 4 normal-size))
+         contents extra-slots)
+    (unless (<= 0 num-extra-slots 10)
+      (error 'invalid-reader-input-error :details
+             "chartable vector length is incorrect"))
+    (setq contents (make-array normal-size))
+    (loop for idx from 0 below normal-size
+          do (setf (aref contents idx) (aref something (+ 4 idx))))
+    (setq extra-slots (make-array num-extra-slots))
+    (loop for idx from 0 below num-extra-slots
+          do (setf (aref extra-slots idx) (aref something (+ 4 normal-size idx))))
+    (chartables:make-chartable
+     :default (aref something 0)
+     :parent (aref something 1)
+     :purpose (aref something 2)
+     :ascii (aref something 3)
+     :contents contents
+     :extra-slots extra-slots)))
+
+(defun* transform-to-sub-chartable ((something cl:vector))
+  (let (depth normal-size)
+    (setq depth (when (> (cl:length something) 0) (aref something 0)))
+    (unless (<= 1 depth 3)
+      (error 'invalid-reader-input-error
+             :details "sub-chartable depth can be only 1, 2 or 3"))
+    (setq normal-size (aref chartables:+chartab-size+ depth))
+    (unless (= (cl:length something) (+ 2 normal-size))
+      (error 'invalid-reader-input-error :details
+             (cl:format nil "sub-chartable vector length should be exactly 2 + ~s" normal-size)))
+
+    (loop with contents = (make-array normal-size)
+          for idx from 0 below normal-size
+          do (setf (aref contents idx) (aref something (+ 2 idx)))
+          finally (return (chartables:make-sub-chartable :depth (aref something 0)
+                                                         :min-char (aref something 1)
+                                                         :contents contents)))
+    ))
+
 (defun* apply-modifiers ((reader reader) something (modifiers list) &optional (nil-not-allowed t))
   (log-debug2 "applying modifiers ~s to:~s" modifiers something)
   (when (and modifiers nil-not-allowed (null something))
@@ -624,6 +671,10 @@
               (setq something (transform-to-pstring something)))
              (hash-table
               (setq something (transform-to-hash-table something)))
+             (chartable
+              (setq something (transform-to-chartable something)))
+             (sub-chartable
+              (setq something (transform-to-sub-chartable something)))
              (t (error 'invalid-reader-input-error
                        :details (cl:format nil "unexpected modifier ~s" modifier)))
              ))))
@@ -993,12 +1044,32 @@
 ;;     (read stream)))
 
 
-(test read-char-tables ()
-  ;; (let ((ct (read "#^[2 nil some-symbol 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 slot0 1 slot2 1 1 1]")))
-  ;;   (message "%s" (symbol-plist 'some-symbol))
-  ;;   (char-table-extra-slot ct 0)
-  ;;   (char-table-extra-slot ct 6))
-  )
+(test read-chartables ()
+  (let ((sub-ct (car (read-cl-string "#^^[3 12 8 8 8 3 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8]"))))
+    (is (= 3 (chartables:sub-chartable-depth sub-ct)))
+    (is (= 12 (chartables:sub-chartable-min-char sub-ct)))
+    (is (= 8 (aref (chartables:sub-chartable-contents sub-ct) 0)))
+    (is (= 3 (aref (chartables:sub-chartable-contents sub-ct) 3)))
+    )
+  (signals invalid-reader-input-error (read-cl-string "#^^[3 12 8 8 8 3 8]"))
+  (let ((ct (car (read-cl-string
+                  #M"#^[8 nil test
+                     #^^[3 0 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3]
+                     #^^[1 0 #^^[2 0 #^^[3 0 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3]
+                     3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3]
+                     3 3 3 3 3 3 3 3 3 3 3 3 3 3 3]
+                     #^^[1 65536 3 3 #^^[2 73728 3 #^^[3 73856 3 3 3 3 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8]
+                     8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8]
+                     8 8 8 8 8 8 8 8 8 8 8 8 8]
+                     8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8
+                     slot0 slot1 slot2]")
+                 )))
+    (is (equal
+         '((0 79 8) (80 73859 3) (73860 4194303 8))
+         (snakes:generator->list (chartables:generate-chartable-ranges ct))))
+    (is (equal '#(el::slot0 el::slot1 el::slot2)
+               (chartables:chartable-extra-slots ct)))
+    ))
 
 (defun test-me ()
   (run! 'cl-emacs/reader))
