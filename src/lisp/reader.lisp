@@ -992,6 +992,14 @@
 ;;     (read stream)
 ;;     (read stream)))
 
+
+(test read-char-tables ()
+  ;; (let ((ct (read "#^[2 nil some-symbol 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 slot0 1 slot2 1 1 1]")))
+  ;;   (message "%s" (symbol-plist 'some-symbol))
+  ;;   (char-table-extra-slot ct 0)
+  ;;   (char-table-extra-slot ct 6))
+  )
+
 (defun test-me ()
   (run! 'cl-emacs/reader))
 

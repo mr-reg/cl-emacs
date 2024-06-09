@@ -27,7 +27,7 @@
      :snakes
      :cl-emacs/commons)
   (:export )
-  )
+  (:local-nicknames (#:el #:cl-emacs/elisp)))
 (in-package :cl-emacs/types/chartable)
 (log-enable :cl-emacs/types/chartable :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
@@ -86,7 +86,10 @@
   ;;is nil if no ASCII character has a specific value.
   (ascii nil)
 
-  (contents nil :type simple-vector))
+  (contents nil :type simple-vector)
+
+  (extra-slots nil :type simple-vector)
+  )
 
 (defun* (make-simple-chartable -> chartable) (&key default parent
                                                    purpose)
@@ -96,15 +99,19 @@
                   :purpose purpose
                   :ascii default
                   :contents (make-array (ash 1 (aref +chartab-size-bits+ 0))
-                                        :initial-element default))
-  )
+                                        :initial-element default)
+                  :extra-slots (make-array (or (cl:get purpose 'el::char-table-extra-slots)
+                                               0)
+                                           :initial-element default)))
 
 (defun* print-chartable ((ct chartable) (stream stream) depth)
   (declare (ignore depth))
-  (with-slots (default parent purpose ascii contents) ct
+  (with-slots (default parent purpose ascii contents extra-slots) ct
     (cl:format stream "#^[~s ~s ~s ~s" default parent purpose ascii)
     (loop for sub-table across contents
           do (cl:format stream " ~s" sub-table))
+    (loop for extra-slot across extra-slots
+          do (cl:format stream " ~s" extra-slot))
     (cl:format stream "]")))
 
 (defstruct (sub-chartable (:copier nil)
@@ -133,8 +140,11 @@
     (cl:format stream "]")))
 
 (test test-print-chartable
-  (let ((ct (make-simple-chartable :purpose 'test-purpose :default 10)))
-    (is (string= "#^[10 NIL TEST-PURPOSE 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10]"
+  (setf (cl:get 'el::test-purpose 'el::char-table-extra-slots) 6)
+  (let ((ct (make-simple-chartable :purpose 'el::test-purpose :default 10)))
+    (setf (aref (chartable-extra-slots ct) 0) 310)
+    (setf (aref (chartable-extra-slots ct) 1) 311)
+    (is (string= "#^[10 NIL EL::TEST-PURPOSE 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 310 311 10 10 10 10]"
                  (cl:format nil "~s" ct)))))
 
 ;; chartables has no equality check, function will always set value without
@@ -473,8 +483,6 @@
                  (16 15000 2)
                  (15001 4194303 1))
                (generator->list (generate-chartable-ranges ct3))))))
-
-;; TODO: add support for extra slots
 
 (defun test-me ()
   (run! 'cl-emacs/types/chartable))
