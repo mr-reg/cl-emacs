@@ -16,11 +16,13 @@
                         #:caar
                         #:case
                         #:cdar
+                        #:char-code
                         #:char-upcase
                         #:character
                         #:characterp
                         #:class-name
                         #:class-of
+                        #:code-char
                         #:coerce
                         #:concatenate
                         #:copy-alist
@@ -83,6 +85,7 @@
                         #:with-output-to-string
                         #:with-slots
                         #:write-char
+                        #:zerop
                         #:&key
                         #:&optional
                         #:&rest)))))

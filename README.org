@@ -8,19 +8,20 @@ This is port of the Beast from C to Common Lisp.
 Development just started
 
 * Progress
-** reader [5/9]
+** reader [6/9]
    * [X] basic elisp reader 
    * [X] character syntax reader
-   * [-] string reader [2/4]
+   * [X] string reader [4/4]
      * [X] emacs property-string type
      * [X] basic reader for pstrings
-     * [ ] support escape sequences
-     * [ ] support character syntax
+     * [X] support escape sequences
+     * [X] support character syntax
    * [X] hashtable reader
    * [X] float number reader
    * [X] char tables && sub-char tables
    * [ ] shorthands
    * [ ] other special reader syntax
+   * [ ] bit vectors?  
    * [ ] markers?
 ** printer [0/2]
    * [ ] basic print implementation
@@ -66,6 +67,10 @@ SBCL + quicklisp port is inevitable in future.
   * any bytecode support: 
 
     you can use common lisp memory image system to speedup loading.
+
+  * unibyte strings
+
+    all string are multibyte inside, unibyte functions are emulated
 
   * gui implementation:
 

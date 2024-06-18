@@ -20,8 +20,12 @@
     (:use :common-lisp :cl-emacs/log :alexandria :fiveam :defstar)
   (:export #:parse-elisp-number
            #:reversed-list-to-number
+           #:char-end-of-statement-p
            #:char-list-to-cl-string
-           #:char-list-to-pstring)
+           #:char-list-to-pstring
+           #:char-whitespace-p)
+  (:import-from #:serapeum
+                #:memq)
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:pstrings #:cl-emacs/types/pstrings)))
 (in-package :cl-emacs/reader-utils)
@@ -92,3 +96,13 @@
   (is (= #o321 (reversed-list-to-number '(1 2 3) 3)))
   (is (= #x1fa (reversed-list-to-number '(10 15 1) 4)))
   )
+
+(defun* char-whitespace-p ((char character))
+  #M"return t if character is whitespace or #\null.
+     #\nullnil used for EOF"
+  (memq char '(#\null #\space #\tab #\newline)))
+
+(defun* char-end-of-statement-p ((char character))
+  #M"return t if character is whitespace or nil or any
+     special symbol that signals about new statement. "
+  (or (char-whitespace-p char) (memq char '(#\( #\) #\[ #\] #\" #\' #\` #\, #\#))))

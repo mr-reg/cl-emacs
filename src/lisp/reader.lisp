@@ -33,6 +33,7 @@
                     (#:pstrings #:cl-emacs/types/pstrings)
                     (#:chartables #:cl-emacs/types/chartables)
                     (#:textprop #:cl-emacs/textprop)
+                    (#:creader #:cl-emacs/character-reader)
                     )
   ;; (:use-reexport
   ;;  ;; :cl-emacs/elisp/alien-vars
@@ -48,7 +49,7 @@
   )
 
 (in-package :cl-emacs/reader)
-(log-enable :cl-emacs/reader :debug)
+(log-enable :cl-emacs/reader :debug1)
 ;; (log-enable :cl-emacs/reader :info)
 (def-suite cl-emacs/reader)
 (in-suite cl-emacs/reader)
@@ -109,15 +110,7 @@
                   stack-frame mod-frame stack mod-stack)
       (values stack-frame mod-frame))))
 
-(defun* char-whitespace-p ((char character))
-  #M"return t if character is whitespace or #\null.
-     #\nullnil used for EOF"
-  (memq char '(#\null #\space #\tab #\newline)))
 
-(defun* char-end-of-statement-p ((char character))
-  #M"return t if character is whitespace or nil or any
-     special symbol that signals about new statement. "
-  (or (char-whitespace-p char) (memq char '(#\( #\) #\[ #\] #\" #\' #\` #\, #\#))))
 
 (defun* start-collector ((reader reader))
   (log-debug1 "start collector")
@@ -269,6 +262,7 @@
          (push-extra-char reader char))
         ((eq char #\")
          (start-collector reader)
+         (push (pstrings:build-pstring "") (car stack))
          (change-state reader state/pstring))
         ((eq char #\?)
          (start-collector reader)
@@ -290,20 +284,103 @@
 
 ;; string
 (defun* end-pstring ((reader reader))
-  (log-debug1 "end string")
+  ;; first element in stack-frame is always pstring - collector
+  ;; this function should try to process stack frame and return t
+  ;; if string was really finished
+  ;; if string is really finished, stack should contain only last double quote
+  (log-debug1 "end pstring started")
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
-    (let ((parsed (char-list-to-pstring (nreverse stack-frame))))
-      (end-collector reader parsed mod-frame))))
+    (let* ((rev-frame (nreverse stack-frame))
+           (collector (car rev-frame))
+           (char-list (cdr rev-frame))
+           (cl-buffer (char-list-to-cl-string char-list))
+           (buffer-len (cl:length cl-buffer))
+           (start-position 0)
+           (string-is-over nil)
+           (current-chunk ""))
+      (unless (pstrings:pstring-p collector)
+        (error 'invalid-reader-input-error :details
+               "pstring reader not initialized properly (bug)"))
+      (log-debug2 "collector:~s" collector)
+      (setq
+       current-chunk
+       (with-output-to-string (stream)
+         (setq
+          cl-buffer
+          (loop
+            while (< start-position buffer-len)
+            for char = nil
+            do (handler-case
+                   (progn
+                     (log-debug2 "read character start-position:~s cl-buffer:~s"
+                                 start-position cl-buffer)
+                     (setq char (read-string-character cl-buffer
+                                                       :start-position start-position))
+                     ;; complete read means that current string data is over
+                     ;; but string reader can continue
+                     (log-debug2 "normal complete read")
+                     (when char
+                       (write-char (code-char char) stream))
+                     (return ""))
+                 (extra-symbols-in-character-spec-error (e)
+                   (with-slots (creader::position
+                                creader::parsed-code) e
+                     (log-debug2 "position:~s parsed-code:~s"
+                                 creader::position
+                                 creader::parsed-code)
+                     (setq char creader::parsed-code)
+                     (cond
+                       ;; reader stopped and double quote ahead - proper end of the string
+                       ((and (zerop creader::position)
+                             (cl:char-equal #\" (aref cl-buffer start-position)))
+                        ;; return everything ahead of double quote to main reader
+                        (setq string-is-over t)
+                        (return (str:substring (1+ start-position) t cl-buffer)))
+                       ;; reader stopped but not a double quote ahead
+                       ((zerop creader::position)
+                        (error 'invalid-reader-input-error :details
+                               "string parser is stuck (bug)"))
+                       ;; move reader forward
+                       (t
+                        ;; character can be nil if it should be ignored according to
+                        ;; the emacs escape syntax
+                        (when char
+                          (write-char (code-char char) stream))
+                        (incf start-position creader::position)
+                        (log-debug2 "moving position +~s=~s" creader::position
+                                    start-position)
+                        ))
+                     )
+                   ))
+            finally (return "")))))
+      (log-debug2 "current-chunk:~s cl-buffer:~s" current-chunk cl-buffer)
+      ;; accumulate chunk to collector
+      (pstrings:ninsert (pstrings:build-pstring current-chunk) collector)
+
+      (when string-is-over
+        ;; here cl-buffer may contain some unprocessed characters for main reader
+        (log-debug2 "ending string reader, extra-characters:~s" cl-buffer)
+        (loop for char across cl-buffer
+              do (push-extra-char reader char))
+        (end-collector reader collector mod-frame)
+        (return-from end-pstring t))
+      ;; here we know that cl-buffer is completely processed and string is still
+      ;; not complete. Restore stack and continue read
+      (log-debug2 "restart string-reader")
+      (with-slots (stack mod-stack) reader
+        (push (list collector) stack)
+        (push mod-frame mod-stack))
+      ;; nil result means that string is not finished
+      nil)
+
+    ))
 
 (defun* state/pstring-transition ((reader reader) (char character))
   (with-slots (stack) reader
-    (cond
-      ((memq char '(#\"))
-       (end-pstring reader)
-       (change-state reader state/toplevel))
-      (t
-       (push char (car stack)))
-      )))
+    (push char (car stack))
+    (when (eq char #\")
+      (when (end-pstring reader)
+        (change-state reader state/toplevel)))))
 ;; character
 (defun* end-character ((reader reader))
   (log-debug1 "end character")
@@ -314,13 +391,13 @@
         (handler-case
             (setq code (read-emacs-character parsed))
           (extra-symbols-in-character-spec-error (e)
-            (with-slots (cl-emacs/character-reader::position cl-emacs/character-reader::parsed-code) e
-              (let ((remainder (str:substring cl-emacs/character-reader::position t parsed)))
-                (log-debug2 "~s parsed:~s position:~s" e parsed cl-emacs/character-reader::position)
+            (with-slots (creader::position creader::parsed-code) e
+              (let ((remainder (str:substring creader::position t parsed)))
+                (log-debug2 "~s parsed:~s position:~s" e parsed creader::position)
                 (log-debug1 "character definition remainder ~s" remainder)
                 (loop for idx from (1- (cl:length remainder)) downto 0
                       do (push (aref remainder idx) extra-buffer))
-                (setq code cl-emacs/character-reader::parsed-code)))))
+                (setq code creader::parsed-code)))))
         (end-collector reader code mod-frame)))))
 
 (defun* state/character-transition ((reader reader) (char character))
@@ -784,7 +861,9 @@
   (is (equal 'el::test
              (car (read-cl-string "#_test"))))
   (is (equal (quote el::||)
-             (car (read-cl-string "#_"))))  )
+             (car (read-cl-string "#_"))))
+  ;; "a\xa\ b" "a\xab"
+  )
 
 (test read-shorthands
   ;; TODO: add support for shorthands in reader
@@ -872,14 +951,25 @@
              (car (read-cl-string #M"(defvar test-var nil \"some
                                      multiline docstring `with symbols'.\")"))))
   ;; TODO: add better pstring property validation after more complicated reads
-  ;; TODO: research corner cases
   (is (equal
        (quote #P" ")
        (car (read-cl-string "#(\" \" 0 1 (invisible t))"))))
   (is (equal
        (quote #P"foo bar")
        (car (read-cl-string "#(\"foo bar\" 0 3 (face bold) 3 4 nil 4 7 (face italic))"))))
-
+  (is (equal (pstrings:build-pstring "abc\\z\"")
+             (car (read-cl-string "\"abc\\\\\\x7a\\\"\"" ))))
+  (is (equal #P"sample string without newline."
+             (car (read-cl-string
+                   #M"#(\"sampl\\ e \\
+                      string without newline.\" 0 4 (face bold))"))))
+  (is (equal (pstrings:build-pstring (cl:format nil "~c, \"\"~c" #\tab #\soh))
+             (car (read-cl-string "\"\\t, \\\"\\\"\\C-a\""))))
+  (is (equal (quote #P"")
+             (car (read-cl-string "#(\"\" 0 0 (invisible t))"))))
+  (is (equal
+       (quote #P"fooA0bar")
+       (car (read-cl-string "\"foo\\u00410bar\")"))))
   )
 (test read-lists
   (is (equal `(el::a ,#P"b")

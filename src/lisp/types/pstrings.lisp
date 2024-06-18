@@ -323,6 +323,9 @@
 
      if first argument is interval, assume that it is internal-call with correct interval selected"
   (assert (<= start end))
+  (when (and (emptyp pstr) (or (> start 0) (> end 0)))
+    (error 'invalid-pstring-operation :details
+           "can't set properties on empty string"))
   (when (= start end)
     (return-from set-properties))
   (log-debug2 "set-properties start:~s end:~s alist:~s overwrite:~s"
@@ -581,8 +584,10 @@
                    (format nil "~s" pstr)))
       )
 
-    ;; TODO: use emacs symbols case in this test
-    ;; TODO: better test weird cases with special characters in symbols and quotes/strings in values
+    (let ((pstr (build-pstring "")))
+      (signals invalid-pstring-operation (set-properties pstr 0 1 '((prop1 . val1)))))
+
+    ;; TODO: use emacs symbols lower-case form in this test
     ))
 (defun test-me ()
   (run! 'cl-emacs/types/pstrings))
