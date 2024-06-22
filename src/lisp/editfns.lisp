@@ -31,7 +31,7 @@
                     )  )
 (in-package :cl-emacs/editfns)
 (log-enable :cl-emacs/editfns :debug2)
-(named-readtables:in-readtable pstrings:pstring-syntax)
+(named-readtables:in-readtable mstrings:mstring-syntax)
 (def-suite cl-emacs/editfns)
 (in-suite cl-emacs/editfns)
 
@@ -709,8 +709,8 @@ At the beginning of the buffer or accessible region, return 0.
 (test test-propertize
   (is (string= "#(\"abc\" 0 3 (P1 V1 P2 V2))"
                (cl:format nil "~s"
-                          (propertize #P"abc" 'p1 'v1 'p2 'v2))))
-  (let ((pstr #P"abc"))
+                          (propertize (pstrings:build-pstring "abc") 'p1 'v1 'p2 'v2))))
+  (let ((pstr (pstrings:build-pstring "abc")))
     (add-text-properties 0 1 '(p3 v3) pstr)
     (is (string= "#(\"abc\" 0 1 (P1 V1 P2 V2 P3 V3) 1 3 (P1 V1 P2 V2))"
                  (cl:format nil "~s"

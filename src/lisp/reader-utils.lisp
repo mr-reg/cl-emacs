@@ -41,6 +41,8 @@
     (when (or has-nan has-inf)
       (setq to-parse (str:concat (str:substring 0 -3 chardata) "0")))
     (log-debug2 "parsing number from chardata ~s" to-parse)
+    (when (emptyp to-parse)
+      (return-from parse-elisp-number nil))
     (handler-case
         (let ((parsed (parse-number:parse-real-number to-parse)))
           ;; here we know that number notation is correct

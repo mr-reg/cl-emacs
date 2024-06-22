@@ -76,7 +76,7 @@
                     (#:el #:cl-emacs/elisp)))
 (in-package :cl-emacs/data)
 (log-enable :cl-emacs/data :debug2)
-(named-readtables:in-readtable pstrings:pstring-syntax)
+(named-readtables:in-readtable mstrings:mstring-syntax)
 (def-suite cl-emacs/data)
 (in-suite cl-emacs/data)
 
@@ -773,8 +773,8 @@ function or t otherwise.
                                              (write-char (char-downcase char) stream)))))))
 (test test-symbol-name
   ;; TODO: add proper tests for (symbol-name)
-  (is (pstrings:pstring= #P"test" (symbol-name 'el::test)))
-  (is (pstrings:pstring= #P"Tes_t" (symbol-name 'el::_tes__t))))
+  (is (pstrings:pstring= (pstrings:build-pstring "test") (symbol-name 'el::test)))
+  (is (pstrings:pstring= (pstrings:build-pstring "Tes_t") (symbol-name 'el::_tes__t))))
 
 (defun* symbol-plist ()
   #M"Return SYMBOL's property list.

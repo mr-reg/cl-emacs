@@ -68,6 +68,7 @@
                         #:return-from
                         #:second
                         #:setf
+                        #:simple-vector
                         #:sort
                         #:stream
                         #:string

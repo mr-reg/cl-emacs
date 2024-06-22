@@ -7,6 +7,14 @@
   :license "GPLv3"
   :long-name "cl-emacs"
   :class :package-inferred-system
+  :around-compile (lambda (next)
+                    (proclaim '(optimize
+                                (safety 3)
+                                (debug 3)
+                                (compilation-speed 3)
+                                (speed 0)))
+                    (funcall next))
+
   :defsystem-depends-on (;; :cffi
                          :cl-custom-hash-table
                          :cl-plumbing

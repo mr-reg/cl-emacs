@@ -33,7 +33,8 @@
   (with-open-file (file *log-filename* :direction :output
                                        :if-exists :supersede
                                        :if-does-not-exist :create
-                                       :sharing :lock)
+                                       ;; :sharing :lock
+                                       )
     (loop
       for char = (read-char-no-hang *log-file-stream*)
       with last-sync = 0

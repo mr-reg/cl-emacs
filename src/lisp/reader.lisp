@@ -20,7 +20,6 @@
     (:use
      :defstar
      :cl-emacs/log
-     :alexandria
      :fiveam
      :cl-emacs/reader-utils
      :cl-emacs/character-reader
@@ -29,6 +28,8 @@
      :cl-emacs/alloc
      :cl-emacs/fns
      :cl-emacs/commons)
+  (:import-from #:alexandria
+                #:doplist)
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:pstrings #:cl-emacs/types/pstrings)
                     (#:chartables #:cl-emacs/types/chartables)
@@ -53,7 +54,7 @@
 ;; (log-enable :cl-emacs/reader :info)
 (def-suite cl-emacs/reader)
 (in-suite cl-emacs/reader)
-(named-readtables:in-readtable pstrings:pstring-syntax)
+(named-readtables:in-readtable mstrings:mstring-syntax)
 
 ;; main reader documentation is here
 ;; https://www.gnu.org/software/emacs/manual/html_mono/elisp.html#Lisp-Data-Types
@@ -651,22 +652,22 @@
   (let (args data ht)
     (ignore-errors ;; like emacs does
      (doplist (key val something)
-       (case key
-         (el::size (push val args)
-          (push :size args))
-         (el::test (push val args)
-           (push :test args))
-         (el::rehash-size (push val args)
-          (push :rehash-size args))
-         (el::rehash-threshold (push val args)
-          (push :rehash-threshold args))
-         (el::data (setq data val))
-         (t ;; just silently ignore bad parameter, like emacs does
-          ))))
+              (case key
+                (el::size (push val args)
+                 (push :size args))
+                (el::test (push val args)
+                  (push :test args))
+                (el::rehash-size (push val args)
+                 (push :rehash-size args))
+                (el::rehash-threshold (push val args)
+                 (push :rehash-threshold args))
+                (el::data (setq data val))
+                (t ;; just silently ignore bad parameter, like emacs does
+                 ))))
     (log-debug2 "args: ~s" args)
     (setq ht (cl:apply 'make-hash-table args))
     (doplist (key val data)
-      (puthash key val ht))
+             (puthash key val ht))
     ht)
   )
 
@@ -851,12 +852,12 @@
              (car (read-cl-string "\\,"))))
   (is (equal (quote el::+1)
              (car (read-cl-string "\\+1"))))
-  (is (equal #P"non-intern-symbol"
+  (is (equal (pstrings:build-pstring "non-intern-symbol")
              (symbol-name (car (read-cl-string "#:non-intern-symbol")))))
   (is-false (find-symbol "non-intern-symbol" :el))
-  (is (equal #P"+1"
+  (is (equal (pstrings:build-pstring "+1")
              (symbol-name (car (read-cl-string "#:+1")))))
-  (is (equal #P""
+  (is (equal (pstrings:build-pstring "")
              (symbol-name (car (read-cl-string "#:,")))))
   (is (equal 'el::test
              (car (read-cl-string "#_test"))))
@@ -884,7 +885,7 @@
 
   (is (= 1500 (car (read-cl-string "1500.0"))))
   (is (= 1500 (car (read-cl-string "+15E2"))))
-  (is (= 1500 (car (read-cl-string "+1500000e-3"))))
+  (is (= 1600 (car (read-cl-string "+160000e-2"))))
   (is (= 1500 (car (read-cl-string "15.0e+2"))))
   (is (= 12.34 (car (read-cl-string "1.234e+01"))))
   (is (= 1500 (car (read-cl-string ".15e4"))))
@@ -903,7 +904,7 @@
   (is (equal (quote ((el::quote 3)))
              (car (read-cl-string "(' 3)"))))
   (signals eof-reader-error (read-cl-string "';; test comment"))
-  (is (equal `(el::quote ,#P"abc (")
+  (is (equal `(el::quote ,(pstrings:build-pstring "abc ("))
              (car (read-cl-string "'\"abc (\""))))
   (is (equal (quote (el::quote 66))
              (car (read-cl-string "'?B"))))
@@ -918,7 +919,7 @@
              (car (read-cl-string "''(1 '('''(2 ''''3) 4) 5)"))))
   (is (equal (quote (el::quote (el::a (el::quote el::b))))
              (car (read-cl-string "'(a'b)"))))
-  (is (equal `(el::quote (,#P"a" (el::quote el::b)))
+  (is (equal `(el::quote (,(pstrings:build-pstring "a") (el::quote el::b)))
              (car (read-cl-string "'(\"a\"'b)"))))
   (is (equal (quote (el::quote (65 (el::quote el::b))))
              (car (read-cl-string "'(?A'b)"))))
@@ -943,7 +944,7 @@
   )
 
 (test read-strings
-  (is (equal `(,#P"test" . 6)
+  (is (equal `(,(pstrings:build-pstring "test") . 6)
              (read-cl-string "\"test\" ")))
   (is (equal `(el::defvar el::test-var el::nil
                 ,(pstrings:build-pstring #M"some
@@ -952,29 +953,29 @@
                                      multiline docstring `with symbols'.\")"))))
   ;; TODO: add better pstring property validation after more complicated reads
   (is (equal
-       (quote #P" ")
+       (pstrings:build-pstring " ")
        (car (read-cl-string "#(\" \" 0 1 (invisible t))"))))
   (is (equal
-       (quote #P"foo bar")
+       (pstrings:build-pstring "foo bar")
        (car (read-cl-string "#(\"foo bar\" 0 3 (face bold) 3 4 nil 4 7 (face italic))"))))
   (is (equal (pstrings:build-pstring "abc\\z\"")
              (car (read-cl-string "\"abc\\\\\\x7a\\\"\"" ))))
-  (is (equal #P"sample string without newline."
+  (is (equal (pstrings:build-pstring "sample string without newline.")
              (car (read-cl-string
                    #M"#(\"sampl\\ e \\
                       string without newline.\" 0 4 (face bold))"))))
   (is (equal (pstrings:build-pstring (cl:format nil "~c, \"\"~c" #\tab #\soh))
              (car (read-cl-string "\"\\t, \\\"\\\"\\C-a\""))))
-  (is (equal (quote #P"")
-             (car (read-cl-string "#(\"\" 0 0 (invisible t))"))))
+  (is (equal  (pstrings:build-pstring "")
+              (car (read-cl-string "#(\"\" 0 0 (invisible t))"))))
   (is (equal
-       (quote #P"fooA0bar")
+       (pstrings:build-pstring "fooA0bar")
        (car (read-cl-string "\"foo\\u00410bar\")"))))
   )
 (test read-lists
-  (is (equal `(el::a ,#P"b")
+  (is (equal `(el::a ,(pstrings:build-pstring "b"))
              (car (read-cl-string "(a\"b\") "))))
-  (is (equal `(el::test 2 3 ,#P"A ( B")
+  (is (equal `(el::test 2 3 ,(pstrings:build-pstring "A ( B"))
              (car (read-cl-string "(test 2 3 \"A ( B\")"))))
   (is (equal (quote (el::test (2 3) 4 ()))
              (car (read-cl-string "(test (2 3) 4 ())"))))

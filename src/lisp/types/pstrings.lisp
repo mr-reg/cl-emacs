@@ -30,7 +30,6 @@
            #:do-char
            #:ninsert
            #:pstring
-           #:pstring-syntax
            #:pstring-p
            #:pstring-char=
            #:pstring=
@@ -91,19 +90,18 @@
   (len 0 :type fixnum)
   (first nil :type (or interval null)))
 
-(defmethod make-load-form ((tree trees:binary-tree) &optional environment)
-  (make-load-form-saving-slots tree :environment environment))
+;; (defmethod make-load-form ((tree trees:binary-tree) &optional environment)
+;;   (make-load-form-saving-slots tree :environment environment))
 
-(defmethod make-load-form ((node trees::avl-tree-node) &optional environment)
-  (make-load-form-saving-slots node :environment environment))
+;; (defmethod make-load-form ((node trees::avl-tree-node) &optional environment)
+;;   (make-load-form-saving-slots node :environment environment))
 
 
-(defmethod make-load-form ((pstr pstring) &optional environment)
-  (make-load-form-saving-slots pstr :environment environment))
+;; (defmethod make-load-form ((pstr pstring) &optional environment)
+;;   (make-load-form-saving-slots pstr :environment environment))
 
-(defmethod make-load-form ((interval interval) &optional environment)
-  (make-load-form-saving-slots interval :environment environment))
-
+;; (defmethod make-load-form ((interval interval) &optional environment)
+;;   (make-load-form-saving-slots interval :environment environment))
 
 
 (defgenerator generate-intervals (pstring-or-interval)
@@ -465,23 +463,29 @@
 
 ;;; reader for common lisp
 
-(defun* (pstring-reader -> pstring) ((stream stream) (subchar character) arg)
-  #M"simple pstring reader, supports strings without properties
-     used for basic interaction with pstrings from common lisp code"
-  (declare (ignore arg))
+;; (defun* (pstring-reader -> pstring) ((stream stream) (subchar character) arg)
+;;   #M"simple pstring reader, supports strings without properties
+;;      used for basic interaction with pstrings from common lisp code"
+;;   (declare (ignore arg))
 
-  (let (result)
-    (cond
-      ((char= subchar #\P)
-       (let ((cl-string (read stream)))
-         (assert (stringp cl-string))
-         (setq result (build-pstring cl-string))))
-      (t (error "Bad pstring reader subchar ~s" subchar)))
-    result))
+;;   (let (result)
+;;     (cond
+;;       ((char= subchar #\P)
+;;        (unless (char-equal (read-char stream) #\")
+;;          (error "double quote not found after #P"))
+;;        (let ((cl-string
+;;                (with-output-to-string (str-stream)
+;;                  (loop for next-char = (read-char stream)
+;;                        until (char-equal #\" next-char)
+;;                        do (write-char next-char str-stream)))))
+;;          (setq result (build-pstring cl-string))))
+;;       (t (error "Bad pstring reader subchar ~s" subchar)))
+;;     result))
 
-(named-readtables:defreadtable pstring-syntax
-  (:merge mstrings:mstring-syntax)
-  (:dispatch-macro-char #\# #\P #'pstring-reader))
+
+;; (named-readtables:defreadtable pstring-syntax
+;;   (:merge mstrings:mstring-syntax)
+;;   (:dispatch-macro-char #\# #\P #'pstring-reader))
 
 ;; TODO: add operations < > substr contains for pstring
 

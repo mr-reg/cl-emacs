@@ -23,8 +23,8 @@
 (in-package :cl-emacs/main)
 (log-enable :cl-emacs/main)
 
-(defparameter *emacs-source-path* "../emacs/")
-(defparameter *print-circle* t)
+;; (defparameter *emacs-source-path* "../emacs/")
+;; (defparameter *print-circle* t)
 
 (defun main ()
   (log-debug "main complete")

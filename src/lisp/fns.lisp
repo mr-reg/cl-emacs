@@ -21,7 +21,6 @@
      :defstar
      :cl-emacs/log
      :cl-emacs/data
-     :alexandria
      :fiveam
      :cl-custom-hash-table
      :cl-emacs/editfns
@@ -47,8 +46,9 @@
   (:import-from #:cl-user
                 #:hash-table-weak-p)
   (:import-from #:serapeum
-                #:memq
-                )
+                #:memq)
+  (:import-from #:alexandria
+                #:assoc-value)
   (:export #:clrhash
            #:copy-alist
            #:copy-hash-table
@@ -83,7 +83,7 @@
 (log-enable :cl-emacs/fns :debug2)
 (def-suite cl-emacs/fns)
 (in-suite cl-emacs/fns)
-(named-readtables:in-readtable pstrings:pstring-syntax)
+(named-readtables:in-readtable mstrings:mstring-syntax)
 
 
 ;;; equality functions
@@ -191,15 +191,15 @@
   (is (equal 456 456))
   (is (= (sxhash-equal 456) (sxhash-equal 456)))
 
-  (is (equal #P"asdf" #P"asdf"))
-  (is (= (sxhash-equal #P"asdf")
-         (sxhash-equal #P"asdf")))
-  (is-false (eq #P"asdf" #P"asdf"))
+  (is (equal (pstrings:build-pstring "asdf") (pstrings:build-pstring "asdf")))
+  (is (= (sxhash-equal (pstrings:build-pstring "asdf"))
+         (sxhash-equal (pstrings:build-pstring "asdf"))))
+  (is-false (eq (pstrings:build-pstring "asdf") (pstrings:build-pstring "asdf")))
 
-  (is (equal '(1 (2 (3))) '(1 (2 (3)))))
-  (is (= (sxhash-equal '(1 (2 (3))))
-         (sxhash-equal '(1 (2 (3))))))
-  (is-false (eq '(1 (2 (3))) '(1 (2 (3)))))
+  (is (equal (list 1 '(2 (3))) (list 1 '(2 (3)))))
+  (is (= (sxhash-equal (list 1 '(2 (3))))
+         (sxhash-equal (list 1 '(2 (3))))))
+  (is-false (eq (list 1 '(2 (3))) (list 1 '(2 (3)))))
 
   (is (equal #((1 2) 3) #((1 2) 3)))
   (is (= (sxhash-equal #((1 2) 3))
@@ -210,9 +210,9 @@
   (is-false (= (sxhash-equal "asdf")
                (sxhash-equal "ASDF")))
 
-  (is (equal #P"asdf" (propertize #P"asdf" 'asdf t)))
-  (is (equal (sxhash-equal #P"asdf")
-             (sxhash-equal (propertize #P"asdf" 'asdf t))))
+  (is (equal (pstrings:build-pstring "asdf") (propertize (pstrings:build-pstring "asdf") 'asdf t)))
+  (is (equal (sxhash-equal (pstrings:build-pstring "asdf"))
+             (sxhash-equal (propertize (pstrings:build-pstring "asdf") 'asdf t))))
 
   (is (equal cl-emacs/data::*nan*
              (/ 0.0 0.0)))
@@ -254,17 +254,17 @@
 
 (test test-equal-including-properties
   (is-false (equal-including-properties
-             #P"asdf"
-             (propertize #P"asdf" 'asdf t)))
+             (pstrings:build-pstring "asdf")
+             (propertize (pstrings:build-pstring "asdf") 'asdf t)))
   (is-false (=
-             (sxhash-equal-including-properties #P"asdf")
-             (sxhash-equal-including-properties (propertize #P"asdf" 'asdf t))))
+             (sxhash-equal-including-properties (pstrings:build-pstring "asdf"))
+             (sxhash-equal-including-properties (propertize (pstrings:build-pstring "asdf") 'asdf t))))
   (is (equal-including-properties
        (pstrings:build-pstring "asdf" '((asdf . t)))
-       (propertize #P"asdf" 'asdf t)))
+       (propertize (pstrings:build-pstring "asdf") 'asdf t)))
   (is (=
        (sxhash-equal-including-properties (pstrings:build-pstring "asdf" '((asdf . t))))
-       (sxhash-equal-including-properties (propertize #P"asdf" 'asdf t)))))
+       (sxhash-equal-including-properties (propertize (pstrings:build-pstring "asdf") 'asdf t)))))
 
 ;;; hashtables
 
@@ -346,7 +346,10 @@
     (cl:apply constructor-sym (list :size size
                                     :rehash-size rehash-size
                                     :rehash-threshold rehash-threshold
-                                    :weak cl-weakness))))
+                                    :weakness cl-weakness
+                                    ;; CCL option
+                                    ;;:weak cl-weakness
+                                    ))))
 
 (defun* puthash (key value (table hash-table))
   #M"Associate KEY with VALUE in hash table TABLE.
@@ -363,16 +366,16 @@
     (is (eq 'value3 (gethash 'key1 table)))
     (is (eq 'value2 (gethash 'key2 table)))
     (is (= 2 (hash-table-count table)))
-    (puthash #P"abc" 1 table)
-    (puthash #P"abc" 1 table)
+    (puthash (pstrings:build-pstring "abc") 1 table)
+    (puthash (pstrings:build-pstring "abc") 1 table)
     (is (= 4 (hash-table-count table)))
-    (is-false (gethash #P"abc" table))
+    (is-false (gethash (pstrings:build-pstring "abc") table))
     )
   (let ((table (make-hash-table :test 'equal)))
-    (puthash #P"abc" 1 table)
-    (puthash #P"abc" #P"mno" table)
+    (puthash (pstrings:build-pstring "abc") 1 table)
+    (puthash (pstrings:build-pstring "abc") (pstrings:build-pstring "mno") table)
     (is (= 1 (hash-table-count table)))
-    (is (equal (gethash #P"abc" table) #P"mno"))
+    (is (equal (gethash (pstrings:build-pstring "abc") table) (pstrings:build-pstring "mno")))
     )
   )
 

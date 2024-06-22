@@ -26,6 +26,8 @@
      :fiveam
      :snakes
      :cl-emacs/commons)
+  (:import-from #:alexandria
+                #:define-constant)
   (:export #:+chartab-size+
            #:chartable-extra-slots
            #:generate-chartable-ranges
@@ -51,31 +53,34 @@
   ())
 
 ;; 64/16/32/128
-(defconstant +chartab-size-bits+ #(6 4 5 7))
+(define-constant +chartab-size-bits+ #(6 4 5 7) :test 'equal)
+
 
 ;; Number of elements in Nth level chartable.
-(defconstant +chartab-size+
-  (make-array
-   4
-   :initial-contents
-   (list (ash 1 (aref +chartab-size-bits+ 0))
-         (ash 1 (aref +chartab-size-bits+ 1))
-         (ash 1 (aref +chartab-size-bits+ 2))
-         (ash 1 (aref +chartab-size-bits+ 3)))
-   ))
+(define-constant +chartab-size+
+    (make-array
+     4
+     :initial-contents
+     (list (ash 1 (aref +chartab-size-bits+ 0))
+           (ash 1 (aref +chartab-size-bits+ 1))
+           (ash 1 (aref +chartab-size-bits+ 2))
+           (ash 1 (aref +chartab-size-bits+ 3)))
+     )
+  :test 'equal)
 
 ;; Number of characters each element of Nth level chartable covers.
-(defconstant +chars-per-element+
-  (make-array
-   4
-   :initial-contents
-   (list (ash 1 (+ (aref +chartab-size-bits+ 1)
-                   (aref +chartab-size-bits+ 2)
-                   (aref +chartab-size-bits+ 3)))
-         (ash 1 (+ (aref +chartab-size-bits+ 2)
-                   (aref +chartab-size-bits+ 3)))
-         (ash 1  (aref +chartab-size-bits+ 3))
-         1)))
+(define-constant +chars-per-element+
+    (make-array
+     4
+     :initial-contents
+     (list (ash 1 (+ (aref +chartab-size-bits+ 1)
+                     (aref +chartab-size-bits+ 2)
+                     (aref +chartab-size-bits+ 3)))
+           (ash 1 (+ (aref +chartab-size-bits+ 2)
+                     (aref +chartab-size-bits+ 3)))
+           (ash 1  (aref +chartab-size-bits+ 3))
+           1))
+  :test 'equal)
 
 ;; each chartable covers range (0 . 4194303)
 
