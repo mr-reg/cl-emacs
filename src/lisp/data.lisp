@@ -16,12 +16,12 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/elisp-packages:define-elisp-package :cl-emacs/data
+(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/data
     (:use
      :defstar
-     :cl-emacs/log
+     :cl-emacs/lib/log
      :fiveam
-     :cl-emacs/commons
+     :cl-emacs/lib/commons
      :cl-emacs/alloc
      :cl-emacs/eval
      )

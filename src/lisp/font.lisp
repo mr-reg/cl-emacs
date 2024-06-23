@@ -20,10 +20,10 @@
     (:use
      :common-lisp
      :defstar
-     :cl-emacs/log
+     :cl-emacs/lib/log
      :alexandria
      :fiveam
-     :cl-emacs/commons))
+     :cl-emacs/lib/commons))
 (in-package :cl-emacs/font)
 (log-enable :cl-emacs/font :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
@@ -174,7 +174,7 @@ where
       where GSUB shows which \"GSUB\" features the font supports, and GPOS
       shows which \"GPOS\" features the font supports.  Both GSUB and GPOS are
       lists of the form:
-	((SCRIPT (LANGSYS FEATURE ...) ...) ...)
+        ((SCRIPT (LANGSYS FEATURE ...) ...) ...)
 
       where
         SCRIPT is a symbol representing OpenType script tag.

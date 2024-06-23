@@ -20,10 +20,10 @@
     (:use
      :common-lisp
      :defstar
-     :cl-emacs/log
+     :cl-emacs/lib/log
      :alexandria
      :fiveam
-     :cl-emacs/commons))
+     :cl-emacs/lib/commons))
 (in-package :cl-emacs/menu)
 (log-enable :cl-emacs/menu :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)

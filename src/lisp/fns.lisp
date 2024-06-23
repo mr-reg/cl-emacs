@@ -16,17 +16,17 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/elisp-packages:define-elisp-package :cl-emacs/fns
+(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/fns
     (:use
      :defstar
-     :cl-emacs/log
+     :cl-emacs/lib/log
      :cl-emacs/data
      :fiveam
      :cl-custom-hash-table
      :cl-emacs/editfns
      :cl-emacs/alloc
      :cl-emacs/eval
-     :cl-emacs/commons)
+     :cl-emacs/lib/commons)
   (:import-from #:cl
                 #:copy-alist
                 #:clrhash

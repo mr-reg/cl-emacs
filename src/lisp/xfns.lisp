@@ -20,10 +20,10 @@
     (:use
      :common-lisp
      :defstar
-     :cl-emacs/log
+     :cl-emacs/lib/log
      :alexandria
      :fiveam
-     :cl-emacs/commons))
+     :cl-emacs/lib/commons))
 (in-package :cl-emacs/xfns)
 (log-enable :cl-emacs/xfns :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
@@ -246,8 +246,8 @@ In addition to the standard attribute keys listed in
 the attributes:
 
  source -- String describing the source from which multi-monitor
-	   information is obtained, one of \"Gdk\", \"XRandR 1.5\",
-	   \"XRandr\", \"Xinerama\", or \"fallback\"
+           information is obtained, one of \"Gdk\", \"XRandR 1.5\",
+           \"XRandr\", \"Xinerama\", or \"fallback\"
 
 Internal use only, use ‘display-monitor-attributes-list' instead.
 

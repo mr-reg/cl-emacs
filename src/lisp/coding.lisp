@@ -20,10 +20,10 @@
     (:use
      :common-lisp
      :defstar
-     :cl-emacs/log
+     :cl-emacs/lib/log
      :alexandria
      :fiveam
-     :cl-emacs/commons))
+     :cl-emacs/lib/commons))
 (in-package :cl-emacs/coding)
 (log-enable :cl-emacs/coding :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
@@ -137,7 +137,7 @@ coding system, the region will contain the single
 character ?\\N{COPYRIGHT SIGN}.
 
 When called from a program, takes four arguments:
-	START, END, CODING-SYSTEM, and DESTINATION.
+        START, END, CODING-SYSTEM, and DESTINATION.
 START and END are buffer positions.
 
 Optional 4th arguments DESTINATION specifies where the decoded text goes.

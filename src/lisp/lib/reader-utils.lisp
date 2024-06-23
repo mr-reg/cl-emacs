@@ -16,8 +16,8 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/reader-utils
-    (:use :common-lisp :cl-emacs/log :alexandria :fiveam :defstar)
+(uiop:define-package :cl-emacs/lib/reader-utils
+    (:use :common-lisp :cl-emacs/lib/log :alexandria :fiveam :defstar)
   (:export #:parse-elisp-number
            #:reversed-list-to-number
            #:char-end-of-statement-p
@@ -28,11 +28,11 @@
                 #:memq)
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:pstrings #:cl-emacs/types/pstrings)))
-(in-package :cl-emacs/reader-utils)
-(log-enable :cl-emacs/reader-utils :debug2)
+(in-package :cl-emacs/lib/reader-utils)
+(log-enable :cl-emacs/lib/reader-utils :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(def-suite cl-emacs/reader-utils)
-(in-suite cl-emacs/reader-utils)
+(def-suite cl-emacs/lib/reader-utils)
+(in-suite cl-emacs/lib/reader-utils)
 
 (defun* parse-elisp-number (chardata)
   (let ((has-nan (str:ends-with-p "NaN" chardata))

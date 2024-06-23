@@ -1,5 +1,5 @@
 #-asdf3.1 (error "CL-EMACS requires ASDF 3.1 or later.")
-(load "elisp-packages.lisp")
+(load "lib/elisp-packages.lisp")
 
 (asdf:defsystem :cl-emacs
   :version "0.0.1"
@@ -51,11 +51,11 @@
                ;; :cl-emacs/elisp
                ;; :cl-emacs/elisp-tests
                ;; :cl-emacs/log
-               :cl-emacs/commons
+               :cl-emacs/lib/commons
                :cl-emacs/types/pstrings
                :cl-emacs/elisp
                :cl-emacs/data
-               :cl-emacs/reader
+               :cl-emacs/lib/reader
                :cl-emacs/main
                )
   ;; :components ((:module "src/lisp"

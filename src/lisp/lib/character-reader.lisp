@@ -16,15 +16,15 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/character-reader
+(uiop:define-package :cl-emacs/lib/character-reader
     (:use
      :common-lisp
-     :cl-emacs/log
+     :cl-emacs/lib/log
      :alexandria
      :fiveam
      :defstar
-     :cl-emacs/reader-utils
-     :cl-emacs/commons)
+     :cl-emacs/lib/reader-utils
+     :cl-emacs/lib/commons)
   (:import-from #:serapeum
                 #:memq)
   (:export #:read-emacs-character
@@ -32,10 +32,10 @@
            #:extra-symbols-in-character-spec-error
            #:invalid-character-spec-error)
   (:local-nicknames (:el :cl-emacs/elisp)))
-(in-package :cl-emacs/character-reader)
-(log-enable :cl-emacs/character-reader :debug2)
-(def-suite cl-emacs/character-reader)
-(in-suite cl-emacs/character-reader)
+(in-package :cl-emacs/lib/character-reader)
+(log-enable :cl-emacs/lib/character-reader :debug2)
+(def-suite cl-emacs/lib/character-reader)
+(in-suite cl-emacs/lib/character-reader)
 (named-readtables:in-readtable mstrings:mstring-syntax)
 
 (define-condition character-reader-error (reader-error)
@@ -86,8 +86,16 @@
                      (error 'invalid-character-spec-error
                             :input raw-input
                             :details (format nil "invalid character in hex notation ~a" char))))
-          (let ((parsed (parse-integer hex-part :radix 16)))
-            (when (and (< parsed cl-unicode:+code-point-limit+) (code-char parsed))
+          (let* ((parsed (parse-integer hex-part :radix 16)))
+            ;; for wrong character (code-char) will be
+            ;; nil in CCL
+            ;; U~X in SBCL
+
+            (when (and (< parsed cl-unicode:+code-point-limit+) (code-char parsed)
+                       ;; this is filter to ignore characters without unicode name, but
+                       ;; in SBCL this does not work consistently
+                       ;; (not (string= (char-name (code-char parsed)) (format nil "U~X" parsed)))
+                       )
               (setq decoded parsed))))
         (let ((parsed (cl-unicode:character-named clean-name)))
           (when parsed
@@ -876,6 +884,7 @@
   ;; (signals invalid-character-spec-error (read-emacs-character "\\N{U+D801}"))
   ;; (signals invalid-character-spec-error (read-emacs-character "\\N{U+Dffe}"))
   ;; (signals invalid-character-spec-error (read-emacs-character "\\N{U+DFFF}"))
+
   (signals invalid-character-spec-error (read-emacs-character "\\N{0.5}"))
   (signals invalid-character-spec-error (read-emacs-character "\\N{U+-0}"))
   )
@@ -948,4 +957,4 @@
   )
 
 (defun test-me ()
-  (run! 'cl-emacs/character-reader))
+  (run! 'cl-emacs/lib/character-reader))

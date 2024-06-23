@@ -16,16 +16,16 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/elisp-packages:define-elisp-package :cl-emacs/types/chartables
+(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/types/chartables
     (:use
      :defstar
      :cl-emacs/data
-     :cl-emacs/log
+     :cl-emacs/lib/log
      :cl-emacs/fns
      :cl-emacs/eval
      :fiveam
      :snakes
-     :cl-emacs/commons)
+     :cl-emacs/lib/commons)
   (:import-from #:alexandria
                 #:define-constant)
   (:export #:+chartab-size+

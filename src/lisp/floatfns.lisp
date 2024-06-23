@@ -16,14 +16,14 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/elisp-packages:define-elisp-package :cl-emacs/floatfns
+(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/floatfns
     (:use
      :defstar
-     :cl-emacs/log
+     :cl-emacs/lib/log
      :alexandria
      :fiveam
      :cl-emacs/data
-     :cl-emacs/commons)
+     :cl-emacs/lib/commons)
   (:import-from #:cl
                 #:abs
                 #:acos

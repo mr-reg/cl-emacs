@@ -20,10 +20,10 @@
     (:use
      :defstar
      :common-lisp
-     :cl-emacs/log
+     :cl-emacs/lib/log
      :fiveam
      :snakes
-     :cl-emacs/commons)
+     :cl-emacs/lib/commons)
   (:export #:build-pstring
            #:compute-hash
            #:copy-pstring

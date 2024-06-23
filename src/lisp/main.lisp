@@ -17,7 +17,7 @@
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (uiop:define-package :cl-emacs/main
-    (:use :common-lisp :cl-emacs/log :fiveam)
+    (:use :common-lisp :cl-emacs/lib/log :fiveam)
   (:import-from :common-lisp-user #:quit)
   )
 (in-package :cl-emacs/main)
@@ -31,10 +31,10 @@
   )
 
 (defun test-all ()
-  (let ((mem-f cl-emacs/log:*loglevel-file*))
-    (setq cl-emacs/log:*loglevel-file* 4)
+  (let ((mem-f cl-emacs/lib/log:*loglevel-file*))
+    (setq cl-emacs/lib/log:*loglevel-file* 4)
     (run-all-tests)
-    (setq cl-emacs/log:*loglevel-file* mem-f))
+    (setq cl-emacs/lib/log:*loglevel-file* mem-f))
 
   ;; (dolist (suite fiveam::*toplevel-suites*)
   ;;   (run suite))

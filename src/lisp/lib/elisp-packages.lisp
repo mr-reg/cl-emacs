@@ -1,8 +1,8 @@
-(uiop:define-package :cl-emacs/elisp-packages
+(uiop:define-package :cl-emacs/lib/elisp-packages
     (:use :common-lisp)
   (:export
    #:define-elisp-package))
-(in-package :cl-emacs/elisp-packages)
+(in-package :cl-emacs/lib/elisp-packages)
 (defmacro define-elisp-package (&rest form)
   (cons 'uiop:define-package
         (append form '((:import-from #:serapeum

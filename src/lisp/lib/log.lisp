@@ -1,4 +1,4 @@
-(uiop:define-package :cl-emacs/log
+(uiop:define-package :cl-emacs/lib/log
     (:use :common-lisp)
   (:shadow #:log #:debug #:trace #:error #:warn)
   (:export #:log-debug
@@ -13,7 +13,7 @@
            #:*loglevel-stdout*
            )
   )
-(in-package :cl-emacs/log)
+(in-package :cl-emacs/lib/log)
 
 (defparameter *log-filename* "cl-emacs.log")
 (defvar *log-file-stream* nil)
@@ -123,5 +123,5 @@
        (vom:info ,format ,@args))))
 
 (log-reset)
-(log-enable :cl-emacs/log)
+(log-enable :cl-emacs/lib/log)
 (log-enable :common-lisp-user :debug1)

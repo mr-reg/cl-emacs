@@ -17,7 +17,7 @@
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (uiop:define-package :cl-emacs/utils
-    (:use :common-lisp :cl-emacs/log)
+    (:use :common-lisp :cl-emacs/lib/log)
   )
 (in-package :cl-emacs/utils)
 (log-enable :cl-emacs/utils)

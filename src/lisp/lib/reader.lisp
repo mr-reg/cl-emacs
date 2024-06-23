@@ -16,25 +16,25 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/elisp-packages:define-elisp-package :cl-emacs/reader
+(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/lib/reader
     (:use
      :defstar
-     :cl-emacs/log
+     :cl-emacs/lib/log
      :fiveam
-     :cl-emacs/reader-utils
-     :cl-emacs/character-reader
+     :cl-emacs/lib/reader-utils
+     :cl-emacs/lib/character-reader
      :cl-emacs/data
      :cl-emacs/eval
      :cl-emacs/alloc
      :cl-emacs/fns
-     :cl-emacs/commons)
+     :cl-emacs/lib/commons)
   (:import-from #:alexandria
                 #:doplist)
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:pstrings #:cl-emacs/types/pstrings)
                     (#:chartables #:cl-emacs/types/chartables)
                     (#:textprop #:cl-emacs/textprop)
-                    (#:creader #:cl-emacs/character-reader)
+                    (#:creader #:cl-emacs/lib/character-reader)
                     )
   ;; (:use-reexport
   ;;  ;; :cl-emacs/elisp/alien-vars
@@ -49,11 +49,11 @@
   (:export #:read-cl-string)
   )
 
-(in-package :cl-emacs/reader)
-(log-enable :cl-emacs/reader :debug1)
-;; (log-enable :cl-emacs/reader :info)
-(def-suite cl-emacs/reader)
-(in-suite cl-emacs/reader)
+(in-package :cl-emacs/lib/reader)
+(log-enable :cl-emacs/lib/reader :debug1)
+;; (log-enable :cl-emacs/lib/reader :info)
+(def-suite cl-emacs/lib/reader)
+(in-suite cl-emacs/lib/reader)
 (named-readtables:in-readtable mstrings:mstring-syntax)
 
 ;; main reader documentation is here
@@ -1163,7 +1163,7 @@
     ))
 
 (defun test-me ()
-  (run! 'cl-emacs/reader))
+  (run! 'cl-emacs/lib/reader))
 
 (in-package :cl-emacs/elisp)
-(reexport-symbols :cl-emacs/reader)
+(reexport-symbols :cl-emacs/lib/reader)

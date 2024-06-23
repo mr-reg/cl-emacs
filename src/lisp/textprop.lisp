@@ -16,13 +16,13 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/elisp-packages:define-elisp-package :cl-emacs/textprop
+(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/textprop
     (:use
      :defstar
-     :cl-emacs/log
+     :cl-emacs/lib/log
      :alexandria
      :fiveam
-     :cl-emacs/commons
+     :cl-emacs/lib/commons
      :cl-emacs/eval)
   (:local-nicknames (#:pstrings #:cl-emacs/types/pstrings)                    )
   (:export #:set-text-properties

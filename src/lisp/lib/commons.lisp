@@ -16,8 +16,8 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/commons
-    (:use :common-lisp :cl-emacs/log :alexandria :fiveam
+(uiop:define-package :cl-emacs/lib/commons
+    (:use :common-lisp :cl-emacs/lib/log :alexandria :fiveam
           :defstar)
 
   (:export
@@ -25,8 +25,8 @@
    #:unimplemented-error
    #:error-with-description
    #:simple-print-condition-with-slots))
-(in-package :cl-emacs/commons)
-(log-enable :cl-emacs/commons :debug1)
+(in-package :cl-emacs/lib/commons)
+(log-enable :cl-emacs/lib/commons :debug1)
 
 (defvar *timer* 0)
 (defun set-timer ()

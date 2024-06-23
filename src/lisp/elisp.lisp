@@ -19,10 +19,10 @@
 (uiop:define-package :cl-emacs/elisp
   ;; (:import-from #:cl
   ;;               #:in-package)
-  ;; (:import-from #:cl-emacs/commons
+  ;; (:import-from #:cl-emacs/lib/commons
   ;;               #:reexport-symbols)
   ;; (:use-reexport
-  ;;  :cl-emacs/reader
+  ;;  :cl-emacs/lib/reader
   ;;  ;; :cl-emacs/elisp/alloc
   ;;  ;; :cl-emacs/elisp/data
   ;;  ;; :cl-emacs/elisp/editfns
@@ -45,7 +45,7 @@
 
 ;; (in-package :cl-emacs/elisp)
 (cl:defun reexport-symbols (package)
-  (cl-emacs/commons:reexport-symbols package))
+  (cl-emacs/lib/commons:reexport-symbols package))
 
 (cl:import '(cl::nil
              cl::t))

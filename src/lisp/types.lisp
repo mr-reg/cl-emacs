@@ -20,10 +20,10 @@
     (:use
      :common-lisp
      :defstar
-     :cl-emacs/log
+     :cl-emacs/lib/log
      :alexandria
      :fiveam
-     :cl-emacs/commons)
+     :cl-emacs/lib/commons)
   (:shadow #:string #:make-string)
   (:export #:string
            #:make-string
