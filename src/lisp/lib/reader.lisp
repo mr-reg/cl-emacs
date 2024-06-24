@@ -46,7 +46,8 @@
   ;;  ;; :cl-emacs/elisp/font
   ;;  ;; :cl-emacs/elisp/xfns
   ;;  )
-  (:export #:read-cl-string)
+  (:export #:read-cl-string
+           #:eof-reader-error)
   )
 
 (in-package :cl-emacs/lib/reader)
@@ -822,7 +823,7 @@
                      a substring of STRING from which to read;  they default to 0 and
                      \(length STRING) respectively.  Negative values are counted from
                      the end of STRING."
-  (with-input-from-string (stream (str:substring start end cl-string))
+  (with-input-from-string (stream cl-string :start start :end end)
     (multiple-value-bind (result reader) (read-internal stream)
       (with-slots (character-counter) reader
         (cons result character-counter)))))

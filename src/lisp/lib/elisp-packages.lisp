@@ -60,10 +60,12 @@
                         #:multiple-value-bind
                         #:nil
                         #:not
+                        #:pathname
                         #:pop
                         #:position
                         #:push
                         #:read-char
+                        #:read-sequence
                         #:return
                         #:return-from
                         #:second
@@ -77,6 +79,7 @@
                         #:string=
                         #:symbol
                         #:t
+                        #:truename
                         #:unless
                         #:upper-case-p
                         #:values
@@ -86,6 +89,7 @@
                         #:with-output-to-string
                         #:with-slots
                         #:write-char
+                        #:write-sequence
                         #:zerop
                         #:&key
                         #:&optional
