@@ -17,7 +17,7 @@
          (setq expr (car expr))
          (setq body (with-output-to-string
                       (print expr)))
-         
+
          )))
     (f-append
      body
@@ -34,7 +34,18 @@
              t)
     nil
     ))
-(recurse-process-dir)
+;; (recurse-process-dir)
 ;; (make-read-test-date "~/github/emacs/lisp/master.el")
 
-
+(defun read-princ-el-file (filename)
+  (let ((contents (f-read-text filename))
+        (position 0)
+        body)
+    (ignore-errors
+      (while t
+        (let ((expr (read-from-string contents position)))
+          (setq position (cdr expr))
+          (setq expr (car expr))
+          (princ expr)
+          )))))
+;; (read-princ-el-file "/data/data/com.termux/files/home/github/emacs/.dir-locals.el")

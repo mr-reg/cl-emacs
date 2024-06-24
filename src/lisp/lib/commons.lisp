@@ -44,8 +44,19 @@
   "emulate emacs error formatting syntax"
   (format stream "#<~a" (class-name (class-of obj)))
   (let ((cls (class-of obj)))
-    (dolist (slot (cl-user::class-slots cls))
-      (let ((slot-sym (cl-user::slot-definition-name slot)))
+    (dolist (slot
+             (or
+              #+ccl
+              (cl-user::class-slots cls)
+              #+sbcl
+              (sb-mop:class-slots cls)
+              ))
+      (let ((slot-sym (or
+                       #+ccl
+                       (cl-user::slot-definition-name slot)
+                       #+sbcl
+                       (sb-mop:slot-definition-name slot)
+                       )))
         (format stream " ~a:~s" slot-sym
                 (slot-value obj slot-sym)))))
   (format stream ">"))
@@ -55,14 +66,15 @@
   (:report simple-print-condition-with-slots))
 
 
-(define-condition unimplemented-error (base-error)
-  ())
+
 
 (define-condition error-with-description (base-error)
   ((details :initarg :details
             :initform ""
             :type string)))
 
+(define-condition unimplemented-error (error-with-description)
+  ())
 
 (defmacro import-cl-basics ()
   )

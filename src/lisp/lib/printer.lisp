@@ -19,6 +19,9 @@
 (cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/lib/printer
     (:use
      :defstar
+     :cl-emacs/alloc
+     :cl-emacs/data
+     :cl-emacs/eval
      :cl-emacs/lib/log
      :fiveam
      :cl-emacs/lib/commons)
@@ -26,7 +29,8 @@
                     (#:pstrings #:cl-emacs/types/pstrings)
                     (#:chartables #:cl-emacs/types/chartables)
                     )
-  (:export #:prin1)
+  (:export #:prin1-to-cl-stream
+           #:princ-to-cl-stream)
   )
 
 (in-package :cl-emacs/lib/printer)
@@ -34,3 +38,29 @@
 (def-suite cl-emacs/lib/printer)
 (in-suite cl-emacs/lib/printer)
 (named-readtables:in-readtable mstrings:mstring-syntax)
+(defun* princ-to-cl-stream (obj stream)
+  (cond
+    ((consp obj)
+     (write-char #\( stream)
+     (loop with first = t
+           while (consp obj)
+           do (if first (setq first nil)
+                  (write-char #\space stream))
+              (princ-to-cl-stream (car obj) stream)
+              (setq obj (cdr obj))
+              (when (and obj (not (consp obj)))
+                (write-sequence " . " stream)
+                (princ-to-cl-stream obj stream)))
+     (write-char #\) stream))
+    ((symbolp obj)
+     (princ-to-cl-stream (symbol-name obj) stream))
+    ((pstrings:pstring-p obj)
+     (pstrings:write-pstring-chunks obj stream nil))
+    ((null obj)
+     (princ-to-cl-stream (symbol-name nil) stream))
+    ((numberp obj)
+     (cl:princ obj stream)
+     )
+    (t (error 'unimplemented-error :details
+              (cl:format nil "unsupported object type ~s" (cl:type-of obj)))))
+  )

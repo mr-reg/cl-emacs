@@ -51,8 +51,8 @@
   )
 
 (in-package :cl-emacs/lib/reader)
-(log-enable :cl-emacs/lib/reader :debug1)
-;; (log-enable :cl-emacs/lib/reader :info)
+;; (log-enable :cl-emacs/lib/reader :debug1)
+(log-enable :cl-emacs/lib/reader :info)
 (def-suite cl-emacs/lib/reader)
 (in-suite cl-emacs/lib/reader)
 (named-readtables:in-readtable mstrings:mstring-syntax)
