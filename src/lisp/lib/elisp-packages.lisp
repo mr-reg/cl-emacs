@@ -44,6 +44,7 @@
                         #:error
                         #:find-symbol
                         #:fixnum
+                        #:float
                         #:hash-table
                         #:handler-case
                         #:ignore
@@ -60,7 +61,6 @@
                         #:multiple-value-bind
                         #:nil
                         #:not
-                        #:numberp
                         #:pathname
                         #:pop
                         #:position
@@ -79,7 +79,6 @@
                         #:string>
                         #:string=
                         #:symbol
-                        #:symbolp
                         #:t
                         #:truename
                         #:unless

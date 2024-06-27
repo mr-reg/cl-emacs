@@ -43,6 +43,8 @@
                 #:floatp
                 #:integerp
                 #:null
+                #:numberp
+                #:symbolp
                 #:vectorp
                 )
   (:export
@@ -68,6 +70,8 @@
    #:integerp
    #:isnan
    #:null
+   #:numberp
+   #:symbolp
    #:vectorp
    #:symbol-name
 
@@ -114,7 +118,10 @@
       (dolist (arg divisors)
         (if floatp-mode
             (setq accum (cl:/ accum arg))
-            (setq accum (cl:truncate accum arg))))
+            (if (zerop arg)
+                (error 'arith-error :details
+                       "integer zero division is not allowed" )
+                (setq accum (cl:truncate accum arg)))))
       accum)))
 
 ;; this symbol will stay internal, because it is not defined in elisp
@@ -123,7 +130,7 @@
 ;; emacs does not distinguish positive and negative inifinity, so do we
 (defparameter *infinity* (/ 1.0 0.0))
 
-(defun* (isnan -> boolean) (x)
+(defun* (isnan -> boolean) ((x float))
   #M"Return non-nil if argument X is a NaN."
   (float-features:float-nan-p x))
 (test test-isnan
@@ -136,8 +143,8 @@
   (is (= 1 (/ 1)))
   (signals arith-error (/ 0))
   (is (= 0 (/ 104323300000000000000000)))
-  (signals error (/ 0 0))
-  (signals error (/ 1 0))
+  (signals arith-error (/ 0 0))
+  (signals arith-error (/ 1 0))
   (is (= 10 (/ 20 2)))
   (is (= 2 (/ 10 4)))
   (is (= 0 (/ 1 3)))
@@ -148,7 +155,7 @@
   (is (float-features:float-infinity-p (/ 1.0 0)))
   (is (float-features:float-infinity-p (/ -1.0 0)))
   (is (= 0 (/ 1 104323300000000000000000)))
-  (signals error (/ 104323300000000000000000 0))
+  (signals arith-error (/ 104323300000000000000000 0))
   (is (float-features:float-infinity-p (/ 104323300000000000000000.1 0)))
   (is (floatp (/ 104323300000000000000000 100.0)))
   (is-true (isnan (/ (/ 0.0 0.0) (/ 0.0 0.0))))
@@ -634,11 +641,7 @@ NUMBER may be an integer or a floating point number.
 
 (fn NUMBER)"
   (error 'unimplemented-error))
-(defun* numberp ()
-  #M"Return t if OBJECT is a number (floating point or integer).
 
-(fn OBJECT)"
-  (error 'unimplemented-error))
 (defun* position-symbol ()
   #M"Create a new symbol with position.
 SYM is a symbol, with or without position, the symbol to position.
@@ -797,11 +800,6 @@ global value outside of any lexical scope.
   #M"Extract the position from a symbol with position.
 
 (fn LS)"
-  (error 'unimplemented-error))
-(defun* symbolp ()
-  #M"Return t if OBJECT is a symbol.
-
-(fn OBJECT)"
   (error 'unimplemented-error))
 (defun* threadp ()
   #M"Return t if OBJECT is a thread.

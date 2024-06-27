@@ -50,15 +50,22 @@
               (cl-user::class-slots cls)
               #+sbcl
               (sb-mop:class-slots cls)
+              #+ecl
+              (clos:class-slots cls)
               ))
       (let ((slot-sym (or
                        #+ccl
                        (cl-user::slot-definition-name slot)
                        #+sbcl
                        (sb-mop:slot-definition-name slot)
+                       #+ecl
+                       (clos:slot-definition-name slot)
                        )))
         (format stream " ~a:~s" slot-sym
-                (slot-value obj slot-sym)))))
+                (slot-value obj slot-sym)
+                )
+        )
+      ))
   (format stream ">"))
 
 (define-condition base-error ()

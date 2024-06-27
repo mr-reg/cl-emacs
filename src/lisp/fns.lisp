@@ -111,7 +111,10 @@
      (eql 0.0e+NaN 0.0e+NaN) returns t, whereas ‘=' does the opposite.
 
      (fn OBJ1 OBJ2)"
-  (eq obj1 obj2))
+  (cond
+    ((and (floatp obj1) (floatp obj2) (isnan obj1) (isnan obj2))
+     t)
+    (t (eq obj1 obj2))))
 
 (defun* sxhash-eql (obj)
   #M"Return an integer hash code for OBJ suitable for ‘eql'.
@@ -172,6 +175,10 @@
         ((and (pstrings:pstring-p x) (pstrings:pstring-p y))
          (pstrings:pstring-char= x y))
         (t nil)))
+
+(defun* sxhash-combine (hash1 hash2)
+  (sxhash-eq (+ hash1 hash2)))
+
 (defun* sxhash-equal (obj)
   #M"Return an integer hash code for OBJ suitable for ‘equal'.
      If (equal A B), then (= (sxhash-equal A) (sxhash-equal B)), but the
@@ -180,9 +187,16 @@
      Hash codes are not guaranteed to be preserved across Emacs sessions.
 
      "
-  (if (pstrings:pstring-p obj)
-      (pstrings:compute-hash obj nil)
-      (sxhash-eql obj))
+  (cond
+    ((pstrings:pstring-p obj)
+     (pstrings:compute-hash obj nil))
+    ((vectorp obj) (loop for el across obj
+                         with hash = 0
+                         do (setq hash (sxhash-combine
+                                        hash
+                                        (sxhash-equal el)))
+                         finally (return hash)))
+    (t (sxhash-eql obj)))
   )
 (test test-equal
   (is (equal 'foo 'foo))
