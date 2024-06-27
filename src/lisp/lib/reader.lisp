@@ -99,7 +99,7 @@
   (extra-buffer nil :type list)
   (mod-stack nil :type list)
   ;; key = pointer number, value = cons (nil . placeholder) or (t . real value)
-  (pointers (make-hash-table :test 'el::eq) :type hash-table))
+  (pointers (make-hash-table :test 'el::eq)))
 
 (defun* push-extra-char ((reader reader) (char character))
   (with-slots (extra-buffer) reader
@@ -809,10 +809,11 @@
         (error 'eof-reader-error :details "Lisp structure is not complete"))
       (when (car mod-stack)
         (error 'eof-reader-error :details (cl:format nil "modifiers ~s without defined body" (car mod-stack))))
-      (loop for pointer-num being each hash-key in pointers using (hash-value cons)
-            do (unless (car cons)
-                 (error 'invalid-reader-input-error
-                        :details (cl:format nil "undefined pointer #~a" pointer-num))))
+      (maphash #'(lambda (pointer-num cons)
+                   (unless (car cons)
+                     (error 'invalid-reader-input-error
+                            :details (cl:format nil "undefined pointer #~a" pointer-num)))
+                   ) pointers)
       (values (caar stack) reader))))
 
 (defun* read-cl-string (cl-string &optional (start 0) (end (cl:length cl-string)))
@@ -828,7 +829,7 @@
       (with-slots (character-counter) reader
         (cons result character-counter)))))
 
-(test read-symbols
+(test test-read-symbols
   (is (equal (quote el::||)
              (car (read-cl-string "##"))))
   (is (equal (quote (el::test . 4))
@@ -864,10 +865,9 @@
              (car (read-cl-string "#_test"))))
   (is (equal (quote el::||)
              (car (read-cl-string "#_"))))
-  ;; "a\xa\ b" "a\xab"
   )
 
-(test read-shorthands
+(test test-read-shorthands
   ;; TODO: add support for shorthands in reader
   ;; (let ((read-symbol-shorthands
   ;;         '(("s-" . "shorthand-longhand-"))))
@@ -875,7 +875,7 @@
   ;;   (read "#_s-test"))
   )
 
-(test read-numbers
+(test test-read-numbers
   (is (= 1 (car (read-cl-string "1"))))
   (is (= 1 (car (read-cl-string "1."))))
   (is (= 1 (car (read-cl-string "+1"))))
@@ -895,7 +895,7 @@
   (is (equal cl-emacs/data::*infinity* (car (read-cl-string "1.0e+INF"))))
   (is (equal cl-emacs/data::*infinity* (car (read-cl-string "-4.0e+INF"))))
   )
-(test read-quotes
+(test test-read-quotes
   (is (equal (quote (el::quote el::test-symbol))
              (car (read-cl-string "'test-symbol"))))
   (is (equal (quote (el::quote (el::quote el::test-sym)))
@@ -944,7 +944,7 @@
              (car (read-cl-string "`(a ,@b)"))))
   )
 
-(test read-strings
+(test test-read-strings
   (is (equal `(,(pstrings:build-pstring "test") . 6)
              (read-cl-string "\"test\" ")))
   (is (equal `(el::defvar el::test-var el::nil
@@ -973,7 +973,7 @@
        (pstrings:build-pstring "fooA0bar")
        (car (read-cl-string "\"foo\\u00410bar\")"))))
   )
-(test read-lists
+(test test-read-lists
   (is (equal `(el::a ,(pstrings:build-pstring "b"))
              (car (read-cl-string "(a\"b\") "))))
   (is (equal `(el::test 2 3 ,(pstrings:build-pstring "A ( B"))
@@ -1000,32 +1000,32 @@
   (is (equal (quote (1 2 3))
              (car (read-cl-string "(1 . (2 . (3 . nil)))"))))
   )
-(test read-comments
+(test test-read-comments
   (is (equal 'el::test
-              (car (read-cl-string #M";;; comment line
+             (car (read-cl-string #M";;; comment line
                                         test symbol"))))
   )
-(test read-characters
+(test test-read-characters
   (is (equal '(65 66)
              (car (read-cl-string "(?A?B))"))))
   (is (equal '(el::a 92 65 66 65 32 . 3)
              (car (read-cl-string "(a ?\\\\ ?A?B ?A?\\s. 3)")))))
 
-(test reader-special-cases
+(test test-reader-special-cases
   (signals eof-reader-error (read-cl-string ""))
   (is (equal '(el::quote el::test)
              (car (read-cl-string #M" ' #!some-stuff
                                         #!some-stuff
                                         test")))))
 
-(test read-vectors
+(test test-read-vectors
   (is (equal (quote #(1 el::a))
              (car (read-cl-string "[1 a]"))))
   (is (equal (quote #(el::a el::b el::c el::.))
              (car (read-cl-string "[a b c .]"))))
   (signals invalid-reader-input-error (read-cl-string "[1 . a]"))
   )
-(test read-cl-string
+(test test-read-cl-string
 ;;;###autoload
   ;; #'test
   ;; #'(lambda (x) (use-package-require-after-load x body))
@@ -1051,12 +1051,12 @@
   ;; obarrays?
   )
 
-(test reader-functions
+(test test-reader-functions
   (is (equal (quote (el::function el::a))
              (car (read-cl-string "#'a"))))
   )
 
-(test read-circles
+(test test-read-circles
   (let ((sample (car (read-cl-string "#1=(a #1#)"))))
     (is (eq sample (second sample))))
   (let ((sample (car (read-cl-string "#1=[a #1#]"))))
@@ -1089,7 +1089,7 @@
   ;; check in other collection types, like hashmap and string properties
   )
 
-(test read-radix
+(test test-read-radix
   (signals invalid-reader-input-error (read-cl-string "#b"))
   (is (equal (quote #b10)
              (car (read-cl-string "#b010"))))
@@ -1112,7 +1112,7 @@
   (signals invalid-reader-input-error (read-cl-string "#x013aw"))
   )
 
-(test read-hash-tables
+(test test-read-hash-tables
   (let ((ht (car (read-cl-string
                   #M"#s(hash-table
                      size 1000 test eq
@@ -1136,7 +1136,7 @@
 ;;     (read stream)))
 
 
-(test read-chartables ()
+(test test-read-chartables ()
   (let ((sub-ct (car (read-cl-string "#^^[3 12 8 8 8 3 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8]"))))
     (is (= 3 (chartables:sub-chartable-depth sub-ct)))
     (is (= 12 (chartables:sub-chartable-min-char sub-ct)))

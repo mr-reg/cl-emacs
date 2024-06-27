@@ -23,14 +23,16 @@
      :cl-emacs/data
      :cl-emacs/eval
      :cl-emacs/lib/log
+     :cl-emacs/lib/reader-utils
+     :snakes
      :fiveam
      :cl-emacs/lib/commons)
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:pstrings #:cl-emacs/types/pstrings)
                     (#:chartables #:cl-emacs/types/chartables)
                     )
-  (:export #:prin1-to-cl-stream
-           #:princ-to-cl-stream)
+  ;; (:export #:prin1-to-cl-stream
+  ;;          #:princ-to-cl-stream)
   )
 
 (in-package :cl-emacs/lib/printer)
@@ -38,7 +40,15 @@
 (def-suite cl-emacs/lib/printer)
 (in-suite cl-emacs/lib/printer)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-(defun* princ-to-cl-stream (obj stream)
+
+(defun* write-pstring-to-cl-stream ((pstr pstrings:pstring) stream &key escaped)
+  (do-generator (char (pstrings:generate-chars pstr))
+    (when (and escaped (or (cl:char<= char #\space)
+                           (char-end-of-statement-p char)))
+      (write-char #\\ stream))
+    (write-char char stream)))
+(defun* print-to-cl-stream (obj stream raw-mode)
+  #M"if raw-mode = t, then princ, else prin1"
   (cond
     ((consp obj)
      (write-char #\( stream)
@@ -46,21 +56,52 @@
            while (consp obj)
            do (if first (setq first nil)
                   (write-char #\space stream))
-              (princ-to-cl-stream (car obj) stream)
+              (print-to-cl-stream (car obj) stream raw-mode)
               (setq obj (cdr obj))
               (when (and obj (not (consp obj)))
                 (write-sequence " . " stream)
-                (princ-to-cl-stream obj stream)))
+                (print-to-cl-stream obj stream raw-mode)))
      (write-char #\) stream))
-    ((symbolp obj)
-     (princ-to-cl-stream (symbol-name obj) stream))
+    ((or (symbolp obj) (null obj))
+     (let ((symbol-name (symbol-name obj)))
+       (when (pstrings:emptyp symbol-name)
+         (write-sequence "##" stream))
+       (if raw-mode
+           (write-pstring-to-cl-stream symbol-name stream :escaped nil)
+           (write-pstring-to-cl-stream symbol-name stream :escaped t))))
     ((pstrings:pstring-p obj)
      (pstrings:write-pstring-chunks obj stream nil))
-    ((null obj)
-     (princ-to-cl-stream (symbol-name nil) stream))
     ((numberp obj)
      (cl:princ obj stream)
      )
     (t (error 'unimplemented-error :details
               (cl:format nil "unsupported object type ~s" (cl:type-of obj)))))
   )
+(defun* (princ-to-cl-string -> string) (obj)
+  (with-output-to-string (stream)
+    (print-to-cl-stream obj stream t)))
+(defun* (prin1-to-cl-string -> string) (obj)
+  (with-output-to-string (stream)
+    (print-to-cl-stream obj stream nil)))
+
+(defmacro prin-test (princ prin1 obj)
+  `(progn (is (string= ,princ (princ-to-cl-string ,obj)))
+          (is (string= ,prin1 (prin1-to-cl-string ,obj)))))
+
+(test test-princ-to-cl-string-symbol ()
+  (prin-test "##" "##" 'el::||)
+  (prin-test "test" "test" 'el::test)
+  (prin-test ":test" ":test" 'el::\:test)
+  (prin-test "ab_~!@$%^&:<>{}?c" "ab_~!@$%^&:<>{}?c" 'el::|AB__~!@$%^&:<>{}?C|)
+  (prin-test "AbCd" "AbCd" 'el::_AB_CD)
+  (prin-test "nil" "nil" 'el::nil)
+  (prin-test "abc, [/]'`" "abc\\,\\ \\[/\\]\\'\\`" 'el::|ABC, [/]'`|)
+  (prin-test "non-intern-symbol" "non-intern-symbol" (cl:make-symbol "non-intern-symbol"))
+  (prin-test " !\"#$%&'()*+,-./09:;<=>?@az[\\]^_`az{|}~"
+             "\\\\\\\\\\\\\\\\ !\\\"\\#$%&\\'\\(\\)*+\\,-./09:\\;<=>?@az\\[\\\\\]^_\\`az{|}~"
+             (cl:make-symbol " !\"#$%&'()*+,-./09:;<=>?@AZ[\\]^_`az{|}~"))
+  )
+(defun test-me ()
+  (run! 'cl-emacs/lib/printer))
+;; (loop for code from 1 to 127
+;;       do (cl:format t "~c~%" (code-char code)))

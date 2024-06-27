@@ -34,6 +34,7 @@
                         #:defconstant
                         #:define-condition
                         #:defstruct
+                        #:defmacro
                         #:defmethod
                         #:defparameter
                         #:defun

@@ -28,6 +28,8 @@
            #:compute-hash
            #:copy-pstring
            #:do-char
+           #:emptyp
+           #:generate-chars
            #:ninsert
            #:pstring
            #:pstring-p

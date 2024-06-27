@@ -65,6 +65,7 @@
            #:identity
            #:memq
            #:make-hash-table
+           #:maphash
            #:nreverse
            #:nth
            #:puthash
@@ -776,13 +777,16 @@ FUNCTION must be a function of one argument, and must return a value
 
 (fn FUNCTION SEQUENCE &optional SEPARATOR)"
   (error 'unimplemented-error))
-(defun* maphash ()
+(defun* maphash (function table)
   #M"Call FUNCTION for all entries in hash table TABLE.
 FUNCTION is called with two arguments, KEY and VALUE.
 ‘maphash' always returns nil.
 
 (fn FUNCTION TABLE)"
-  (error 'unimplemented-error))
+  #+custom-hash-table-fallback
+  (cl-custom-hash-table::maphash function table)
+  #-custom-hash-table-fallback
+  (cl:maphash function table))
 (defun* md5 ()
   #M"Return MD5 message digest of OBJECT, a buffer or string.
 
