@@ -96,33 +96,38 @@
      With one argument, return 1 divided by the argument.
      The arguments must be numbers or markers.
      usage: (/ NUMBER &rest DIVISORS)"
-  (float-features:with-float-traps-masked (:divide-by-zero :invalid)
-    (unless divisors
-      (cond
-        ((integerp number)
-         (when (cl:zerop number)
-           (error 'arith-error :details "integer division by zero not allowed"))
-         (return-from / (cl:identity (cl:truncate 1 number))))
-        ((floatp number)
-         (return-from / (cl:/ 1.0 number)))
-        (t (error 'arith-error :details
-                  (cl:format nil "unsupported number format: ~s" number)))))
-    (let ((floatp-mode (floatp number))
-          (accum number))
-      (dolist (arg divisors)
-        (cond
-          ((floatp arg) (setq floatp-mode t))
-          ((integerp arg))
-          (t (error 'arith-error :details
-                    (cl:format nil "unsupported number format: ~s" arg) ))))
-      (dolist (arg divisors)
-        (if floatp-mode
-            (setq accum (cl:/ accum arg))
-            (if (zerop arg)
-                (error 'arith-error :details
-                       "integer zero division is not allowed" )
-                (setq accum (cl:truncate accum arg)))))
-      accum)))
+  (let ((result 
+          (float-features:with-float-traps-masked (:divide-by-zero :invalid)
+            (if divisors
+                (let ((floatp-mode (floatp number))
+                      (accum number))
+                  (dolist (arg divisors)
+                    (cond
+                      ((floatp arg) (setq floatp-mode t))
+                      ((integerp arg))
+                      (t (error 'arith-error :details
+                                (cl:format nil "unsupported number format: ~s" arg) ))))
+                  (dolist (arg divisors)
+                    (if floatp-mode
+                        (setq accum (cl:/ accum arg))
+                        (if (zerop arg)
+                            (error 'arith-error :details
+                                   "integer zero division is not allowed" )
+                            (setq accum (cl:truncate accum arg)))))
+                  accum)
+                (cond
+                  ((integerp number)
+                   (when (cl:zerop number)
+                     (error 'arith-error :details "integer division by zero not allowed"))
+                   (cl:identity (cl:truncate 1 number)))
+                  ((floatp number)
+                   (cl:/ 1.0 number))
+                  (t (error 'arith-error :details
+                            (cl:format nil "unsupported number format: ~s" number))))
+                ))))
+    (if (float-features:float-infinity-p result)
+        float-features:single-float-positive-infinity
+        result)))
 
 ;; this symbol will stay internal, because it is not defined in elisp
 ;; for some reason

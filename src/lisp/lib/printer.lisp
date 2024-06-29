@@ -22,6 +22,7 @@
      :cl-emacs/alloc
      :cl-emacs/data
      :cl-emacs/eval
+     :cl-emacs/fns
      :cl-emacs/lib/log
      :cl-emacs/lib/reader-utils
      :snakes
@@ -50,6 +51,9 @@
 (defun* print-to-cl-stream (obj stream raw-mode)
   #M"if raw-mode = t, then princ, else prin1"
   (cond
+    ((and (consp obj) (eq (car obj) 'el::quote))
+     (write-char #\' stream)
+     (print-to-cl-stream (car (cdr obj)) stream raw-mode))
     ((consp obj)
      (write-char #\( stream)
      (loop with first = t
@@ -72,8 +76,12 @@
     ((pstrings:pstring-p obj)
      (pstrings:write-pstring-chunks obj stream nil))
     ((numberp obj)
-     (cl:princ obj stream)
-     )
+     (cond 
+       ((and (floatp obj) (float-features:float-infinity-p obj))
+        (write-sequence "1.0e+INF" stream))
+       ((and (floatp obj) (isnan obj))
+        (write-sequence "0.0e+NaN" stream))
+       (t (cl:princ obj stream))))
     (t (error 'unimplemented-error :details
               (cl:format nil "unsupported object type ~s" (cl:type-of obj)))))
   )
@@ -88,19 +96,33 @@
   `(progn (is (string= ,princ (princ-to-cl-string ,obj)))
           (is (string= ,prin1 (prin1-to-cl-string ,obj)))))
 
-(test test-princ-to-cl-string-symbol ()
+(test test-print-symbol ()
   (prin-test "##" "##" 'el::||)
   (prin-test "test" "test" 'el::test)
   (prin-test ":test" ":test" 'el::\:test)
   (prin-test "ab_~!@$%^&:<>{}?c" "ab_~!@$%^&:<>{}?c" 'el::|AB__~!@$%^&:<>{}?C|)
   (prin-test "AbCd" "AbCd" 'el::_AB_CD)
   (prin-test "nil" "nil" 'el::nil)
-  (prin-test "abc, [/]'`" "abc\\,\\ \\[/\\]\\'\\`" 'el::|ABC, [/]'`|)
+  (prin-test "abc_, [/]'`" "abc_\\,\\ \\[/\\]\\'\\`" 'el::|ABC__, [/]'`|)
   (prin-test "non-intern-symbol" "non-intern-symbol" (cl:make-symbol "non-intern-symbol"))
   (prin-test " !\"#$%&'()*+,-./09:;<=>?@az[\\]^_`az{|}~"
              "\\\\\\\\\\\\\\\\ !\\\"\\#$%&\\'\\(\\)*+\\,-./09:\\;<=>?@az\\[\\\\\]^_\\`az{|}~"
-             (cl:make-symbol " !\"#$%&'()*+,-./09:;<=>?@AZ[\\]^_`az{|}~"))
+             (cl:make-symbol " !\"#$%&'()*+,-./09:;<=>?@AZ[\\]^__`az{|}~"))
   )
+
+(test test-print-numbers 
+  (prin-test "12" "12" 12)
+  (prin-test "-1" "-1" -1)
+  (prin-test "-1.0" "-1.0" -1.0)
+  (prin-test "0.0" "0.0" 0.0)
+  (prin-test "0.0e+NaN" "0.0e+NaN" (/ 0.0 0.0))
+  (prin-test "1.0e+INF" "1.0e+INF" (/ 1.0 0.0))
+  (prin-test "1.0e+INF" "1.0e+INF" (/ -1.0 0.0))
+  )
+
+(test test-print-quote 
+  (prin-test "'test" "'test" (quote (el::quote el::test))))
+
 (defun test-me ()
   (run! 'cl-emacs/lib/printer))
 ;; (loop for code from 1 to 127

@@ -3,9 +3,7 @@
 (progn
   
   nil)
-(let ((obj (make-symbol (with-output-to-string
-                          (cl-loop for code from 1 to 127
-                                   do (write-char code))))))
+(let ((obj (quote (quote 'test))))
   (princ obj)
   (princ "\n")
   (prin1 obj)
