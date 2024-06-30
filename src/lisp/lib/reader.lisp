@@ -972,6 +972,7 @@
   (is (equal
        (pstrings:build-pstring "fooA0bar")
        (car (read-cl-string "\"foo\\u00410bar\")"))))
+  (read-cl-string "\"\\x103000\")")
   )
 (test test-read-lists
   (is (equal `(el::a ,(pstrings:build-pstring "b"))

@@ -3,7 +3,8 @@
 (progn
   
   nil)
-(let ((obj (quote (quote 'test))))
+
+(let ((obj " !\"#$%&'()*+,-./09:;<=>?@AZ[\\]^_`az{|}~"))
   (princ obj)
   (princ "\n")
   (prin1 obj)

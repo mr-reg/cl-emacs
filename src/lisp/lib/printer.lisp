@@ -43,9 +43,14 @@
 (named-readtables:in-readtable mstrings:mstring-syntax)
 
 (defun* write-pstring-to-cl-stream ((pstr pstrings:pstring) stream &key escaped)
+  #M"escaped can be:
+     nil - no escape processing
+     :string - string escape mode
+     :symbol - symbol escape mode"
   (do-generator (char (pstrings:generate-chars pstr))
-    (when (and escaped (or (cl:char<= char #\space)
-                           (char-end-of-statement-p char)))
+    (when (or (and (eq escaped :symbol) (or (cl:char<= char #\space)
+                                            (char-end-of-statement-p char)))
+              (and (eq escaped :string) (memq char '(#\\ #\"))))
       (write-char #\\ stream))
     (write-char char stream)))
 (defun* print-to-cl-stream (obj stream raw-mode)
@@ -72,9 +77,14 @@
          (write-sequence "##" stream))
        (if raw-mode
            (write-pstring-to-cl-stream symbol-name stream :escaped nil)
-           (write-pstring-to-cl-stream symbol-name stream :escaped t))))
+           (write-pstring-to-cl-stream symbol-name stream :escaped :symbol))))
     ((pstrings:pstring-p obj)
-     (pstrings:write-pstring-chunks obj stream nil))
+     (if raw-mode
+         (write-pstring-to-cl-stream obj stream :escaped nil)
+         (progn
+           (write-char #\" stream)
+           (write-pstring-to-cl-stream obj stream :escaped :string)
+           (write-char #\" stream))))
     ((numberp obj)
      (cond 
        ((and (floatp obj) (float-features:float-infinity-p obj))
@@ -123,7 +133,29 @@
 (test test-print-quote 
   (prin-test "'test" "'test" (quote (el::quote el::test))))
 
+(test test-print-string
+  (prin-test " " "\" \"" (pstrings:build-pstring " "))
+  (prin-test "test" "\"test\"" (pstrings:build-pstring "test"))
+  (prin-test "test" "\"test\"" (pstrings:build-pstring "test"))
+  (prin-test #M"multiline
+                string"
+             #M"\"multiline
+                string\""
+             (pstrings:build-pstring #M"multiline
+                                        string"))
+  ;; (prin-test " " "#(\" \" 0 1 (invisible t))" 
+  ;;            (pstrings:build-pstring " " '((el::invisible . t))))
+  ;; (prin-test (cl:format nil "~c, \"\"~c" #\tab #\soh)
+  ;;            (cl:format nil "\"~c, \\\"\\\"~c\"" #\tab #\soh)
+  ;;            (pstrings:build-pstring (cl:format nil "~c, \"\"~c" #\tab #\soh)))
+  ;; (prin-test " !\"#$%&'()*+,-./09:;<=>?@AZ[\\]^_`az{|}~"
+  ;;            "\" !\\\"#$%&'()*+,-./09:;<=>?@AZ[\\\\]^_`az{|}~\""
+  ;;            (pstrings:build-pstring " !\"#$%&'()*+,-./09:;<=>?@AZ[\\]^_`az{|}~"))
+  ;; (prin-test "\x303000" "\x303000" "\x303000")
+  
+  )
+
 (defun test-me ()
   (run! 'cl-emacs/lib/printer))
 ;; (loop for code from 1 to 127
-;;       do (cl:format t "~c~%" (code-char code)))
+;;       do (cl:format t "~c" (code-char code)))
