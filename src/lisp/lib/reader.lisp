@@ -74,23 +74,37 @@
 (define-condition reader-stopped-signal (reader-signal)
   ())
 
-(defparameter *states*
-  '(state/toplevel
-    state/symbol
-    state/symbol-escaped
-    state/character
-    state/line-comment
-    state/pstring
-    state/pointer
-    state/radix-bin
-    state/radix-oct
-    state/radix-hex
-    ))
+(defmacro define-states (&rest states)
+  ;; using numeric states to select transition function faster
+  (let (body1)
+    (push
+     (cl:append '(defun define-transitions ())
+                (loop for state in states
+                      for id from 0
+                      for sym-name = (concatenate 'string (cl:symbol-name state) "-TRANSITION")
+                      collect
+                      `(setf (aref *transitions* ,id)
+                             (cl:symbol-function (find-symbol  ,sym-name))))) 
+     body1)
+    (setq body1  (cl:append (loop for state in states
+                                  for id from 0
+                                  collect `(defparameter ,state ,id))
+                            body1))
+    (push `(defparameter *transitions* (make-array ,(cl:length states))) body1)
+    
+    (cons 'progn body1)))
+(define-states
+    state/toplevel
+  state/symbol
+  state/symbol-escaped
+  state/character
+  state/line-comment
+  state/pstring
+  state/pointer
+  state/radix-bin
+  state/radix-oct
+  state/radix-hex)
 
-;; using numeric states to select transition function faster
-(loop for state in *states*
-      for id from 0
-      do (cl:eval `(defparameter ,state ,id)))
 
 (defstruct reader
   (state 0 :type fixnum)
@@ -552,34 +566,6 @@
 
 ;; main part
 
-(defvar *transitions* nil)
-;; (defvar *start-handlers* nil)
-;; (defvar *stop-handlers* nil)
-(let ((n-states (cl:length *states*)))
-  (setf *transitions* (make-array n-states))
-  ;; (setf *start-handlers* (make-array n-states))
-  ;; (setf *stop-handlers* (make-array n-states))
-  )
-(dolist (state *states*)
-  (cl:eval `(setf (aref *transitions* ,state)
-                  ,(let* ((transition-function-name (concatenate 'string (cl:symbol-name state) "-TRANSITION"))
-                          (transition-function-symbol (find-symbol transition-function-name)))
-                     (if transition-function-symbol
-                         (cl:symbol-function transition-function-symbol)
-                         (error "can't find transition function ~a" transition-function-name)))))
-  ;; (eval `(setf (aref *stop-handlers* ,state)
-  ;;              ,(let* ((stop-function-name (concatenate 'string (symbol-name state) "-STOP-HANDLER"))
-  ;;                      (stop-function-symbol (find-symbol stop-function-name)))
-  ;;                 (if stop-function-symbol
-  ;;                     (symbol-function stop-function-symbol)
-  ;;                     (error "can't find stop-handler function ~a" stop-function-name)))))
-  ;; (eval `(setf (aref *start-handlers* ,state)
-  ;;              ,(let* ((start-function-name (concatenate 'string (symbol-name state) "-START-HANDLER"))
-  ;;                      (start-function-symbol (find-symbol start-function-name)))
-  ;;                 (if start-function-symbol
-  ;;                     (symbol-function start-function-symbol)
-  ;;                     (error "can't find start-handler function ~a" start-function-name)))))
-  )
 
 (defun* replace-placeholder-in-tree (tree old-value new-value &optional stack)
   (when (memq tree stack)
@@ -763,7 +749,7 @@
 
 (defun* change-state ((reader reader) new-state)
   (with-slots (state stack mod-stack) reader
-    (log-debug1 "transition to state ~s" (nth new-state *states*))
+    (log-debug1 "transition to state ~s" new-state)
     (log-debug2 "mod-stack: ~s" mod-stack)
     (log-debug2 "stack: ~s" stack)
     (setq state new-state)))
@@ -828,6 +814,9 @@
     (multiple-value-bind (result reader) (read-internal stream)
       (with-slots (character-counter) reader
         (cons result character-counter)))))
+
+;; last function, should be called after all transitions definition
+(define-transitions)
 
 (test test-read-symbols
   (is (equal (quote el::||)
@@ -1159,7 +1148,7 @@
                  )))
     (is (equal
          '((0 79 8) (80 73859 3) (73860 4194303 8))
-         (snakes:generator->list (chartables:generate-chartable-ranges ct))))
+         (chartables:get-chartable-ranges ct)))
     (is (equal '#(el::slot0 el::slot1 el::slot2)
                (chartables:chartable-extra-slots ct)))
     ))

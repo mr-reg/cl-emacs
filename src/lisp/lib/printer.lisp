@@ -65,8 +65,8 @@
        (when (pstrings:emptyp symbol-name)
          (write-sequence "##" stream))
        (if raw-mode
-           (write-pstring-to-cl-stream symbol-name stream :escaped nil)
-           (write-pstring-to-cl-stream symbol-name stream :escaped :symbol))))
+           (pstrings:write-pstring-to-cl-stream symbol-name stream :escaped nil)
+           (pstrings:write-pstring-to-cl-stream symbol-name stream :escaped :symbol))))
     ((pstrings:pstring-p obj)
      (if raw-mode
          (pstrings:write-pstring-to-cl-stream obj stream :escaped nil)

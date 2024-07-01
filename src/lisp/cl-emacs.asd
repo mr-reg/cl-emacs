@@ -31,13 +31,12 @@
                          ;; :lisp-binary
                          :mstrings
                          :parse-number
-                         ;; :pzmq
                          :serapeum
-                         :snakes
                          :str
                          :trees
                          :vom
                          :uiop
+                         ;; :lisp-critic
                          ;; :usocket
                          )
   :depends-on (
@@ -60,6 +59,7 @@
                :cl-emacs/elisp
                :cl-emacs/data
                :cl-emacs/lib/reader
+               :cl-emacs/lib/printer
                :cl-emacs/main
                )
   ;; :components ((:module "src/lisp"

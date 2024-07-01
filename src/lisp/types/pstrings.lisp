@@ -22,16 +22,15 @@
      :common-lisp
      :cl-emacs/lib/log
      :fiveam
-     :snakes
      :cl-emacs/lib/commons)
   (:import-from #:serapeum
                 #:memq)
   (:export #:build-pstring
            #:compute-hash
            #:copy-pstring
-           #:do-char
+           #:mapchars
            #:emptyp
-           #:generate-chars
+           #:do-chars
            #:ninsert
            #:pstring
            #:pstring-p
@@ -40,8 +39,7 @@
            #:pstring-len
            #:set-properties
            #:write-pstring-to-cl-stream
-           )
-  )
+           ))
 (in-package :cl-emacs/types/pstrings)
 (log-enable :cl-emacs/types/pstrings :info)
 ;; (log-enable :cl-emacs/types/pstrings :debug2)
@@ -110,40 +108,44 @@
 ;;   (make-load-form-saving-slots interval :environment environment))
 
 
-(defgenerator generate-intervals (pstring-or-interval)
+(defun* map-intervals (func (pstring-or-interval (or pstring interval null)))
   #M"if you specify pstring, iteration will start from the first interval
-     if you specify interval, it will be the first"
+     if you specify interval, it will be the first
+     if you specify nil, it is considered as non-existing interval, no invocation "
   (loop
     with iterator = (if (pstring-p pstring-or-interval)
                         (pstring-first pstring-or-interval)
                         pstring-or-interval)
     while iterator
-    do (yield iterator)
+    do (funcall func iterator)
        (setq iterator (interval-next iterator))))
 
-(defgenerator generate-chars (pstr)
-  (do-generator (interval (generate-intervals pstr))
-    (loop for char across (interval-chunk interval)
-          do (yield char))))
+(defun* map-chars (func (pstr pstring))
+  (map-intervals #'(lambda (interval)
+                     (loop for char across (interval-chunk interval)
+                           do (funcall func char)))
+                 pstr))
 
-(defgenerator generate-property-intervals (pstr)
+(defun* map-property-intervals (func (pstr pstring))
+  #M"func accepts 3 arguments (start end alist)"
   (let (start end alist)
     (labels ((write-known-interval ()
                (when alist
-                 (yield start end alist))
+                 (funcall func start end alist))
                (setq alist nil)
                (setq start nil)
                (setq end nil)))
-      (do-generator (iterator (generate-intervals pstr))
-        ;; (log-debug2 "printing interval ~s" ,iterator)
-        (if (and start (equalp alist (interval-alist iterator)))
-            (incf end (interval-len iterator))
-            (progn
-              (when start
-                (write-known-interval))
-              (setq alist (interval-alist iterator))
-              (setq start (interval-start iterator))
-              (setq end (+ (interval-start iterator) (interval-len iterator))))))
+      (map-intervals #'(lambda (iterator)
+                         ;; (log-debug2 "printing interval ~s" ,iterator)
+                         (if (and start (equalp alist (interval-alist iterator)))
+                             (incf end (interval-len iterator))
+                             (progn
+                               (when start
+                                 (write-known-interval))
+                               (setq alist (interval-alist iterator))
+                               (setq start (interval-start iterator))
+                               (setq end (+ (interval-start iterator) (interval-len iterator))))))
+                     pstr)
       (write-known-interval))))
 
 (defun* print-pstring ((pstr pstring) (stream stream) depth)
@@ -163,45 +165,52 @@
      also it tries to combine alists to convert real internal smaller
      intervals to bigger ones with unique property alists in output
      "
-  (let ((full-pstring-form nil))
+  (let ((full-pstring-form nil)
+        (eos-func (when (eq escaped :symbol)
+                    (find-symbol "CHAR-END-OF-STATEMENT-P" (find-package "CL-EMACS/LIB/READER-UTILS")))))
     (when (eq escaped :string)
       (block look-for-properties
-        (do-generator (iterator (generate-intervals pstr))
-          (when (interval-alist iterator)
-            (setq full-pstring-form t)
-            (return-from look-for-properties))))
+        (map-intervals #'(lambda (iterator)
+                           (when (interval-alist iterator)
+                             (setq full-pstring-form t)
+                             (return-from look-for-properties)))
+                       pstr))
       (when full-pstring-form
         (write-sequence "#(" stream))
       (write-string "\"" stream))
-    (do-generator (char (generate-chars pstr))
-      (when  (or (and (eq escaped :symbol) (or (cl:char<= char #\space)
-                                               (char-end-of-statement-p char)))
-                 (and (eq escaped :string) (memq char '(#\\ #\"))))
-        
-        (write-char #\\ stream))
-      (write-char char stream))
+    (map-chars #'(lambda (char)
+                   (when  (or (and (eq escaped :symbol) (or (cl:char<= char #\space)
+                                                            (funcall eos-func char)))
+                              (and (eq escaped :string) (memq char '(#\\ #\"))))
+                     
+                     (write-char #\\ stream))
+                   (write-char char stream))
+               pstr)
     (when (eq escaped :string)
       (write-char #\" stream)
       (when full-pstring-form
         ;; circular deprendency trick
         (let* ((pkg (find-package "CL-EMACS/LIB/PRINTER"))
-               (print-func (find-symbol "PRINT-TO-CL-STREAM" pkg)))
-          (do-generator (start end alist (generate-property-intervals pstr))
-            (write-char #\space stream)
-            (funcall print-func start stream nil)
-            (write-char #\space stream)
-            (funcall print-func end stream nil)
-            (write-sequence " (" stream)
-            (let ((first t))
-              (dolist (cons alist)
-                (unless first
-                  (write-char #\space stream))
-                (funcall print-func (car cons) stream nil)
-                (write-char #\space stream)
-                (funcall print-func (cdr cons) stream nil)
-                (setq first nil)))
-            (write-char #\) stream)
-            ))
+               (print-func  (find-symbol "PRINT-TO-CL-STREAM" pkg)))
+          
+          (map-property-intervals 
+           #'(lambda (start end alist)
+               (write-char #\space stream)
+               (funcall print-func start stream nil)
+               (write-char #\space stream)
+               (funcall print-func end stream nil)
+               (write-sequence " (" stream)
+               (let ((first t))
+                 (dolist (cons alist)
+                   (unless first
+                     (write-char #\space stream))
+                   (funcall print-func (car cons) stream nil)
+                   (write-char #\space stream)
+                   (funcall print-func (cdr cons) stream nil)
+                   (setq first nil)))
+               (write-char #\) stream)
+               )
+           pstr))
         (write-char #\) stream)))))
 
 ;; (defun test-tree ()
@@ -311,8 +320,10 @@
        (setq changed-interval new-interval)))
 
     ;; move tree positions forward
-    (do-generator (iterator (generate-intervals (interval-next changed-interval)))
-      (incf (interval-start iterator) delta-len))
+    (map-intervals 
+     #'(lambda (iterator)
+         (incf (interval-start iterator) delta-len))
+     (interval-next changed-interval))
     ;; resize string
     (incf (pstring-len pstr) delta-len)
     ;; break long intervals
@@ -412,33 +423,37 @@
     (trees:pprint-tree tree)))
 
 (defun* (pstring-char= -> boolean) ((pstr1 pstring) (pstr2 pstring))
-  (do-generators ((char1 (generate-chars pstr1) :fill-value nil)
-                  (char2 (generate-chars pstr2) :fill-value nil))
-    (unless (eq char1 char2)
-      (return-from pstring-char= nil)))
-  t)
+  (let (chars1)
+    (map-chars #'(lambda (char)
+                   (push char chars1)) 
+               pstr1)
+    (setq chars1 (nreverse chars1))
+    (map-chars #'(lambda (char)
+                   (unless (eq char (pop chars1))
+                     (return-from pstring-char= nil))
+                   ) 
+               pstr2)
+    (null chars1)))
 
 (defun* (pstring-properties= -> boolean) ((pstr1 pstring) (pstr2 pstring))
-  (loop
-    with gen1 = (generate-property-intervals pstr1)
-    with gen2 = (generate-property-intervals pstr2)
-    with start1 and end1 and alist1
-    with start2 and end2 and alist2
-    do (setf (values start1 end1 alist1) (cl:funcall gen1))
-       (setf (values start2 end2 alist2) (cl:funcall gen2))
-       ;; (log-debug "prop comparison ~s ~s"
-       ;;            (list start1 end1 alist1)
-       ;;            (list start2 end2 alist2))
-       (when (and (eq start1 'generator-stop)
-                  (eq start2 'generator-stop))
-         (return-from pstring-properties= t))
-       (unless (and (eq start1 start2)
-                    (eq end1 end2)
-                    (equalp alist1 alist2)
-                    (not (eq start1 'generator-stop))
-                    (not (eq start2 'generator-stop)))
-         (return-from pstring-properties= nil)))
-  t)
+  (let (intervals1)
+    (map-property-intervals #'(lambda (start end alist)
+                                (push (list start end alist) intervals1)) 
+                            pstr1)
+    (setq intervals1 (nreverse intervals1))
+    (map-property-intervals #'(lambda (start2 end2 alist2)
+                                (unless intervals1
+                                  (return-from pstring-properties= nil))
+                                (let* ((interval1 (pop intervals1))
+                                       (start1 (pop interval1))
+                                       (end1 (pop interval1))
+                                       (alist1 (pop interval1)))
+                                  (unless (and (eq start1 start2)
+                                               (eq end1 end2)
+                                               (equal alist1 alist2))
+                                    (return-from pstring-properties= nil)))) 
+                            pstr2)
+    (null intervals1)))
 
 (defun* (pstring= -> boolean) ((pstr1 pstring) (pstr2 pstring))
   (and (pstring-char= pstr1 pstr2)
@@ -461,15 +476,18 @@
 
 (defun* (to-cl-string -> string) ((pstr pstring))
   (with-output-to-string (stream)
-    (do-generator (char (generate-chars pstr))
-      (write-char char stream))))
+    (map-chars #'(lambda (char)
+                   (write-char char stream))
+               pstr)))
 
 (defun* compute-hash ((pstr pstring) &optional with-properties)
   (let* ((cl-string (to-cl-string pstr))
          (obj (list cl-string)))
     (when with-properties
-      (do-generator (start end alist (generate-property-intervals pstr))
-        (push (sxhash (list start end alist)) obj)))
+      (map-property-intervals #'(lambda (start end alist)
+                                  (push (sxhash (list start end alist)) obj))
+                              pstr)
+      )
     (sxhash obj)))
 
 (test test-compute-hash
@@ -511,7 +529,7 @@
 ;;   (:merge mstrings:mstring-syntax)
 ;;   (:dispatch-macro-char #\# #\P #'pstring-reader))
 
-;; TODO: add operations < > substr contains for pstring
+;; TODO: add operations (< > substr contains) for pstring
 
 (test test-basic-insertion
   (let* ((*normal-interval-length* 2)
@@ -533,6 +551,7 @@
         (pstr5 (build-pstring "abc" '((prop2 . "value"))))
         (pstr6 (build-pstring "abc" '((prop2 . "value")))))
     (is-false (pstring= pstr1 pstr2))
+    (is-false (pstring= pstr2 pstr1))
     (is-true (pstring= pstr1 pstr3))
     (is-false (pstring= pstr1 pstr4))
     (is-true (pstring-char= pstr3 pstr4))
@@ -560,13 +579,13 @@
     )
   )
 
-(test property-operations
+(test test-property-operations
   (let* ((*normal-interval-length* 2)
          (*max-interval-length* 4)
          )
     ;; one-interval test
     (let ((pstr (build-pstring "ab" '((prop2 . 2) (prop1 . val1)))))
-      (is (string= "#(\"ab\" 0 2 (PROP1 VAL1 PROP2 2))" (format nil "~s" pstr))))
+      (is (string= "#(\"ab\" 0 2 (prop1 val1 prop2 2))" (format nil "~s" pstr))))
 
     ;; split test
     (let ((pstr1 (build-pstring "ab" '((prop3 . 2) (prop1 . val1))))
@@ -577,7 +596,7 @@
       (set-properties pstr1 1 3 '((prop3 . 3) (prop2 . 2)))
       ;; (log-debug "~s" pstr1)
       (is (= 3 (trees:size (pstring-tree pstr1))))
-      (is (string= "#(\"abcd\" 0 1 (PROP1 VAL1 PROP3 2) 1 3 (PROP1 VAL1 PROP2 2 PROP3 3) 3 4 (PROP1 VAL1 PROP3 2))"
+      (is (string= "#(\"abcd\" 0 1 (prop1 val1 prop3 2) 1 3 (prop1 val1 prop2 2 prop3 3) 3 4 (prop1 val1 prop3 2))"
                    (format nil "~s" pstr1)))
       )
 
@@ -585,7 +604,7 @@
     (let ((pstr1 (build-pstring "ab" '((prop3 . 2) (prop1 . val1))))
           (pstr2 (build-pstring "cd")))
       (ninsert pstr2 pstr1)
-      (is (string= "#(\"abcd\" 0 2 (PROP1 VAL1 PROP3 2))"
+      (is (string= "#(\"abcd\" 0 2 (prop1 val1 prop3 2))"
                    (format nil "~s" pstr1)))
       )
 
@@ -593,7 +612,7 @@
     (let ((pstr (build-pstring "abcdef")))
       (set-properties pstr 1 3 '((prop2 . 2) (prop1 . val1)))
       (set-properties pstr 3 5 '((prop2 . 2) (prop1 . val1)))
-      (is (string= "#(\"abcdef\" 1 5 (PROP1 VAL1 PROP2 2))"
+      (is (string= "#(\"abcdef\" 1 5 (prop1 val1 prop2 2))"
                    (format nil "~s" pstr)))
       )
 
@@ -601,21 +620,20 @@
     (let ((pstr (build-pstring "abcdef")))
       (set-properties pstr 0 4 '((prop2 . 2) (prop1 . val1)))
       (set-properties pstr 3 5 '((prop2 . 3) (prop1 . val1)))
-      (is (string= "#(\"abcdef\" 0 3 (PROP1 VAL1 PROP2 2) 3 5 (PROP1 VAL1 PROP2 3))"
+      (is (string= "#(\"abcdef\" 0 3 (prop1 val1 prop2 2) 3 5 (prop1 val1 prop2 3))"
                    (format nil "~s" pstr))))
 
     ;; property overwrite test
     (let ((pstr (build-pstring "abcdef" '((prop1 . val1)))))
       (set-properties pstr 1 5 '((prop2 . val2)) t)
       (set-properties pstr 3 5 '((prop3 . val3)) t)
-      (is (string= "#(\"abcdef\" 0 1 (PROP1 VAL1) 1 3 (PROP2 VAL2) 3 5 (PROP3 VAL3) 5 6 (PROP1 VAL1))"
+      (is (string= "#(\"abcdef\" 0 1 (prop1 val1) 1 3 (prop2 val2) 3 5 (prop3 val3) 5 6 (prop1 val1))"
                    (format nil "~s" pstr)))
       )
 
     (let ((pstr (build-pstring "")))
       (signals invalid-pstring-operation (set-properties pstr 0 1 '((prop1 . val1)))))
 
-    ;; TODO: use emacs symbols lower-case form in this test
     ))
 (defun test-me ()
   (run! 'cl-emacs/types/pstrings))

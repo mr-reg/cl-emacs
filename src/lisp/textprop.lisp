@@ -74,7 +74,7 @@
 (test test-add-text-properties
   (let ((pstr (pstrings:build-pstring "ab" '((p3 . v3)))))
     (add-text-properties 1 2 '(p2 v2 p1 v1) pstr)
-    (is (string= "#(\"ab\" 0 1 (P3 V3) 1 2 (P1 V1 P2 V2 P3 V3))"
+    (is (string= "#(\"ab\" 0 1 (p3 v3) 1 2 (p1 v1 p2 v2 p3 v3))"
                  (cl:format nil "~s" pstr)))
     ))
 (defun* get-char-property ()
@@ -299,7 +299,7 @@ Use ‘set-text-properties' if you want to remove all text properties.
 (test test-set-text-properties
   (let ((pstr (pstrings:build-pstring "ab" '((p3 . v3)))))
     (set-text-properties 1 2 '(p2 v2 p1 v1) pstr)
-    (is (string= "#(\"ab\" 0 1 (P3 V3) 1 2 (P1 V1 P2 V2))"
+    (is (string= "#(\"ab\" 0 1 (p3 v3) 1 2 (p1 v1 p2 v2))"
                  (cl:format nil "~s" pstr)))
     ))
 (defun* text-properties-at ()

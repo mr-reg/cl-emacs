@@ -707,12 +707,12 @@ At the beginning of the buffer or accessible region, return 0.
     result))
 
 (test test-propertize
-  (is (string= "#(\"abc\" 0 3 (P1 V1 P2 V2))"
+  (is (string= "#(\"abc\" 0 3 (p1 v1 p2 v2))"
                (cl:format nil "~s"
                           (propertize (pstrings:build-pstring "abc") 'p1 'v1 'p2 'v2))))
   (let ((pstr (pstrings:build-pstring "abc")))
     (add-text-properties 0 1 '(p3 v3) pstr)
-    (is (string= "#(\"abc\" 0 1 (P1 V1 P2 V2 P3 V3) 1 3 (P1 V1 P2 V2))"
+    (is (string= "#(\"abc\" 0 1 (p1 v1 p2 v2 p3 v3) 1 3 (p1 v1 p2 v2))"
                  (cl:format nil "~s"
                             (propertize pstr 'p1 'v1 'p2 'v2)))))
   )
