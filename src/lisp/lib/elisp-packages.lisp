@@ -11,6 +11,7 @@
                         #:aref
                         #:ash
                         #:assert
+                        #:block
                         #:boolean
                         #:break
                         #:caar

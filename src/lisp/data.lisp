@@ -125,7 +125,7 @@
                   (t (error 'arith-error :details
                             (cl:format nil "unsupported number format: ~s" number))))
                 ))))
-    (if (float-features:float-infinity-p result)
+    (if (and (floatp result) (float-features:float-infinity-p result))
         float-features:single-float-positive-infinity
         result)))
 

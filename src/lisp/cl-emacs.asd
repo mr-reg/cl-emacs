@@ -13,6 +13,10 @@
                                 (debug 3)
                                 (compilation-speed 3)
                                 (speed 0)))
+                    ;; #+sbcl
+                    ;; (proclaim (sb-ext:muffle-conditions cl:style-warning))
+                    #+sbcl
+                    (setq *compile-verbose* nil)
                     (funcall next))
 
   :defsystem-depends-on (;; :cffi

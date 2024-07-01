@@ -4,8 +4,9 @@
   
   nil)
 
-(let ((obj " !\"#$%&'()*+,-./09:;<=>?@AZ[\\]^_`az{|}~"))
+(let ((obj #("abc" 0 2 ("ab\"c" ab\ c))))
   (princ obj)
+  (princ "\n")
   (princ "\n")
   (prin1 obj)
   "")

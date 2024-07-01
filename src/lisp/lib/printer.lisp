@@ -42,17 +42,6 @@
 (in-suite cl-emacs/lib/printer)
 (named-readtables:in-readtable mstrings:mstring-syntax)
 
-(defun* write-pstring-to-cl-stream ((pstr pstrings:pstring) stream &key escaped)
-  #M"escaped can be:
-     nil - no escape processing
-     :string - string escape mode
-     :symbol - symbol escape mode"
-  (do-generator (char (pstrings:generate-chars pstr))
-    (when (or (and (eq escaped :symbol) (or (cl:char<= char #\space)
-                                            (char-end-of-statement-p char)))
-              (and (eq escaped :string) (memq char '(#\\ #\"))))
-      (write-char #\\ stream))
-    (write-char char stream)))
 (defun* print-to-cl-stream (obj stream raw-mode)
   #M"if raw-mode = t, then princ, else prin1"
   (cond
@@ -80,11 +69,18 @@
            (write-pstring-to-cl-stream symbol-name stream :escaped :symbol))))
     ((pstrings:pstring-p obj)
      (if raw-mode
-         (write-pstring-to-cl-stream obj stream :escaped nil)
-         (progn
-           (write-char #\" stream)
-           (write-pstring-to-cl-stream obj stream :escaped :string)
-           (write-char #\" stream))))
+         (pstrings:write-pstring-to-cl-stream obj stream :escaped nil)
+         (pstrings:write-pstring-to-cl-stream obj stream :escaped :string)
+         ))
+    ((vectorp obj)
+     (write-char #\[ stream)
+     (loop for el across obj
+           with first = t
+           do (unless first
+                (write-char #\space stream))
+              (print-to-cl-stream el stream raw-mode)
+              (setq first nil))
+     (write-char #\] stream))
     ((numberp obj)
      (cond 
        ((and (floatp obj) (float-features:float-infinity-p obj))
@@ -143,17 +139,36 @@
                 string\""
              (pstrings:build-pstring #M"multiline
                                         string"))
-  ;; (prin-test " " "#(\" \" 0 1 (invisible t))" 
-  ;;            (pstrings:build-pstring " " '((el::invisible . t))))
-  ;; (prin-test (cl:format nil "~c, \"\"~c" #\tab #\soh)
-  ;;            (cl:format nil "\"~c, \\\"\\\"~c\"" #\tab #\soh)
-  ;;            (pstrings:build-pstring (cl:format nil "~c, \"\"~c" #\tab #\soh)))
-  ;; (prin-test " !\"#$%&'()*+,-./09:;<=>?@AZ[\\]^_`az{|}~"
-  ;;            "\" !\\\"#$%&'()*+,-./09:;<=>?@AZ[\\\\]^_`az{|}~\""
-  ;;            (pstrings:build-pstring " !\"#$%&'()*+,-./09:;<=>?@AZ[\\]^_`az{|}~"))
-  ;; (prin-test "\x303000" "\x303000" "\x303000")
+  (prin-test " " "#(\" \" 0 1 (invisible t))" 
+             (pstrings:build-pstring " " '((el::invisible . t))))
+  (prin-test (cl:format nil "~c, \"\"~c" #\tab #\soh)
+             (cl:format nil "\"~c, \\\"\\\"~c\"" #\tab #\soh)
+             (pstrings:build-pstring (cl:format nil "~c, \"\"~c" #\tab #\soh)))
+  (prin-test " !\"#$%&'()*+,-./09:;<=>?@AZ[\\]^_`az{|}~"
+             "\" !\\\"#$%&'()*+,-./09:;<=>?@AZ[\\\\]^_`az{|}~\""
+             (pstrings:build-pstring " !\"#$%&'()*+,-./09:;<=>?@AZ[\\]^_`az{|}~"))
+  (prin-test "abc" "#(\"abc\" 0 3 (\"ab\\\"c\" ab\\ c))" 
+             (pstrings:build-pstring 
+              "abc" 
+              (list 
+               (cons (pstrings:build-pstring "ab\"c") 'el::|AB C|))))
+
+  ;; emacs supports this, but we do not:
+  ;; it makes no sense, because strings are for characters, not for any hex numbers
+  ;; to properly support this, we need convert pstrings to numeric/fixnum arrays, 
+  ;; which will take a lot of memory in future
+  ;; (prin-test "\x303000" "\"\x303000\"" "\x303000")
   
   )
+(test test-print-lists
+      (prin-test "(a b)" "(a b)" '(el::a el::b))
+      (prin-test "(a . b)" "(a . b)" '(el::a . el::b))
+      (prin-test "(a)" "(a)" '(el::a . nil)))
+
+(test test-print-vectors
+      (prin-test "[a b]" "[a b]" #(el::a el::b))
+      (prin-test "[]" "[]" #())
+      )
 
 (defun test-me ()
   (run! 'cl-emacs/lib/printer))

@@ -24,6 +24,8 @@
      :fiveam
      :snakes
      :cl-emacs/lib/commons)
+  (:import-from #:serapeum
+                #:memq)
   (:export #:build-pstring
            #:compute-hash
            #:copy-pstring
@@ -37,7 +39,7 @@
            #:pstring=
            #:pstring-len
            #:set-properties
-           #:write-pstring-chunks
+           #:write-pstring-to-cl-stream
            )
   )
 (in-package :cl-emacs/types/pstrings)
@@ -144,45 +146,63 @@
               (setq end (+ (interval-start iterator) (interval-len iterator))))))
       (write-known-interval))))
 
-
-(defun* write-pstring-chunks ((ps1 pstring) (stream stream) &optional escape)
-  #M"write only characters of string.
-     If escape is t, emacs string escape syntax will be added"
-  (declare (ignore escape))
-  ;; TODO: add emacs escaping into pstring print
-  (do-generator (char (generate-chars ps1))
-    (write-char char stream)))
-
 (defun* print-pstring ((pstr pstring) (stream stream) depth)
   (declare (ignore depth))
-  #M"human interface operation, not designed to be fast,
+  (write-pstring-to-cl-stream pstr stream :escaped :string)
+  )
+
+(defun* write-pstring-to-cl-stream ((pstr pstring) stream &key escaped)
+  #M"escaped can be:
+     nil - no escape processing: raw string
+     :string - string escape mode: \"string mode\"
+     :symbol - symbol escape mode: special\ symbol
+
+     in :string mode:
+     human interface operation, not designed to be uberfast,
      requires triple string scan to output in emacs-compatible form
      also it tries to combine alists to convert real internal smaller
-     intervals to bigger ones with unique property alists in output"
-  (with-slots (tree first) pstr
-    (let ((has-properties (block look-for-properties
-                            (do-generator (iterator (generate-intervals pstr))
-                              (when (interval-alist iterator)
-                                (return-from look-for-properties t)))
-                            nil)))
-      (when has-properties
-        (write-string "#(" stream))
-      (write-string "\"" stream)
-      (write-pstring-chunks pstr stream t)
-      (write-string "\"" stream)
-      (when has-properties
-        (do-generator (start end alist (generate-property-intervals pstr))
-          ;; TODO: use emacs format function here
-          (format stream " ~a ~a (" start end)
-          (let ((first t))
-            (dolist (cons alist)
-              (unless first
-                (format stream " "))
-              (format stream "~a ~a" (car cons) (cdr cons))
-              (setq first nil)))
-          (format stream ")"))
-        (write-string ")" stream))
-      )))
+     intervals to bigger ones with unique property alists in output
+     "
+  (let ((full-pstring-form nil))
+    (when (eq escaped :string)
+      (block look-for-properties
+        (do-generator (iterator (generate-intervals pstr))
+          (when (interval-alist iterator)
+            (setq full-pstring-form t)
+            (return-from look-for-properties))))
+      (when full-pstring-form
+        (write-sequence "#(" stream))
+      (write-string "\"" stream))
+    (do-generator (char (generate-chars pstr))
+      (when  (or (and (eq escaped :symbol) (or (cl:char<= char #\space)
+                                               (char-end-of-statement-p char)))
+                 (and (eq escaped :string) (memq char '(#\\ #\"))))
+        
+        (write-char #\\ stream))
+      (write-char char stream))
+    (when (eq escaped :string)
+      (write-char #\" stream)
+      (when full-pstring-form
+        ;; circular deprendency trick
+        (let* ((pkg (find-package "CL-EMACS/LIB/PRINTER"))
+               (print-func (find-symbol "PRINT-TO-CL-STREAM" pkg)))
+          (do-generator (start end alist (generate-property-intervals pstr))
+            (write-char #\space stream)
+            (funcall print-func start stream nil)
+            (write-char #\space stream)
+            (funcall print-func end stream nil)
+            (write-sequence " (" stream)
+            (let ((first t))
+              (dolist (cons alist)
+                (unless first
+                  (write-char #\space stream))
+                (funcall print-func (car cons) stream nil)
+                (write-char #\space stream)
+                (funcall print-func (cdr cons) stream nil)
+                (setq first nil)))
+            (write-char #\) stream)
+            ))
+        (write-char #\) stream)))))
 
 ;; (defun test-tree ()
 ;;   (let ((tree (trees:make-binary-tree :avl #'< :key #'prop-interval-start)))

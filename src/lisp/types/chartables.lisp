@@ -351,10 +351,12 @@
     )
   )
 
+
 ;; mapping functions use EQ in emacs code, we use EQUAL for simplicity
 (defgenerator generate-chartable-ranges-without-parents (ct)
   #M"generates single list (start end value), returns all values including nil,
      so there is no holes in ranges"
+  (log-debug2 "generate-chartable-ranges-without-parents called")
   (with-slots (contents default) ct
     (let ((current-start 0)
           (current-value nil)
@@ -371,6 +373,7 @@
                      (setq current-start position)
                      (setq current-value value))))
                (process-sub-chartable (sub-ct)
+                 (log-debug2 "process-sub-chartable called")
                  (with-slots (contents depth min-char) sub-ct
                    (let ((element-size (aref +chars-per-element+ depth)))
                      (loop for sub-sub-ct across contents
@@ -496,7 +499,16 @@
                  (10 15 3)
                  (16 15000 2)
                  (15001 4194303 1))
-               (generator->list (generate-chartable-ranges ct3))))))
+               (generator->list (generate-chartable-ranges ct3))))
+    ))
 
 (defun test-me ()
   (run! 'cl-emacs/types/chartables))
+
+;; (defun profile ()
+;;   (sb-profile:reset)
+;;   (sb-profile:profile "CL-EMACS/TYPES/CHARTABLES")
+;;   (run! 'test-generate-ranges)
+;;   (sb-profile:report)
+;;   (sb-profile:unprofile "CL-EMACS/TYPES/CHARTABLES")
+;;   )
