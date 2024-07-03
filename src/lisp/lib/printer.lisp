@@ -32,8 +32,7 @@
                     (#:pstrings #:cl-emacs/types/pstrings)
                     (#:chartables #:cl-emacs/types/chartables)
                     )
-  ;; (:export #:prin1-to-cl-stream
-  ;;          #:princ-to-cl-stream)
+  (:export #:print-to-cl-stream)
   )
 
 (in-package :cl-emacs/lib/printer)
@@ -82,7 +81,7 @@
               (setq first nil))
      (write-char #\] stream))
     ((numberp obj)
-     (cond 
+     (cond
        ((and (floatp obj) (float-features:float-infinity-p obj))
         (write-sequence "1.0e+INF" stream))
        ((and (floatp obj) (isnan obj))
@@ -116,7 +115,7 @@
              (cl:make-symbol " !\"#$%&'()*+,-./09:;<=>?@AZ[\\]^__`az{|}~"))
   )
 
-(test test-print-numbers 
+(test test-print-numbers
   (prin-test "12" "12" 12)
   (prin-test "-1" "-1" -1)
   (prin-test "-1.0" "-1.0" -1.0)
@@ -126,7 +125,7 @@
   (prin-test "1.0e+INF" "1.0e+INF" (/ -1.0 0.0))
   )
 
-(test test-print-quote 
+(test test-print-quote
   (prin-test "'test" "'test" (quote (el::quote el::test))))
 
 (test test-print-string
@@ -139,7 +138,7 @@
                 string\""
              (pstrings:build-pstring #M"multiline
                                         string"))
-  (prin-test " " "#(\" \" 0 1 (invisible t))" 
+  (prin-test " " "#(\" \" 0 1 (invisible t))"
              (pstrings:build-pstring " " '((el::invisible . t))))
   (prin-test (cl:format nil "~c, \"\"~c" #\tab #\soh)
              (cl:format nil "\"~c, \\\"\\\"~c\"" #\tab #\soh)
@@ -147,18 +146,18 @@
   (prin-test " !\"#$%&'()*+,-./09:;<=>?@AZ[\\]^_`az{|}~"
              "\" !\\\"#$%&'()*+,-./09:;<=>?@AZ[\\\\]^_`az{|}~\""
              (pstrings:build-pstring " !\"#$%&'()*+,-./09:;<=>?@AZ[\\]^_`az{|}~"))
-  (prin-test "abc" "#(\"abc\" 0 3 (\"ab\\\"c\" ab\\ c))" 
-             (pstrings:build-pstring 
-              "abc" 
-              (list 
+  (prin-test "abc" "#(\"abc\" 0 3 (\"ab\\\"c\" ab\\ c))"
+             (pstrings:build-pstring
+              "abc"
+              (list
                (cons (pstrings:build-pstring "ab\"c") 'el::|AB C|))))
 
   ;; emacs supports this, but we do not:
   ;; it makes no sense, because strings are for characters, not for any hex numbers
-  ;; to properly support this, we need convert pstrings to numeric/fixnum arrays, 
+  ;; to properly support this, we need convert pstrings to numeric/fixnum arrays,
   ;; which will take a lot of memory in future
   ;; (prin-test "\x303000" "\"\x303000\"" "\x303000")
-  
+
   )
 (test test-print-lists
       (prin-test "(a b)" "(a b)" '(el::a el::b))

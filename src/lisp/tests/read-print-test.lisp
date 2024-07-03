@@ -46,7 +46,7 @@
 (define-condition test-error (error-with-description)
   ())
 
-(defun* full-read-princ-file ((file pathname))
+(defun* cl-read-princ-file ((file pathname))
   (let ((raw-string (with-output-to-string (out-stream)
                       (with-open-file (in-stream file)
                         (handler-case
@@ -58,13 +58,26 @@
       (handler-case
           (loop do (let ((read-result (reader:read-cl-string raw-string position)))
                      (log-debug2 "one read result ~s" read-result)
-                     (printer:princ-to-cl-stream (car read-result) out-stream)
+                     (printer:print-to-cl-stream (car read-result) out-stream t)
                      (incf position (cdr read-result))
                      (log-debug2 "new read position ~s" position)))
         (reader:eof-reader-error ()
-          )))
+          ))))
 
+  )
+(defun* el-read-princ-file ((file pathname))
+  (let* ((filename (cl:namestring file))
+         (process-info (uiop:launch-program
+                        (cl:format nil "emacs --batch -Q --load src/elisp/read.el --eval '(read-princ-el-file \"~a\")'"
+                                   filename) :output :stream))
+         (in-stream (uiop:process-info-output process-info)))
+    (with-output-to-string (out-stream)
+      (handler-case
+          (loop for char = (read-char in-stream)
+                do (write-char char out-stream))
+        (end-of-file ())))    
     )
+  
 
   )
 
@@ -76,10 +89,31 @@
 ;;     (run-test-for-subdirectories sub-dir)))
 
 (defun one-control-test ()
-  (let ((filename "/data/data/com.termux/files/home/github/emacs/lisp/calendar/cal-x.el")
-        (cl-str (full-read-princ-file (truename filename)))
-        (c (uiop/launch-program:launch-program)))
-
+  (let* ((filename "~/github/emacs/lisp/calendar/cal-x.el")
+         (cl-str (cl-read-princ-file (truename filename)))
+         (el-str (el-read-princ-file (truename filename)))
+         )
+    (unless (string= cl-str el-str)
+      (cl:format t "filename ~s has differences~%" filename)
+      (with-open-file (stream "cl.txt" :direction :output 
+                                       :if-does-not-exist :create
+                                       :if-exists :supersede)
+        (write-sequence cl-str stream))
+      (with-open-file (stream "el.txt" :direction :output 
+                                       :if-does-not-exist :create
+                                       :if-exists :supersede)
+        (write-sequence el-str stream))
+      
+      (let* ((process-info (uiop:launch-program
+                            "diff cl.txt el.txt" :output :stream))
+             (in-stream (uiop:process-info-output process-info)))
+        (handler-case
+            (loop for char = (read-char in-stream)
+                  do (write-char char t))
+          (end-of-file ()))
+        )      
+      )
+    
     ))
 
 ;; (defun run-test ()
