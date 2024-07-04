@@ -58,7 +58,7 @@
       (handler-case
           (loop do (let ((read-result (reader:read-cl-string raw-string position)))
                      (log-debug2 "one read result ~s" read-result)
-                     (printer:print-to-cl-stream (car read-result) out-stream t)
+                     (printer:princ-to-cl-stream (car read-result) out-stream)
                      (incf position (cdr read-result))
                      (log-debug2 "new read position ~s" position)))
         (reader:eof-reader-error ()
@@ -75,52 +75,62 @@
       (handler-case
           (loop for char = (read-char in-stream)
                 do (write-char char out-stream))
-        (end-of-file ())))    
+        (end-of-file ())))
     )
-  
+
 
   )
 
-;; (defun* run-test-for-subdirectories ((dir pathname))
-;;   (dolist (el-file (uiop/filesystem:directory-files dir "*.el"))
-;;     (log-debug "file ~s" el-file)
-;;     (full-read-file el-file))
-;;   (dolist (sub-dir (uiop/filesystem:subdirectories dir))
-;;     (run-test-for-subdirectories sub-dir)))
-
-(defun one-control-test ()
-  (let* ((filename "~/github/emacs/lisp/calendar/cal-x.el")
-         (cl-str (cl-read-princ-file (truename filename)))
-         (el-str (el-read-princ-file (truename filename)))
+(defun* one-test ((filename pathname))
+  ;; ~/github/emacs/lisp/calendar/cal-x.el
+  (cl:format t "filename ~s " filename)
+  (let* (
+         ;; (filename "/root/github/cl-emacs/src/elisp/test.el")
+         ;; (filename "/root/github/emacs/lisp/calendar/cal-x.el")
+         (cl-str (cl-read-princ-file filename))
+         (el-str (el-read-princ-file filename))
          )
-    (unless (string= cl-str el-str)
-      (cl:format t "filename ~s has differences~%" filename)
-      (with-open-file (stream "cl.txt" :direction :output 
-                                       :if-does-not-exist :create
-                                       :if-exists :supersede)
-        (write-sequence cl-str stream))
-      (with-open-file (stream "el.txt" :direction :output 
-                                       :if-does-not-exist :create
-                                       :if-exists :supersede)
-        (write-sequence el-str stream))
-      
-      (let* ((process-info (uiop:launch-program
-                            "diff cl.txt el.txt" :output :stream))
-             (in-stream (uiop:process-info-output process-info)))
-        (handler-case
-            (loop for char = (read-char in-stream)
-                  do (write-char char t))
-          (end-of-file ()))
-        )      
-      )
-    
+    (if (not (string= cl-str el-str))
+        (progn
+          (cl:format t "has differences~%")
+          (with-open-file (stream "cl.txt" :direction :output
+                                           :if-does-not-exist :create
+                                           :if-exists :supersede)
+            (write-sequence cl-str stream))
+          (with-open-file (stream "el.txt" :direction :output
+                                           :if-does-not-exist :create
+                                           :if-exists :supersede)
+            (write-sequence el-str stream))
+
+          (let* ((process-info (uiop:launch-program
+                                "wdiff -3 cl.txt el.txt" :output :stream))
+                 (in-stream (uiop:process-info-output process-info)))
+            (handler-case
+                (loop for char = (read-char in-stream)
+                      do (write-char char t))
+              (end-of-file ()))
+            )
+          (error 'test-error))
+        (cl:format t "OK~%"))
     ))
 
-;; (defun run-test ()
-;;   ;; (let ((roo)))
-;;   ;; (uiop/filesystem:directory-files )
-;;   (handler-case
-;;       (run-test-for-subdirectories (truename *emacs-source-folder*))
-;;     (test-error ()
-;;       (log-debug "error")))
-;;   )
+(defun* run-test-for-subdirectories ((dir pathname))
+  (dolist (el-file (uiop/filesystem:directory-files dir "*.el"))
+    (one-test el-file)
+    ;; (log-debug "file ~s" el-file)
+    ;; (full-read-file el-file)
+    )
+  (dolist (sub-dir (uiop/filesystem:subdirectories dir))
+    (run-test-for-subdirectories sub-dir)))
+
+(defun run-test ()
+  ;; (let ((roo)))
+  ;; (uiop/filesystem:directory-files )
+  (handler-case
+      (run-test-for-subdirectories 
+       (truename (concatenate 'string
+                              *emacs-source-folder*
+                              "lisp/calc/")))
+    (test-error ()
+      (log-debug "error")))
+  )

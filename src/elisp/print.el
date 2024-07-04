@@ -4,7 +4,7 @@
 
   nil)
 
-(let ((obj #("abc" 0 2 ("ab\"c" ab\ c))))
+(let ((obj (read "`(,a\\,b (,@ nil))")))
   (princ obj)
   (princ "\n")
   (princ "\n")

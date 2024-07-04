@@ -51,7 +51,7 @@
             (has-nan cl-emacs/data::*nan*)
             (has-inf cl-emacs/data::*infinity*)
             (t parsed)))
-      (parse-error ()
+      (error ()
         nil))))
 
 (defun* reversed-list-to-number ((digits list) (radix-bits fixnum))

@@ -182,7 +182,7 @@
                    (when  (or (and (eq escaped :symbol) (or (cl:char<= char #\space)
                                                             (funcall eos-func char)))
                               (and (eq escaped :string) (memq char '(#\\ #\"))))
-                     
+
                      (write-char #\\ stream))
                    (write-char char stream))
                pstr)
@@ -191,22 +191,22 @@
       (when full-pstring-form
         ;; circular deprendency trick
         (let* ((pkg (find-package "CL-EMACS/LIB/PRINTER"))
-               (print-func  (find-symbol "PRINT-TO-CL-STREAM" pkg)))
-          
-          (map-property-intervals 
+               (print-func  (find-symbol "PRIN1-TO-CL-STREAM" pkg)))
+
+          (map-property-intervals
            #'(lambda (start end alist)
                (write-char #\space stream)
-               (funcall print-func start stream nil)
+               (funcall print-func start stream)
                (write-char #\space stream)
-               (funcall print-func end stream nil)
+               (funcall print-func end stream)
                (write-sequence " (" stream)
                (let ((first t))
                  (dolist (cons alist)
                    (unless first
                      (write-char #\space stream))
-                   (funcall print-func (car cons) stream nil)
+                   (funcall print-func (car cons) stream)
                    (write-char #\space stream)
-                   (funcall print-func (cdr cons) stream nil)
+                   (funcall print-func (cdr cons) stream)
                    (setq first nil)))
                (write-char #\) stream)
                )
@@ -320,7 +320,7 @@
        (setq changed-interval new-interval)))
 
     ;; move tree positions forward
-    (map-intervals 
+    (map-intervals
      #'(lambda (iterator)
          (incf (interval-start iterator) delta-len))
      (interval-next changed-interval))
@@ -425,20 +425,20 @@
 (defun* (pstring-char= -> boolean) ((pstr1 pstring) (pstr2 pstring))
   (let (chars1)
     (map-chars #'(lambda (char)
-                   (push char chars1)) 
+                   (push char chars1))
                pstr1)
     (setq chars1 (nreverse chars1))
     (map-chars #'(lambda (char)
                    (unless (eq char (pop chars1))
                      (return-from pstring-char= nil))
-                   ) 
+                   )
                pstr2)
     (null chars1)))
 
 (defun* (pstring-properties= -> boolean) ((pstr1 pstring) (pstr2 pstring))
   (let (intervals1)
     (map-property-intervals #'(lambda (start end alist)
-                                (push (list start end alist) intervals1)) 
+                                (push (list start end alist) intervals1))
                             pstr1)
     (setq intervals1 (nreverse intervals1))
     (map-property-intervals #'(lambda (start2 end2 alist2)
@@ -451,7 +451,7 @@
                                   (unless (and (eq start1 start2)
                                                (eq end1 end2)
                                                (equal alist1 alist2))
-                                    (return-from pstring-properties= nil)))) 
+                                    (return-from pstring-properties= nil))))
                             pstr2)
     (null intervals1)))
 

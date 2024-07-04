@@ -51,7 +51,7 @@
   )
 
 (in-package :cl-emacs/lib/reader)
-;; (log-enable :cl-emacs/lib/reader :debug1)
+;; (log-enable :cl-emacs/lib/reader :debug2)
 (log-enable :cl-emacs/lib/reader :info)
 (def-suite cl-emacs/lib/reader)
 (in-suite cl-emacs/lib/reader)
@@ -84,14 +84,14 @@
                       for sym-name = (concatenate 'string (cl:symbol-name state) "-TRANSITION")
                       collect
                       `(setf (aref *transitions* ,id)
-                             (cl:symbol-function (find-symbol  ,sym-name))))) 
+                             (cl:symbol-function (find-symbol  ,sym-name)))))
      body1)
     (setq body1  (cl:append (loop for state in states
                                   for id from 0
                                   collect `(defparameter ,state ,id))
                             body1))
     (push `(defparameter *transitions* (make-array ,(cl:length states))) body1)
-    
+
     (cons 'progn body1)))
 (define-states
     state/toplevel
@@ -133,14 +133,6 @@
   (with-slots (stack mod-stack) reader
     (push nil stack)
     (push nil mod-stack)))
-
-(defun* init-stack ((reader reader))
-  "init stack with single empty list only first time. That means that parsing actually started"
-  (with-slots (stack mod-stack) reader
-    (unless stack
-      (log-debug2 "initialize stacks")
-      (push nil stack)
-      (push nil mod-stack))))
 
 (defun* push-modifier ((reader reader) modifier &key replace-last)
   (with-slots (mod-stack) reader
@@ -200,12 +192,11 @@
     (let* ((current-modifiers (car mod-stack))
            (active-modifier (car current-modifiers)))
       (log-debug2 "toplevel active-modifier: ~s" active-modifier)
-      (unless (char-whitespace-p char)
-        (init-stack reader))
       (cond
         ((eq active-modifier '\#)
          (cond
-           ((eq char #\') (push-modifier reader '\#\' :replace-last t))
+           ((eq char #\')
+            (push-modifier reader '\#\' :replace-last t))
            ((eq char #\:)
             (pop (car mod-stack))
             (start-collector reader)
@@ -291,7 +282,8 @@
          (push-modifier reader '\,))
         ((and (eq char #\@) (eq active-modifier '\,))
          (push-modifier reader '\,@ :replace-last t))
-        ((eq char #\#) (push-modifier reader '\#))
+        ((eq char #\#)
+         (push-modifier reader '\#))
         (t
          (start-collector reader)
          (change-state reader state/symbol)
@@ -752,7 +744,8 @@
     (log-debug1 "transition to state ~s" new-state)
     (log-debug2 "mod-stack: ~s" mod-stack)
     (log-debug2 "stack: ~s" stack)
-    (setq state new-state)))
+    (setq state new-state)
+    ))
 (defun* process-char ((reader reader) (char character) &key new-state)
   (with-slots (state) reader
     (log-debug2 "process char ~s in state ~s" char state)
@@ -774,6 +767,8 @@
 (defun* read-internal (stream)
   (let ((reader (make-reader :state state/toplevel)))
     (with-slots (state stack mod-stack character-counter extra-buffer pointers) reader
+      (push nil stack)
+      (push nil mod-stack)
       (handler-case
           (handler-case
               (loop
@@ -791,7 +786,9 @@
         (reader-stopped-signal ()
           (log-debug1 "reader stopped")))
       (log-debug2 "stack: ~s" stack)
-      (when (or (null stack) (cdr stack))
+      (when (or (null stack) (equal '(nil) stack))
+        (error 'eof-reader-error :details "Reader not started - empty input"))
+      (when  (cdr stack)
         (error 'eof-reader-error :details "Lisp structure is not complete"))
       (when (car mod-stack)
         (error 'eof-reader-error :details (cl:format nil "modifiers ~s without defined body" (car mod-stack))))
@@ -854,6 +851,8 @@
              (car (read-cl-string "#_test"))))
   (is (equal (quote el::||)
              (car (read-cl-string "#_"))))
+  (is (equal (quote el::|-|)
+             (car (read-cl-string "-"))))
   )
 
 (test test-read-shorthands
@@ -931,7 +930,10 @@
              (car (read-cl-string "'\\,"))))
   (is (equal (quote (el::\` (el::a (el::\,@ el::b))))
              (car (read-cl-string "`(a ,@b)"))))
-  )
+  (is (equal (quote (el::|,| (el::|,| el::a)))
+             (car (read-cl-string ",,a"))))
+  (is (equal (quote (el::|`| el::|,| el::a))
+             (car (read-cl-string "(\\` . ,a)")))))
 
 (test test-read-strings
   (is (equal `(,(pstrings:build-pstring "test") . 6)
@@ -989,11 +991,14 @@
   (signals eof-reader-error (read-cl-string "("))
   (is (equal (quote (1 2 3))
              (car (read-cl-string "(1 . (2 . (3 . nil)))"))))
+  (is (equal (quote (el::quote nil))
+             (read-cl-string "'()")))
   )
 (test test-read-comments
   (is (equal 'el::test
              (car (read-cl-string #M";;; comment line
                                         test symbol"))))
+  (signals eof-reader-error (read-cl-string ";; just comment"))
   )
 (test test-read-characters
   (is (equal '(65 66)
