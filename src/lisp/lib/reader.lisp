@@ -174,6 +174,7 @@
                     (t
                      (error 'invalid-reader-input-error :details "dot in wrong position"))))
                  (t (push element result-list))))
+      (log-debug2 "result list:~s" result-list)
       (end-collector reader result-list mod-frame))))
 
 (defun* end-vector ((reader reader))
@@ -305,11 +306,16 @@
            (buffer-len (cl:length cl-buffer))
            (start-position 0)
            (string-is-over nil)
-           (current-chunk ""))
+           (current-chunk "")
+           (multibyte nil))
       (unless (pstrings:pstring-p collector)
         (error 'invalid-reader-input-error :details
                "pstring reader not initialized properly (bug)"))
       (log-debug2 "collector:~s" collector)
+      (loop for char across cl-buffer
+            do (when (>= (char-code char) 128)
+                 (setf multibyte t)
+                 (return)))
       (setq
        current-chunk
        (with-output-to-string (stream)
@@ -361,9 +367,12 @@
                      )
                    ))
             finally (return "")))))
+
       (log-debug2 "current-chunk:~s cl-buffer:~s" current-chunk cl-buffer)
       ;; accumulate chunk to collector
       (pstrings:ninsert (pstrings:build-pstring current-chunk) collector)
+      (when (and multibyte (not (pstrings:pstring-multibyte collector)))
+        (setf (pstrings:pstring-multibyte collector) t))
 
       (when string-is-over
         ;; here cl-buffer may contain some unprocessed characters for main reader
@@ -396,6 +405,7 @@
     (with-slots (extra-buffer) reader
       (let ((parsed (char-list-to-cl-string (nreverse stack-frame)))
             code)
+        (log-debug2 "parsed: ~s" parsed)
         (handler-case
             (setq code (read-emacs-character parsed))
           (extra-symbols-in-character-spec-error (e)
@@ -412,7 +422,8 @@
   (with-slots (stack) reader
     (cond
       ((char-whitespace-p char)
-       (push-extra-char reader char) ; put whitespace early, because it is stack, not queue
+       (push char (car stack))
+       ;; (push-extra-char reader char) ; put whitespace early, because it is stack, not queue
        (end-character reader)
        (change-state reader state/toplevel))
       (t
@@ -690,9 +701,9 @@
                                                          :contents contents)))
     ))
 
-(defun* apply-modifiers ((reader reader) something (modifiers list) &optional (nil-not-allowed t))
+(defun* apply-modifiers ((reader reader) something (modifiers list) &optional (nil-allowed t))
   (log-debug2 "applying modifiers ~s to:~s" modifiers something)
-  (when (and modifiers nil-not-allowed (null something))
+  (when (and modifiers (not nil-allowed) (null something))
     (error 'invalid-reader-input-error
            :details (cl:format nil "can't apply modifiers ~s without actual body" modifiers)))
   (with-slots (pointers stack) reader
@@ -764,18 +775,20 @@
                ;; extra buffer is modified during character processing
                (process-char reader char)))))
 
-(defun* read-internal (stream)
+(defun* read-internal (stream &optional (external-position 0))
+  #M"external-position is used only for better debug. It will show you exact character
+     position is source string, where reader found a problem"
   (let ((reader (make-reader :state state/toplevel)))
     (with-slots (state stack mod-stack character-counter extra-buffer pointers) reader
       (push nil stack)
       (push nil mod-stack)
       (handler-case
           (handler-case
-              (loop
-                do (let ((char (read-char stream)))
-                     (incf character-counter)
-                     (process-char reader char)
-                     (process-extra-buffer reader)))
+              (loop for read-position from external-position
+                    do (let ((char (read-char stream)))
+                         (incf character-counter)
+                         (process-char reader char)
+                         (process-extra-buffer reader)))
             (end-of-file ()
               (log-debug1 "end of file")
               (process-extra-buffer reader)
@@ -808,7 +821,7 @@
                      \(length STRING) respectively.  Negative values are counted from
                      the end of STRING."
   (with-input-from-string (stream cl-string :start start :end end)
-    (multiple-value-bind (result reader) (read-internal stream)
+    (multiple-value-bind (result reader) (read-internal stream start)
       (with-slots (character-counter) reader
         (cons result character-counter)))))
 
@@ -963,7 +976,9 @@
   (is (equal
        (pstrings:build-pstring "fooA0bar")
        (car (read-cl-string "\"foo\\u00410bar\")"))))
-  (read-cl-string "\"\\x103000\")")
+  ;; (read-cl-string "\"\\x103000\")")
+  (is-false (pstrings:pstring-multibyte (car (read-cl-string "\"\\M-k\""))))
+  (is (pstrings:pstring-multibyte (car (read-cl-string "\"\\±\""))))
   )
 (test test-read-lists
   (is (equal `(el::a ,(pstrings:build-pstring "b"))
@@ -992,7 +1007,7 @@
   (is (equal (quote (1 2 3))
              (car (read-cl-string "(1 . (2 . (3 . nil)))"))))
   (is (equal (quote (el::quote nil))
-             (read-cl-string "'()")))
+             (car (read-cl-string "'()"))))
   )
 (test test-read-comments
   (is (equal 'el::test
@@ -1004,7 +1019,9 @@
   (is (equal '(65 66)
              (car (read-cl-string "(?A?B))"))))
   (is (equal '(el::a 92 65 66 65 32 . 3)
-             (car (read-cl-string "(a ?\\\\ ?A?B ?A?\\s. 3)")))))
+             (car (read-cl-string "(a ?\\\\ ?A?B ?A?\\s. 3)"))))
+  (is (equal 32
+             (car (read-cl-string "?\\ "))))  )
 
 (test test-reader-special-cases
   (signals eof-reader-error (read-cl-string ""))
@@ -1022,6 +1039,7 @@
   )
 (test test-read-cl-string
 ;;;###autoload
+  ;; #&8"\0"
   ;; #'test
   ;; #'(lambda (x) (use-package-require-after-load x body))
   ;; #'*

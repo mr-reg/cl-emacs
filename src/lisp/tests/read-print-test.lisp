@@ -68,8 +68,8 @@
 (defun* el-read-princ-file ((file pathname))
   (let* ((filename (cl:namestring file))
          (process-info (uiop:launch-program
-                        (cl:format nil "emacs --batch -Q --load src/elisp/read.el --eval '(read-princ-el-file \"~a\")'"
-                                   filename) :output :stream))
+                        (cl:format nil "emacs --batch -Q --load src/elisp/read.el --eval '(read-princ-el-file \"~a\" \"raw-emacs.log\")'"
+                                   filename) :output :stream ))
          (in-stream (uiop:process-info-output process-info)))
     (with-output-to-string (out-stream)
       (handler-case
@@ -127,10 +127,12 @@
   ;; (let ((roo)))
   ;; (uiop/filesystem:directory-files )
   (handler-case
-      (run-test-for-subdirectories 
+      (run-test-for-subdirectories
        (truename (concatenate 'string
                               *emacs-source-folder*
-                              "lisp/calc/")))
+                              "lisp/")))
     (test-error ()
       (log-debug "error")))
   )
+(defun debug-one-test ()
+  (one-test #P"/root/github/emacs/lisp/calc/calc-ext.el"))

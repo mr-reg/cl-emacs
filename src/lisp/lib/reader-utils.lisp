@@ -103,7 +103,7 @@
 (defun* char-whitespace-p ((char character))
   #M"return t if character is whitespace or #\null.
      #\nullnil used for EOF"
-  (memq char '(#\null #\space #\tab #\newline)))
+  (memq char '(#\null #\space #\tab #\newline #\page)))
 
 (defun* char-end-of-statement-p ((char character))
   #M"return t if character is whitespace or nil or any

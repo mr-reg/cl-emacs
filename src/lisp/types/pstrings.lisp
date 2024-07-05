@@ -37,6 +37,7 @@
            #:pstring-char=
            #:pstring=
            #:pstring-len
+           #:pstring-multibyte
            #:set-properties
            #:write-pstring-to-cl-stream
            ))
@@ -48,6 +49,7 @@
 (in-suite cl-emacs/types/pstrings)
 
 ;;; smart self-balancing b-tree structure, containing string chunks and properties
+
 
 (define-condition invalid-pstring-operation (error-with-description)
   ())
@@ -92,20 +94,10 @@
                     (:copier nil))
   (tree nil :type trees:binary-tree)
   (len 0 :type fixnum)
+  ;; we use CL characters, so we don't need to track multibyte status
+  ;; but we have this flag for compatible behaviour, like printing
+  (multibyte nil :type boolean)
   (first nil :type (or interval null)))
-
-;; (defmethod make-load-form ((tree trees:binary-tree) &optional environment)
-;;   (make-load-form-saving-slots tree :environment environment))
-
-;; (defmethod make-load-form ((node trees::avl-tree-node) &optional environment)
-;;   (make-load-form-saving-slots node :environment environment))
-
-
-;; (defmethod make-load-form ((pstr pstring) &optional environment)
-;;   (make-load-form-saving-slots pstr :environment environment))
-
-;; (defmethod make-load-form ((interval interval) &optional environment)
-;;   (make-load-form-saving-slots interval :environment environment))
 
 
 (defun* map-intervals (func (pstring-or-interval (or pstring interval null)))
@@ -184,7 +176,11 @@
                               (and (eq escaped :string) (memq char '(#\\ #\"))))
 
                      (write-char #\\ stream))
-                   (write-char char stream))
+                   (let ((code (char-code char)))
+                     (if (or (and (pstring-multibyte pstr) (<= 128 code 159))
+                             (and (not (pstring-multibyte pstr)) (<= 128 code)))
+                         (cl:format stream "\\~o" code)
+                         (write-char char stream))))
                pstr)
     (when (eq escaped :string)
       (write-char #\" stream)
@@ -267,8 +263,17 @@
 (defun* insert-interval ((pstr pstring) (new-interval interval) (position fixnum))
   #M"insert interval into pstring at the required position"
   (log-debug2 "insert interval pstr:~s interval:~s position:~s" pstr new-interval position)
-  (with-slots (len first tree) pstr
+  (with-slots (len first tree multibyte) pstr
     (assert (<= 0 position len))
+
+    ;; TODO: move on build string level?
+    (unless multibyte
+      ;; check if this string should be marked as multibyte
+      (loop for char across (interval-chunk new-interval)
+            do (when (>= (char-code char) 256)
+                 (setq multibyte t)
+                 (return))))
+
     (when (emptyp pstr)
 
       ;; interval modification
@@ -337,6 +342,8 @@
      If position is NIL, works as concatenation
      Result is stored in where"
   (unless (emptyp what)
+    (when (and (pstring-multibyte what) (not (pstring-multibyte where)))
+      (setf (pstring-multibyte where) t))
     (with-slots (tree) what
       (let ((insert-position (or position (pstring-len where))))
         (trees:dotree (interval2 tree)

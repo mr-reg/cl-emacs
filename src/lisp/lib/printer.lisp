@@ -178,24 +178,28 @@
   (prin-test "test" "\"test\"" (pstrings:build-pstring "test"))
   (prin-test #M"multiline
                 string"
-             #M"\"multiline
+      #M"\"multiline
                 string\""
-             (pstrings:build-pstring #M"multiline
+      (pstrings:build-pstring #M"multiline
                                         string"))
   (prin-test " " "#(\" \" 0 1 (invisible t))"
-             (pstrings:build-pstring " " '((el::invisible . t))))
+      (pstrings:build-pstring " " '((el::invisible . t))))
   (prin-test (cl:format nil "~c, \"\"~c" #\tab #\soh)
-             (cl:format nil "\"~c, \\\"\\\"~c\"" #\tab #\soh)
-             (pstrings:build-pstring (cl:format nil "~c, \"\"~c" #\tab #\soh)))
+      (cl:format nil "\"~c, \\\"\\\"~c\"" #\tab #\soh)
+      (pstrings:build-pstring (cl:format nil "~c, \"\"~c" #\tab #\soh)))
   (prin-test " !\"#$%&'()*+,-./09:;<=>?@AZ[\\]^_`az{|}~"
-             "\" !\\\"#$%&'()*+,-./09:;<=>?@AZ[\\\\]^_`az{|}~\""
-             (pstrings:build-pstring " !\"#$%&'()*+,-./09:;<=>?@AZ[\\]^_`az{|}~"))
+      "\" !\\\"#$%&'()*+,-./09:;<=>?@AZ[\\\\]^_`az{|}~\""
+      (pstrings:build-pstring " !\"#$%&'()*+,-./09:;<=>?@AZ[\\]^_`az{|}~"))
   (prin-test "abc" "#(\"abc\" 0 3 (\"ab\\\"c\" ab\\ c))"
-             (pstrings:build-pstring
-              "abc"
-              (list
-               (cons (pstrings:build-pstring "ab\"c") 'el::|AB C|))))
+      (pstrings:build-pstring
+       "abc"
+       (list
+        (cons (pstrings:build-pstring "ab\"c") 'el::|AB C|))))
 
+  (prin-test "\\235ë" "\"\\235ë\""
+      (pstrings:build-pstring (cl:format nil "~c~c" (code-char #o235) (code-char #o353))))
+  ;; (prin-test "\\235ëЖ" "\"\\235ëЖ\""
+  ;;     (pstrings:build-pstring (cl:format nil "~c~cЖ" (code-char #o235) (code-char #o353))))
   ;; emacs supports this, but we do not:
   ;; it makes no sense, because strings are for characters, not for any hex numbers
   ;; to properly support this, we need convert pstrings to numeric/fixnum arrays,
