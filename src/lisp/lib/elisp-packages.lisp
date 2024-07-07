@@ -8,6 +8,7 @@
         (append form '((:import-from #:serapeum
                         #:fixnump)
                        (:import-from #:cl
+                        #:array-element-type
                         #:aref
                         #:ash
                         #:assert

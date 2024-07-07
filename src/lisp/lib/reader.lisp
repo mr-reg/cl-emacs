@@ -83,8 +83,11 @@
                       for id from 0
                       for sym-name = (concatenate 'string (cl:symbol-name state) "-TRANSITION")
                       collect
-                      `(setf (aref *transitions* ,id)
-                             (cl:symbol-function (find-symbol  ,sym-name)))))
+                      `(let ((sym (find-symbol ,sym-name)))
+                         (unless sym
+                           (error "can't find function ~a" ,sym-name))
+                         (setf (aref *transitions* ,id) (cl:symbol-function sym))
+                         )))
      body1)
     (setq body1  (cl:append (loop for state in states
                                   for id from 0
@@ -103,7 +106,8 @@
   state/pointer
   state/radix-bin
   state/radix-oct
-  state/radix-hex)
+  state/radix-hex
+  state/bool-vector-len)
 
 
 (defstruct reader
@@ -244,6 +248,10 @@
            ((eq char #\^)
             (pop (car mod-stack))
             (push-modifier reader 'chartable))
+           ((eq char #\&)
+            (pop (car mod-stack))
+            (start-collector reader)
+            (change-state reader state/bool-vector-len))
            (t (error 'invalid-reader-input-error :details "unsupported character after #"))
            ))
         ((and (eq active-modifier 'chartable)
@@ -557,6 +565,7 @@
          (push-to-reader-stack reader parsed))
         ((char-end-of-statement-p char)
          (end-radix reader radix-bits)
+         (push-extra-char reader char)
          (change-state reader state/toplevel))
         (t
          (error 'invalid-reader-input-error :details (cl:format nil "bad symbol ~s for radix ~a" char radix)))))))
@@ -566,6 +575,37 @@
   (generic-radix-transition reader char 3))
 (defun* state/radix-hex-transition ((reader reader) (char character))
   (generic-radix-transition reader char 4))
+
+(defun* end-bool-vector-len ((reader reader) )
+  (log-debug1 "end bool-vector-len")
+  (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
+    (let* ((chardata (char-list-to-cl-string (nreverse stack-frame)))
+           (elisp-number (parse-elisp-number chardata)))
+      (unless elisp-number
+        (error 'invalid-reader-input-error :details
+               (cl:format nil "can't parse bool-vector length: ~s" chardata)))
+      (log-debug2 "bool-vector length: ~s" elisp-number)
+      ;; push parsed vector length and bool-vector modifier to mod-frame
+      (push elisp-number mod-frame)
+      (push 'bool-vector mod-frame)
+      ;; "cleanup" collector and continue to read char data in normal string state
+      (with-slots (stack mod-stack) reader
+        (push nil stack)
+        (push mod-frame mod-stack))))
+  )
+(defun* state/bool-vector-len-transition ((reader reader) (char character))
+  (with-slots (stack) reader
+    (cond
+      ((digit-char-p char)
+       (push-to-reader-stack reader char))
+      ((eq char #\")
+       (end-bool-vector-len reader)
+       ;; pstring collector initialization
+       (push (pstrings:build-pstring "") (car stack))
+       (change-state reader state/pstring))
+      (t
+       (error 'invalid-reader-input-error
+              :details "non-digital character inside bool-vector length definition")))))
 
 ;; main part
 
@@ -701,6 +741,25 @@
                                                          :contents contents)))
     ))
 
+(defun* transform-to-bool-vector ((len fixnum) (pstr pstrings:pstring))
+  (let ((result (make-array len :element-type 'cl:bit :initial-element 0))
+        (idx 0))
+    (pstrings:map-chars #'(lambda (char)
+                            (let ((code (char-code char)))
+                              (log-debug2 "bool-vector idx:~s code:~s" idx code)
+                              (unless (<= 0 code 255)
+                                (error 'invalid-reader-input-error :details
+                                       "can't use character with code >= 256 in bool-vector definition "))
+                              (loop with mask = 1
+                                    while (and (< mask 256) (< idx len))
+                                    do (setf (aref result idx)
+                                             (if (zerop (logand code mask)) 0 1))
+                                       (log-debug2 "mask:~s bit:~s" mask (logand code mask))
+                                       (incf idx)
+                                       (setq mask (ash mask 1)))))
+                        pstr)
+    result))
+
 (defun* apply-modifiers ((reader reader) something (modifiers list) &optional (nil-allowed t))
   (log-debug2 "applying modifiers ~s to:~s" modifiers something)
   (when (and modifiers (not nil-allowed) (null something))
@@ -709,8 +768,7 @@
   (with-slots (pointers stack) reader
     (loop
       while modifiers
-      do (let ((modifier (car modifiers)))
-           (setq modifiers (cdr modifiers))
+      do (let ((modifier (pop modifiers)))
            (log-debug1 "process ~s modifier" modifier)
            (case modifier
              ((symbol \#\:) (progn))
@@ -743,6 +801,8 @@
               (setq something (transform-to-chartable something)))
              (sub-chartable
               (setq something (transform-to-sub-chartable something)))
+             (bool-vector
+              (setq something (transform-to-bool-vector (pop modifiers) something)))
              (t (error 'invalid-reader-input-error
                        :details (cl:format nil "unexpected modifier ~s" modifier)))
              ))))
@@ -1123,6 +1183,8 @@
   (is (equal (quote #x010aaf)
              (car (read-cl-string "#X010aAF"))))
   (signals invalid-reader-input-error (read-cl-string "#x013aw"))
+  (is (equal (quote (el::test #x123))
+             (car (read-cl-string "(test #x123)"))))
   )
 
 (test test-read-hash-tables
@@ -1175,6 +1237,17 @@
     (is (equal '#(el::slot0 el::slot1 el::slot2)
                (chartables:chartable-extra-slots ct)))
     ))
+
+(test test-read-bool-vector ()
+  (is (equal #*1010
+             (car (read-cl-string "#&4\"\""))))
+  (is (equal #*10
+             (car (read-cl-string "#&2\"a\""))))
+  (is (equal #*
+             (car (read-cl-string "#&0\"\""))))
+  (is (equal #*01011110110001
+             (car (read-cl-string "#&14\"z#\""))))
+  )
 
 (defun test-me ()
   (run! 'cl-emacs/lib/reader))

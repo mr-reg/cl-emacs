@@ -28,9 +28,8 @@
   (:export #:build-pstring
            #:compute-hash
            #:copy-pstring
-           #:mapchars
+           #:map-chars
            #:emptyp
-           #:do-chars
            #:ninsert
            #:pstring
            #:pstring-p

@@ -42,6 +42,8 @@
                 #:consp
                 #:floatp
                 #:integerp
+                #:logand
+                #:logior
                 #:null
                 #:numberp
                 #:symbolp
@@ -69,6 +71,8 @@
    #:floatp
    #:integerp
    #:isnan
+   #:logand
+   #:logior
    #:null
    #:numberp
    #:symbolp
@@ -96,7 +100,7 @@
      With one argument, return 1 divided by the argument.
      The arguments must be numbers or markers.
      usage: (/ NUMBER &rest DIVISORS)"
-  (let ((result 
+  (let ((result
           (float-features:with-float-traps-masked (:divide-by-zero :invalid)
             (if divisors
                 (let ((floatp-mode (floatp number))
@@ -496,12 +500,7 @@ Also see ‘buffer-local-boundp'.
 
 (fn VARIABLE &optional BUFFER)"
   (error 'unimplemented-error))
-(defun* logand ()
-  #M"Return bitwise-and of all the arguments.
-Arguments may be integers, or markers converted to integers.
 
-(fn &rest INTS-OR-MARKERS)"
-  (error 'unimplemented-error))
 (defun* logcount ()
   #M"Return population count of VALUE.
 This is the number of one bits in the two's complement representation
@@ -509,12 +508,6 @@ of VALUE.  If VALUE is negative, return the number of zero bits in the
 representation.
 
 (fn VALUE)"
-  (error 'unimplemented-error))
-(defun* logior ()
-  #M"Return bitwise-or of all the arguments.
-Arguments may be integers, or markers converted to integers.
-
-(fn &rest INTS-OR-MARKERS)"
   (error 'unimplemented-error))
 (defun* lognot ()
   #M"Return the bitwise complement of NUMBER.  NUMBER must be an integer.

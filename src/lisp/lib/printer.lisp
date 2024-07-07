@@ -37,7 +37,8 @@
   )
 
 (in-package :cl-emacs/lib/printer)
-(log-enable :cl-emacs/lib/printer :debug2)
+;; (log-enable :cl-emacs/lib/printer :debug2)
+(log-enable :cl-emacs/lib/printer :info)
 (def-suite cl-emacs/lib/printer)
 (in-suite cl-emacs/lib/printer)
 (named-readtables:in-readtable mstrings:mstring-syntax)
@@ -101,6 +102,25 @@
            (pstrings:write-pstring-to-cl-stream obj stream :escaped nil)
            (pstrings:write-pstring-to-cl-stream obj stream :escaped :string)
            ))
+      ((and (vectorp obj) (eq (array-element-type obj) 'cl:bit))
+       (cl:format stream "#&~d" (cl:length obj))
+       (pstrings:write-pstring-to-cl-stream
+        (pstrings:build-pstring
+         (with-output-to-string (stream)
+           (loop for bit across obj
+                 with code = 0
+                 with nbits = 0
+                 do (setf code (logior code (ash bit nbits)))
+                    (incf nbits)
+                    (when (= nbits 8)
+                      (write-char (code-char code) stream)
+                      (setq nbits 0)
+                      (setq code 0))
+                 finally (when (> nbits 0)
+                           (write-char (code-char code) stream))
+                 )))
+        stream :escaped :string)
+       )
       ((vectorp obj)
        (write-char #\[ stream)
        (loop for el across obj
@@ -196,10 +216,10 @@
        (list
         (cons (pstrings:build-pstring "ab\"c") 'el::|AB C|))))
 
-  (prin-test "\\235ë" "\"\\235ë\""
+  (prin-test "\\235\\353" "\"\\235\\353\""
       (pstrings:build-pstring (cl:format nil "~c~c" (code-char #o235) (code-char #o353))))
-  ;; (prin-test "\\235ëЖ" "\"\\235ëЖ\""
-  ;;     (pstrings:build-pstring (cl:format nil "~c~cЖ" (code-char #o235) (code-char #o353))))
+  (prin-test "\\235ëЖ" "\"\\235ëЖ\""
+      (pstrings:build-pstring (cl:format nil "~c~cЖ" (code-char #o235) (code-char #o353))))
   ;; emacs supports this, but we do not:
   ;; it makes no sense, because strings are for characters, not for any hex numbers
   ;; to properly support this, we need convert pstrings to numeric/fixnum arrays,
@@ -229,6 +249,13 @@
 (test test-print-functions
   (prin-test "#'test" "#'test" '(el::function el::test))
   (prin-test "#'nil" "#'nil" '(el::function nil))
+  )
+
+(test test-print-bool-vector
+  (prin-test "#&0\"\"" #*)
+  (prin-test "#&8\"z\"" #*01011110)
+  (prin-test "#&8\"\\377\"" #*11111111)
+  (prin-test "#&14\"z#\"" #*01011110110001)
   )
 
 (defun test-me ()
