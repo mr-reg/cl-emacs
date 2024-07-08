@@ -130,13 +130,21 @@
                 (print-to-cl-stream printer el stream raw-mode)
                 (setq first nil))
        (write-char #\] stream))
-      ((numberp obj)
+      ((floatp obj)
        (cond
-         ((and (floatp obj) (float-features:float-infinity-p obj))
+         ((and (float-features:float-infinity-p obj) (> obj 0))
           (write-sequence "1.0e+INF" stream))
-         ((and (floatp obj) (isnan obj))
+         ((and (float-features:float-infinity-p obj) (< obj 0))
+          (write-sequence "-1.0e+INF" stream))
+         ((isnan obj)
           (write-sequence "0.0e+NaN" stream))
-         (t (cl:princ obj stream))))
+         (t (if el::float-output-format
+                (cl:format stream el::float-output-format obj)
+                (cl:format stream "~f" obj))
+            )))
+      ((numberp obj)
+       (cl:princ obj stream)
+       )
       (t (error 'unimplemented-error :details
                 (cl:format nil "unsupported object type ~s" (cl:type-of obj))))))
   )
@@ -186,7 +194,11 @@
   (prin-test "0.0" 0.0)
   (prin-test "0.0e+NaN" (/ 0.0 0.0))
   (prin-test "1.0e+INF" (/ 1.0 0.0))
-  (prin-test "1.0e+INF" (/ -1.0 0.0))
+  (prin-test "-1.0e+INF" (/ -1.0 0.0))
+  (prin-test "100000000.0" 1e8)
+  (prin-test "0.0001" 1e-4)
+  (let ((el::float-output-format "~,8f"))
+    (prin-test "0.00010000" 1e-4))
   )
 
 (test test-print-quote

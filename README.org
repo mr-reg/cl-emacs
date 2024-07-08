@@ -8,7 +8,7 @@ This is port of the Beast from C to Common Lisp.
 Development just started
 
 * Progress
-** reader [6/9]
+** reader [7/10]
    * [X] basic elisp reader 
    * [X] character syntax reader
    * [X] string reader [4/4]
@@ -19,9 +19,9 @@ Development just started
    * [X] hashtable reader
    * [X] float number reader
    * [X] char tables && sub-char tables
+   * [X] bool-vectors
    * [ ] shorthands
    * [ ] other special reader syntax
-   * [ ] bit vectors?  
    * [ ] markers?
 ** printer [0/2]
    * [ ] basic print implementation
@@ -51,17 +51,14 @@ the job. Sometimes it will add more functionality to elisp, than
 original Emacs has. I don't care if final product will work and we can
 pass all tests.
 
-** use common lisp community libraries if required
-
-Why do we need to reinvent the wheel? Common lisp standard is old and
-we need some modern features, even if they are not very portable
-between implementations.
-
 ** common lisp implementations support
 
-Main implementation goes on CCL + ocicl setup.
+   Main implementation goes on SBCL + quicklisp setup.
 
-SBCL + quicklisp port is inevitable in future.
+   Planned support:
+   * ECL
+   * CCL
+   * ocicl
 
 * Out of scope
   * any bytecode support: 
@@ -84,6 +81,13 @@ SBCL + quicklisp port is inevitable in future.
     that GUI integration with other applications can't be unified and
     it should be somehow implemented very close to UI library.
 
+* Known differences with Emacs
+
+  Maybe they will be fixed later
+
+** float-output-format uses cl:format syntax  
+   Something like "~,6f" works now, when emacs uses native sprintf
+   format string with some basic validations.
 * License
 
 The best things in life are free: GPLv3.

@@ -346,7 +346,9 @@
                        (return-result (reversed-list-to-number octals 3)))
                       ))
                    (hexadecimal
-                    (when char
+                    (when (and char
+                               (not (char-whitespace-p char))
+                               (not (char-end-of-statement-p char)))
                       (if (digit-char-p char 16)
                           (push (digit-char-p char 16) hex)
                           (if string-mode
@@ -357,12 +359,14 @@
                                      :input input :position position
                                      :start-position start-position
                                      :details (format nil "bad symbol in hexadecimal mode ~a" char)))))
-                    (when (null char)
+                    (when (or (null char) (char-whitespace-p char) (char-end-of-statement-p char))
                       (when (> (length hex) 8)
                         (error 'invalid-character-spec-error
                                :input input :position position
                                :start-position start-position
                                :details "in hexadecimal mode you can use only 8 numbers in character definition"))
+                      (when (and char (or (char-whitespace-p char) (char-end-of-statement-p char)))
+                        (decf position))
                       (let ((result (reversed-list-to-number hex 4)))
                         (return-result result))))
                    (4-unicode

@@ -34,7 +34,8 @@
   )
 
 (in-package :cl-emacs/tests/read-print-test)
-(log-enable :cl-emacs/tests/read-print-test :debug2)
+;; (log-enable :cl-emacs/tests/read-print-test :debug2)
+(log-enable :cl-emacs/tests/read-print-test :info)
 (def-suite cl-emacs/lib/read-print-test)
 (in-suite cl-emacs/lib/read-print-test)
 (named-readtables:in-readtable mstrings:mstring-syntax)
@@ -52,13 +53,15 @@
                         (handler-case
                             (loop do (write-char (read-char in-stream) out-stream))
                           (end-of-file ())))))
-        (position 0))
+        (position 0)
+        (el::float-output-format "~,6f"))
     (log-debug2 "raw-string: ~s" raw-string)
     (with-output-to-string (out-stream)
       (handler-case
           (loop do (let ((read-result (reader:read-cl-string raw-string position)))
                      (log-debug2 "one read result ~s" read-result)
                      (printer:princ-to-cl-stream (car read-result) out-stream)
+                     (write-char #\newline out-stream)
                      (incf position (cdr read-result))
                      (log-debug2 "new read position ~s" position)))
         (reader:eof-reader-error ()
@@ -135,4 +138,8 @@
       (log-debug "error")))
   )
 (defun debug-one-test ()
-  (one-test #P"/root/github/emacs/lisp/calc/calc-ext.el"))
+  (handler-case
+      (one-test #P"/root/github/emacs/lisp/jka-cmpr-hook.el")
+    (test-error ()
+      (log-debug "error")))
+  )

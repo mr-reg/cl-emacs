@@ -129,15 +129,17 @@
                   (t (error 'arith-error :details
                             (cl:format nil "unsupported number format: ~s" number))))
                 ))))
-    (if (and (floatp result) (float-features:float-infinity-p result))
-        float-features:single-float-positive-infinity
-        result)))
+    result
+    ;; (if (and (floatp result) (float-features:float-infinity-p result))
+    ;;     float-features:single-float-positive-infinity
+    ;;     result)
+    ))
 
 ;; this symbol will stay internal, because it is not defined in elisp
 ;; for some reason
 (defparameter *nan* (/ 0.0 0.0))
-;; emacs does not distinguish positive and negative inifinity, so do we
-(defparameter *infinity* (/ 1.0 0.0))
+(defparameter *positive-infinity* (/ 1.0 0.0))
+(defparameter *negative-infinity* (/ -1.0 0.0))
 
 (defun* (isnan -> boolean) ((x float))
   #M"Return non-nil if argument X is a NaN."

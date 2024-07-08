@@ -49,7 +49,8 @@
           ;; here we know that number notation is correct
           (cond
             (has-nan cl-emacs/data::*nan*)
-            (has-inf cl-emacs/data::*infinity*)
+            ((and has-inf (> parsed 0)) cl-emacs/data::*positive-infinity*)
+            ((and has-inf (< parsed 0)) cl-emacs/data::*negative-infinity*)
             (t parsed)))
       (error ()
         nil))))

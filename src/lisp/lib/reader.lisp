@@ -953,8 +953,8 @@
   (is (= 1500 (car (read-cl-string ".15e4"))))
   (is (equal cl-emacs/data::*nan* (car (read-cl-string "0.0e+NaN"))))
   (is (equal cl-emacs/data::*nan* (car (read-cl-string "-4.5E+NaN"))))
-  (is (equal cl-emacs/data::*infinity* (car (read-cl-string "1.0e+INF"))))
-  (is (equal cl-emacs/data::*infinity* (car (read-cl-string "-4.0e+INF"))))
+  (is (equal cl-emacs/data::*positive-infinity* (car (read-cl-string "1.0e+INF"))))
+  (is (equal cl-emacs/data::*negative-infinity* (car (read-cl-string "-4.0e+INF"))))
   )
 (test test-read-quotes
   (is (equal (quote (el::quote el::test-symbol))
@@ -1081,7 +1081,14 @@
   (is (equal '(el::a 92 65 66 65 32 . 3)
              (car (read-cl-string "(a ?\\\\ ?A?B ?A?\\s. 3)"))))
   (is (equal 32
-             (car (read-cl-string "?\\ "))))  )
+             (car (read-cl-string "?\\ "))))
+  (is (equal #x202a
+             (car (read-cl-string "?\\x202a"))))
+  (is (equal '(#x202a #x202a)
+             (car (read-cl-string "(?\\x202a ?\\x202a)"))))
+  (is (equal #o202
+             (car (read-cl-string "?\\202"))))
+  )
 
 (test test-reader-special-cases
   (signals eof-reader-error (read-cl-string ""))

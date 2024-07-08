@@ -52,3 +52,5 @@
 ;; (unless t
 ;;   (do-symbols (symbol :cl-emacs/elisp)
 ;;     (format t "~s~%" symbol)))
+
+(cl:defparameter float-output-format nil)
