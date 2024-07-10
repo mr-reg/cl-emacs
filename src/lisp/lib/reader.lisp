@@ -315,15 +315,21 @@
            (start-position 0)
            (string-is-over nil)
            (current-chunk "")
-           (multibyte nil))
+           ;; we respect previous multibyte flag if it was already set on collector
+           (multibyte (pstrings:pstring-multibyte collector)))
       (unless (pstrings:pstring-p collector)
         (error 'invalid-reader-input-error :details
                "pstring reader not initialized properly (bug)"))
       (log-debug2 "collector:~s" collector)
-      (loop for char across cl-buffer
-            do (when (>= (char-code char) 128)
-                 (setf multibyte t)
-                 (return)))
+
+      (unless multibyte
+        ;; string will be multibyte only if during reading procedure we encounter non-ascii charactor
+        ;; nobody cares about actualy multibyte characters during read, maybe because emacs postpone
+        ;; their processing on later time
+        (loop for char across cl-buffer
+              do (when (>= (char-code char) 128)
+                   (setf multibyte t)
+                   (return))))
       (setq
        current-chunk
        (with-output-to-string (stream)
@@ -332,55 +338,70 @@
           (loop
             while (< start-position buffer-len)
             for char = nil
-            do (handler-case
-                   (progn
-                     (log-debug2 "read character start-position:~s cl-buffer:~s"
-                                 start-position cl-buffer)
-                     (setq char (read-string-character cl-buffer
-                                                       :start-position start-position))
-                     ;; complete read means that current string data is over
-                     ;; but string reader can continue
-                     (log-debug2 "normal complete read")
-                     (when char
-                       (write-char (code-char char) stream))
-                     (return ""))
-                 (extra-symbols-in-character-spec-error (e)
-                   (with-slots (creader::position
-                                creader::parsed-code) e
-                     (log-debug2 "position:~s parsed-code:~s"
-                                 creader::position
-                                 creader::parsed-code)
-                     (setq char creader::parsed-code)
-                     (cond
-                       ;; reader stopped and double quote ahead - proper end of the string
-                       ((and (zerop creader::position)
-                             (cl:char-equal #\" (aref cl-buffer start-position)))
-                        ;; return everything ahead of double quote to main reader
-                        (setq string-is-over t)
-                        (return (str:substring (1+ start-position) t cl-buffer)))
-                       ;; reader stopped but not a double quote ahead
-                       ((zerop creader::position)
-                        (error 'invalid-reader-input-error :details
-                               "string parser is stuck (bug)"))
-                       ;; move reader forward
-                       (t
-                        ;; character can be nil if it should be ignored according to
-                        ;; the emacs escape syntax
-                        (when char
-                          (write-char (code-char char) stream))
-                        (incf start-position creader::position)
-                        (log-debug2 "moving position +~s=~s" creader::position
-                                    start-position)
-                        ))
-                     )
-                   ))
+            for is-unicode-spec = (unless multibyte
+                                    (and (>= (cl:length cl-buffer) (1+ start-position))
+                                         (cl:char-equal (aref cl-buffer start-position) #\\)
+                                         (cl:char-equal (aref cl-buffer (1+ start-position)) #\u))
+                                    )
+            do (labels ((write-new-char (code)
+                          ;; character can be nil if it should be ignored according to
+                          ;; the emacs escape syntax, like "\ "
+                          (when char
+                            (when (and is-unicode-spec (>= code #x80))
+                              (setq multibyte t))
+                            (write-char (safe-code-char char) stream))))
+                 (handler-case
+                     (progn
+                       (log-debug2 "read character start-position:~s cl-buffer:~s"
+                                   start-position cl-buffer)
+                       (setq char (read-string-character cl-buffer
+                                                         :start-position start-position))
+                       ;; complete read means that current string data is over
+                       ;; but string reader can continue
+                       (log-debug2 "normal complete read")
+                       (write-new-char char)
+                       (return ""))
+                   (extra-symbols-in-character-spec-error (e)
+                     (with-slots (creader::position
+                                  creader::parsed-code) e
+                       (log-debug2 "position:~s parsed-code:~s"
+                                   creader::position
+                                   creader::parsed-code)
+                       (setq char creader::parsed-code)
+                       (cond
+                         ;; reader stopped and double quote ahead - proper end of the string
+                         ((and (zerop creader::position)
+                               (cl:char-equal #\" (aref cl-buffer start-position)))
+                          ;; return everything ahead of double quote to main reader
+                          (setq string-is-over t)
+                          (return (str:substring (1+ start-position) t cl-buffer)))
+                         ;; reader stopped but not a double quote ahead
+                         ((zerop creader::position)
+                          (error 'invalid-reader-input-error :details
+                                 "string parser is stuck (bug)"))
+                         ;; move reader forward
+                         (t
+                          (write-new-char char)
+                          (incf start-position creader::position)
+                          (log-debug2 "moving position +~s=~s" creader::position
+                                      start-position)
+                          ))
+                       )
+                     )))
             finally (return "")))))
 
       (log-debug2 "current-chunk:~s cl-buffer:~s" current-chunk cl-buffer)
+      (unless multibyte
+        ;; check for another magic "multibyte" constant
+        (loop for char across current-chunk
+              do (when (>= (char-code char) 2048)
+                   (setf multibyte t)
+                   (return))))
       ;; accumulate chunk to collector
       (pstrings:ninsert (pstrings:build-pstring current-chunk) collector)
-      (when (and multibyte (not (pstrings:pstring-multibyte collector)))
-        (setf (pstrings:pstring-multibyte collector) t))
+      ;; completely ignore what pstrings internal multibyte analyzer thinks
+      ;; during read process only reader approach is right (sarcazm)
+      (setf (pstrings:pstring-multibyte collector) multibyte)
 
       (when string-is-over
         ;; here cl-buffer may contain some unprocessed characters for main reader
@@ -949,12 +970,13 @@
   (is (= 1500 (car (read-cl-string "+15E2"))))
   (is (= 1600 (car (read-cl-string "+160000e-2"))))
   (is (= 1500 (car (read-cl-string "15.0e+2"))))
-  (is (= 12.34 (car (read-cl-string "1.234e+01"))))
+  (is (= 12.34d0 (car (read-cl-string "1.234e+01"))))
   (is (= 1500 (car (read-cl-string ".15e4"))))
   (is (equal cl-emacs/data::*nan* (car (read-cl-string "0.0e+NaN"))))
   (is (equal cl-emacs/data::*nan* (car (read-cl-string "-4.5E+NaN"))))
   (is (equal cl-emacs/data::*positive-infinity* (car (read-cl-string "1.0e+INF"))))
   (is (equal cl-emacs/data::*negative-infinity* (car (read-cl-string "-4.0e+INF"))))
+  (is (= 425.19685d0 (car (read-cl-string "425.19685"))))
   )
 (test test-read-quotes
   (is (equal (quote (el::quote el::test-symbol))
@@ -1006,7 +1028,10 @@
   (is (equal (quote (el::|,| (el::|,| el::a)))
              (car (read-cl-string ",,a"))))
   (is (equal (quote (el::|`| el::|,| el::a))
-             (car (read-cl-string "(\\` . ,a)")))))
+             (car (read-cl-string "(\\` . ,a)"))))
+  (is (equal (quote (el::|`| (el::quote (el::|,| (el::and)))))
+             (car (read-cl-string "`',(and)"))))
+  )
 
 (test test-read-strings
   (is (equal `(,(pstrings:build-pstring "test") . 6)
@@ -1037,8 +1062,16 @@
        (pstrings:build-pstring "fooA0bar")
        (car (read-cl-string "\"foo\\u00410bar\")"))))
   ;; (read-cl-string "\"\\x103000\")")
+  (is (read-cl-string "\"\\x3FFF7F\""))
   (is-false (pstrings:pstring-multibyte (car (read-cl-string "\"\\M-k\""))))
   (is (pstrings:pstring-multibyte (car (read-cl-string "\"\\±\""))))
+  (is-false (pstrings:pstring-multibyte (car (read-cl-string "\"\\3757zXZ\\0\""))))
+  (is (pstrings:pstring-multibyte (car (read-cl-string "\"[1-9][0-9][0-9]\\u2044[0-9]+\""))))
+  (is (pstrings:pstring-multibyte (car (read-cl-string "\"\\u0080\""))))
+  (is-false (pstrings:pstring-multibyte (car (read-cl-string "\"\\u007F\""))))
+  ;; ( (car (read-cl-string "\"[1-9][0-9][0-9]\\u2044[0-9]+\"")))
+  (is (pstrings:pstring-multibyte (car (read-cl-string "\"\\\\(\\u00A0+\\\\)\""))))
+
   )
 (test test-read-lists
   (is (equal `(el::a ,(pstrings:build-pstring "b"))

@@ -33,3 +33,18 @@
 (princ )
 (princ "±")
 (aref "±" 0)
+
+(multibyte-string-p "[1-9][0-9][0-9]\x2044[0-9]+")
+(multibyte-string-p "[1-9][0-9][0-9]\3757[0-9]+")
+(multibyte-string-p "\u007F+")
+#o3777
+#x2044
+
+(let ((float-output-format "%.6f")
+      (print-escape-nonascii t)
+      (print-escape-multibyte nil)
+
+      )
+  (princ "\u2044фв"))
+(cdr (cadr (read "`(quote . ,_)")))
+(princ (read "`(a . '_)"))

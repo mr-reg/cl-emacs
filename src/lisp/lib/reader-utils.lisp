@@ -16,14 +16,22 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/lib/reader-utils
-    (:use :common-lisp :cl-emacs/lib/log :alexandria :fiveam :defstar)
-  (:export #:parse-elisp-number
-           #:reversed-list-to-number
-           #:char-end-of-statement-p
-           #:char-list-to-cl-string
-           #:char-list-to-pstring
-           #:char-whitespace-p)
+(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/lib/reader-utils
+    (:use
+     :cl-emacs/lib/log
+     :alexandria
+     :fiveam
+     :cl-emacs/eval
+     :cl-emacs/data
+     :defstar)
+  (:export
+   #:char-end-of-statement-p
+   #:char-list-to-cl-string
+   #:char-list-to-pstring
+   #:char-whitespace-p
+   #:parse-elisp-number
+   #:reversed-list-to-number
+   )
   (:import-from #:serapeum
                 #:memq)
   (:local-nicknames (#:el #:cl-emacs/elisp)
@@ -45,7 +53,7 @@
     (when (emptyp to-parse)
       (return-from parse-elisp-number nil))
     (handler-case
-        (let ((parsed (parse-number:parse-real-number to-parse)))
+        (let ((parsed (parse-number:parse-real-number to-parse :float-format 'double-float)))
           ;; here we know that number notation is correct
           (cond
             (has-nan cl-emacs/data::*nan*)
@@ -53,7 +61,8 @@
             ((and has-inf (< parsed 0)) cl-emacs/data::*negative-infinity*)
             (t parsed)))
       (error ()
-        nil))))
+        nil)
+      )))
 
 (defun* reversed-list-to-number ((digits list) (radix-bits fixnum))
   #M"internal function for readers
@@ -93,8 +102,8 @@
   (is (= (parse-elisp-number "0") 0))
   (is (= (parse-elisp-number "0.0") 0.0))
   (is (= (parse-elisp-number "-4.5") -4.5))
-  (is (= (parse-elisp-number "2.71828") 2.71828))
-  (is (= (parse-elisp-number "1.5e2") 150.0))
+  (is (= (parse-elisp-number "2.71828") 2.71828d0))
+  (is (= (parse-elisp-number "1.5e2") 150.0d0))
   )
 (test radix-list
   (is (= #o321 (reversed-list-to-number '(1 2 3) 3)))

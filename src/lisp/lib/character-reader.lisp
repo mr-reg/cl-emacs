@@ -16,17 +16,17 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/lib/character-reader
+(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/lib/character-reader
     (:use
-     :common-lisp
      :cl-emacs/lib/log
-     :alexandria
      :fiveam
      :defstar
+     :cl-emacs/data
+     :cl-emacs/eval
+     :cl-emacs/fns
      :cl-emacs/lib/reader-utils
      :cl-emacs/lib/commons)
-  (:import-from #:serapeum
-                #:memq)
+
   (:export #:read-emacs-character
            #:read-string-character
            #:extra-symbols-in-character-spec-error
@@ -39,7 +39,7 @@
 (in-suite cl-emacs/lib/character-reader)
 (named-readtables:in-readtable mstrings:mstring-syntax)
 
-(define-condition character-reader-error (reader-error)
+(define-condition character-reader-error ()
   ((input :initarg :input
           :initform ""
           :type string)
@@ -54,13 +54,13 @@
             :type string)))
 (defmethod print-object ((e character-reader-error) stream)
   (with-slots (input details start-position position) e
-    (format stream "#<~a details:~s, input:~s>"
-            (class-name (class-of e)) details
-            (str:substring
-             start-position
-             (if (= -1 position) t
-                 (min (+ 1 start-position position) (length input)))
-             input)))
+    (cl:format stream "#<~a details:~s, input:~s>"
+               (class-name (class-of e)) details
+               (str:substring
+                start-position
+                (if (= -1 position) t
+                    (min (+ 1 start-position position) (cl:length input)))
+                input)))
   )
 (define-condition invalid-character-spec-error (character-reader-error)
   ())
@@ -72,9 +72,9 @@
                 :type (or null fixnum))))
 (defmethod initialize-instance :after ((e extra-symbols-in-character-spec-error) &key position input parsed-code)
   (with-slots (details) e
-    (let ((rem (- (length input) position)))
-      (setq details (format nil "~a last character~p not parsed. Current result ~a"
-                            rem rem parsed-code)))))
+    (let ((rem (- (cl:length input) position)))
+      (setq details (cl:format nil "~a last character~p not parsed. Current result ~a"
+                               rem rem parsed-code)))))
 
 (defun* decode-named-char ((raw-input string) (name string))
   (let* ((clean-name (str:replace-all "\n" "" name))
@@ -86,16 +86,16 @@
                 do (unless (digit-char-p char 16)
                      (error 'invalid-character-spec-error
                             :input raw-input
-                            :details (format nil "invalid character in hex notation ~a" char))))
+                            :details (cl:format nil "invalid character in hex notation ~a" char))))
           (let* ((parsed (parse-integer hex-part :radix 16)))
             ;; for wrong character (code-char) will be
             ;; nil in CCL
             ;; U~X in SBCL
 
-            (when (and (< parsed cl-unicode:+code-point-limit+) (code-char parsed)
+            (when (and (< parsed cl-unicode:+code-point-limit+) (safe-code-char parsed)
                        ;; this is filter to ignore characters without unicode name, but
                        ;; in SBCL this does not work consistently
-                       ;; (not (string= (char-name (code-char parsed)) (format nil "U~X" parsed)))
+                       ;; (not (string= (char-name (code-char parsed)) (cl:format nil "U~X" parsed)))
                        )
               (setq decoded parsed))))
         (let ((parsed (cl-unicode:character-named clean-name)))
@@ -104,7 +104,7 @@
     (or decoded
         (error 'invalid-character-spec-error
                :input raw-input
-               :details (format nil "can't recognize unicode name ~a" name)))))
+               :details (cl:format nil "can't recognize unicode name ~a" name)))))
 
 
 
@@ -145,7 +145,7 @@
      specification is ignored"
   (block parsing
     (let ((mode 'toplevel)
-          (n-chars (length input))
+          (n-chars (cl:length input))
           (position 0)
           (modifiers 0)
           (caret 0)
@@ -271,7 +271,7 @@
                        (error 'invalid-character-spec-error
                               :input input :position position
                               :start-position start-position
-                              :details (format nil "invalid symbol found ~a" char)))
+                              :details (cl:format nil "invalid symbol found ~a" char)))
                       ((and (eq char #\") string-mode)
                        (decf position)
                        (return-result nil))
@@ -358,9 +358,9 @@
                               (error 'invalid-character-spec-error
                                      :input input :position position
                                      :start-position start-position
-                                     :details (format nil "bad symbol in hexadecimal mode ~a" char)))))
+                                     :details (cl:format nil "bad symbol in hexadecimal mode ~a" char)))))
                     (when (or (null char) (char-whitespace-p char) (char-end-of-statement-p char))
-                      (when (> (length hex) 8)
+                      (when (> (cl:length hex) 8)
                         (error 'invalid-character-spec-error
                                :input input :position position
                                :start-position start-position
@@ -376,9 +376,9 @@
                           (error 'invalid-character-spec-error
                                  :input input :position position
                                  :start-position start-position
-                                 :details (format nil "bad symbol in 4-unicode mode ~a" char))))
-                    (when (or (null char) (>= (length hex) 4))
-                      (unless (= 4 (length hex))
+                                 :details (cl:format nil "bad symbol in 4-unicode mode ~a" char))))
+                    (when (or (null char) (>= (cl:length hex) 4))
+                      (unless (= 4 (cl:length hex))
                         (error 'invalid-character-spec-error
                                :input input :position position
                                :start-position start-position
@@ -392,9 +392,9 @@
                           (error 'invalid-character-spec-error
                                  :input input :position position
                                  :start-position start-position
-                                 :details (format nil "bad symbol in 8-unicode mode ~a" char))))
-                    (when (or (null char) (>= (length hex) 8))
-                      (unless (= 8 (length hex))
+                                 :details (cl:format nil "bad symbol in 8-unicode mode ~a" char))))
+                    (when (or (null char) (>= (cl:length hex) 8))
+                      (unless (= 8 (cl:length hex))
                         (error 'invalid-character-spec-error
                                :input input :position position
                                :start-position start-position
@@ -418,7 +418,7 @@
                       (t (error 'invalid-character-spec-error
                                 :input input :position position
                                 :start-position start-position
-                                :details (format nil "bad symbol after the modifier ~a" char)))))
+                                :details (cl:format nil "bad symbol after the modifier ~a" char)))))
                    (super-modifier
                     (cond
                       ((eq char #\-)
@@ -440,7 +440,7 @@
                       (t (error 'invalid-character-spec-error
                                 :input input :position position
                                 :start-position start-position
-                                :details (format nil "bad symbol after N ~a" char)))))
+                                :details (cl:format nil "bad symbol after N ~a" char)))))
                    (named-in-braces
                     (cond
                       ((null char)
@@ -452,7 +452,7 @@
                        (return-result (decode-named-char input (char-list-to-cl-string (nreverse named-list)))))
                       (t (push char named-list))))
                    )))
-        (loop for idx from start-position below (length input)
+        (loop for idx from start-position below (cl:length input)
               for char = (aref input idx)
               do (incf position)
                  (process-one-character char)
@@ -546,10 +546,10 @@
 
 (test test-read-one-special-character
   (is (= 1 (read-emacs-character "\\"))) (is (= 1 (read-string-character "")))
-  (is (= -1 (read-emacs-character (cl:format nil "\\~c" (code-char 10)))))
-  (is (equal nil (read-string-character (cl:format nil "\\~c" (code-char 10)))))
-  (is (= 13 (read-emacs-character (cl:format nil "\\~c" (code-char 13)))))
-  (is (= 13 (read-string-character (cl:format nil "\\~c" (code-char 13)))))
+  (is (= -1 (read-emacs-character (cl:format nil "\\~c" (safe-code-char 10)))))
+  (is (equal nil (read-string-character (cl:format nil "\\~c" (safe-code-char 10)))))
+  (is (= 13 (read-emacs-character (cl:format nil "\\~c" (safe-code-char 13)))))
+  (is (= 13 (read-string-character (cl:format nil "\\~c" (safe-code-char 13)))))
   (is (= 32 (read-emacs-character "\\ "))) (is (equal nil (read-string-character "\\ ")))
   (is (= 33 (read-emacs-character "\\!"))) (is (= 33 (read-string-character "\\!")))
   (is (= 47 (read-emacs-character "\\/"))) (is (= 47 (read-string-character "\\/")))

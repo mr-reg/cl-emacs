@@ -19,14 +19,18 @@
 (uiop:define-package :cl-emacs/lib/commons
     (:use :common-lisp :cl-emacs/lib/log :alexandria :fiveam
           :defstar)
-
+  (:shadow #:code-char)
   (:export
-   #:reexport-symbols
-   #:unimplemented-error
+   #:safe-code-char
    #:error-with-description
-   #:simple-print-condition-with-slots))
+   #:reexport-symbols
+   #:safe-code
+   #:simple-print-condition-with-slots
+   #:unimplemented-error
+   ))
 (in-package :cl-emacs/lib/commons)
 (log-enable :cl-emacs/lib/commons :debug1)
+(named-readtables:in-readtable mstrings:mstring-syntax)
 
 (defvar *timer* 0)
 (defun set-timer ()
@@ -85,3 +89,9 @@
 
 (defmacro import-cl-basics ()
   )
+
+(defun safe-code-char (code)
+  #M"sometimes emacs code relies on characters above unicode limit, so we need some safe way to
+     process them as cl:char, even if it will cause some side-effects..."
+  (let ((safe-code (mod code cl-unicode:+code-point-limit+)))
+    (cl:code-char safe-code)))

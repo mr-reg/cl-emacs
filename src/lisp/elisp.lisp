@@ -54,3 +54,4 @@
 ;;     (format t "~s~%" symbol)))
 
 (cl:defparameter float-output-format nil)
+;; (cl:defparameter print-escape-multibyte nil)

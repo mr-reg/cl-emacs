@@ -44,6 +44,8 @@
                 #:integerp
                 #:logand
                 #:logior
+                #:min
+                #:max
                 #:null
                 #:numberp
                 #:symbolp
@@ -73,6 +75,8 @@
    #:isnan
    #:logand
    #:logior
+   #:min
+   #:max
    #:null
    #:numberp
    #:symbolp
@@ -582,18 +586,6 @@ See also ‘fmakunbound'.
   #M"Return t if OBJECT is a marker (editor pointer).
 
 (fn OBJECT)"
-  (error 'unimplemented-error))
-(defun* max ()
-  #M"Return largest of all the arguments (which must be numbers or markers).
-The value is always a number; markers are converted to numbers.
-
-(fn NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)"
-  (error 'unimplemented-error))
-(defun* min ()
-  #M"Return smallest of all the arguments (which must be numbers or markers).
-The value is always a number; markers are converted to numbers.
-
-(fn NUMBER-OR-MARKER &rest NUMBERS-OR-MARKERS)"
   (error 'unimplemented-error))
 (defun* mod ()
   #M"Return X modulo Y.

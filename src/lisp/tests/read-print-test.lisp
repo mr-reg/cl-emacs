@@ -35,7 +35,7 @@
 
 (in-package :cl-emacs/tests/read-print-test)
 ;; (log-enable :cl-emacs/tests/read-print-test :debug2)
-(log-enable :cl-emacs/tests/read-print-test :info)
+(log-enable :cl-emacs/tests/read-print-test :debug)
 (def-suite cl-emacs/lib/read-print-test)
 (in-suite cl-emacs/lib/read-print-test)
 (named-readtables:in-readtable mstrings:mstring-syntax)
@@ -43,7 +43,9 @@
 (defun* read-emacs-file ())
 
 (defparameter *emacs-source-folder* "~/github/emacs/")
-
+(defvar *good-tested-files* (make-hash-table :test 'equal))
+(defparameter *excluded-files* '("lisp/pcomplete.el"))
+;; (clrhash *good-tested-files*)
 (define-condition test-error (error-with-description)
   ())
 
@@ -54,7 +56,8 @@
                             (loop do (write-char (read-char in-stream) out-stream))
                           (end-of-file ())))))
         (position 0)
-        (el::float-output-format "~,6f"))
+        (el::float-output-format "~,6f")
+        (el::print-escape-multibyte t))
     (log-debug2 "raw-string: ~s" raw-string)
     (with-output-to-string (out-stream)
       (handler-case
@@ -70,9 +73,8 @@
   )
 (defun* el-read-princ-file ((file pathname))
   (let* ((filename (cl:namestring file))
-         (process-info (uiop:launch-program
-                        (cl:format nil "emacs --batch -Q --load src/elisp/read.el --eval '(read-princ-el-file \"~a\" \"raw-emacs.log\")'"
-                                   filename) :output :stream ))
+         (cmd (cl:format nil "emacs --batch -Q --load src/elisp/read.el --eval '(read-princ-el-file \"~a\" \"raw-emacs.log\")'" filename))
+         (process-info (uiop:launch-program cmd :output :stream ))
          (in-stream (uiop:process-info-output process-info)))
     (with-output-to-string (out-stream)
       (handler-case
@@ -87,6 +89,13 @@
 (defun* one-test ((filename pathname))
   ;; ~/github/emacs/lisp/calendar/cal-x.el
   (cl:format t "filename ~s " filename)
+  (when (gethash (cl:namestring filename) *good-tested-files*)
+    (cl:format t "previously tested~%")
+    (return-from one-test))
+  (dolist (suffix *excluded-files*)
+    (when (str:ends-with-p suffix (cl:namestring filename))
+      (cl:format t "excluded~%")
+      (return-from one-test)))
   (let* (
          ;; (filename "/root/github/cl-emacs/src/elisp/test.el")
          ;; (filename "/root/github/emacs/lisp/calendar/cal-x.el")
@@ -114,7 +123,9 @@
               (end-of-file ()))
             )
           (error 'test-error))
-        (cl:format t "OK~%"))
+        (progn
+          (setf (gethash (cl:namestring filename) *good-tested-files*) t)
+          (cl:format t "OK~%")))
     ))
 
 (defun* run-test-for-subdirectories ((dir pathname))
@@ -133,13 +144,15 @@
       (run-test-for-subdirectories
        (truename (concatenate 'string
                               *emacs-source-folder*
-                              "lisp/")))
+                              "lisp/"
+                              ;; "lisp/calendar/"
+                              )))
     (test-error ()
       (log-debug "error")))
   )
 (defun debug-one-test ()
   (handler-case
-      (one-test #P"/root/github/emacs/lisp/jka-cmpr-hook.el")
+      (one-test #P"/root/github/emacs/lisp/pcomplete.el")
     (test-error ()
       (log-debug "error")))
   )

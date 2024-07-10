@@ -24,12 +24,12 @@
                         #:characterp
                         #:class-name
                         #:class-of
-                        #:code-char
                         #:coerce
                         #:concatenate
                         #:copy-alist
                         #:copy-seq
                         #:char-downcase
+                        #:decf
                         #:declaim
                         #:declare
                         #:defclass
@@ -43,6 +43,8 @@
                         #:digit-char-p
                         #:dolist
                         #:dotimes
+                        #:double-float
+                        #:ecase
                         #:end-of-file
                         #:error
                         #:find-symbol
@@ -64,6 +66,7 @@
                         #:multiple-value-bind
                         #:nil
                         #:not
+                        #:parse-integer
                         #:pathname
                         #:pop
                         #:position

@@ -113,11 +113,11 @@
                  do (setf code (logior code (ash bit nbits)))
                     (incf nbits)
                     (when (= nbits 8)
-                      (write-char (code-char code) stream)
+                      (write-char (safe-code-char code) stream)
                       (setq nbits 0)
                       (setq code 0))
                  finally (when (> nbits 0)
-                           (write-char (code-char code) stream))
+                           (write-char (safe-code-char code) stream))
                  )))
         stream :escaped :string)
        )
@@ -229,12 +229,18 @@
         (cons (pstrings:build-pstring "ab\"c") 'el::|AB C|))))
 
   (prin-test "\\235\\353" "\"\\235\\353\""
-      (pstrings:build-pstring (cl:format nil "~c~c" (code-char #o235) (code-char #o353))))
+      (pstrings:build-pstring (cl:format nil "~c~c" (safe-code-char #o235) (safe-code-char #o353))))
   (prin-test "\\235ëЖ" "\"\\235ëЖ\""
-      (pstrings:build-pstring (cl:format nil "~c~cЖ" (code-char #o235) (code-char #o353))))
+      (pstrings:build-pstring (cl:format nil "~c~cЖ" (safe-code-char #o235) (safe-code-char #o353))))
+
+  (let ((pstr (pstrings:build-pstring " ")))
+    (setf (pstrings:pstring-multibyte pstr) t)
+    (princ-to-cl-string pstr)
+    (prin-test " " "\" \"" pstr))
+
   ;; emacs supports this, but we do not:
-  ;; it makes no sense, because strings are for characters, not for any hex numbers
-  ;; to properly support this, we need convert pstrings to numeric/fixnum arrays,
+  ;; it makes no sense, because strings are for characters, not for any hex numbers.
+  ;; To properly support this, we need convert pstrings to numeric/fixnum arrays,
   ;; which will take a lot of memory in future
   ;; (prin-test "\x303000" "\"\x303000\"" "\x303000")
 
@@ -251,6 +257,8 @@
       '(el::|`| ((el::|,| el::|a,b|) ((el::|,@| el::nil)))))
   (prin-test "'((, a,b) ((,@ nil)))" "'((\\, a\\,b) ((\\,@ nil)))"
       '(el::quote ((el::|,| el::|a,b|) ((el::|,@| el::nil)))))
+  ;; (princ (read "`(a . '_)"))
+
   )
 
 (test test-print-vectors

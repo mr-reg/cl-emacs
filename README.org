@@ -86,8 +86,22 @@ pass all tests.
   Maybe they will be fixed later
 
 ** float-output-format uses cl:format syntax  
+
    Something like "~,6f" works now, when emacs uses native sprintf
    format string with some basic validations.
+
+** internal string representation does not support symbols above with code #x110000
+
+   We use internal CL char type, when emacs just stores symbols as numbers.
+
+   We use (mod code #x110000) to keep character code in valid range.
+
+** print functions may have little different behavior when printing non-ascii characters
+
+   Emacs has very poor understanding if string contains multibyte
+   character without some additional processing. According to emacs
+   this "\3757zXZ\0" is not a multibyte string.
+
 * License
 
 The best things in life are free: GPLv3.
