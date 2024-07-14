@@ -155,7 +155,7 @@
   )
 (defun debug-one-test ()
   (handler-case
-      (one-test #P"/root/github/emacs/lisp/pcomplete.el")
+      (one-test (truename "~/github/cl-emacs/test.el"))
     (test-error ()
       (log-debug "error")))
   )
