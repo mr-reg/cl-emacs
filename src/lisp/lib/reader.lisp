@@ -101,6 +101,7 @@
   state/symbol
   state/symbol-escaped
   state/character
+  state/named-character
   state/line-comment
   state/pstring
   state/pointer
@@ -456,9 +457,19 @@
     (cond
       ((char-whitespace-p char)
        (push char (car stack))
-       ;; (push-extra-char reader char) ; put whitespace early, because it is stack, not queue
        (end-character reader)
        (change-state reader state/toplevel))
+      ((eq char #\{)
+       (push char (car stack))
+       (change-state reader state/named-character))
+      (t
+       (push char (car stack))))))
+(defun* state/named-character-transition ((reader reader) (char character))
+  (with-slots (stack) reader
+    (cond
+      ((eq char #\})
+       (push char (car stack))
+       (change-state reader state/character))
       (t
        (push char (car stack))))))
 
@@ -1077,7 +1088,6 @@
     (is-false (pstrings:pstring-multibyte (car (read-cl-string "\"\\u007F\""))))
     ;; ( (car (read-cl-string "\"[1-9][0-9][0-9]\\u2044[0-9]+\"")))
     (is (pstrings:pstring-multibyte (car (read-cl-string "\"\\\\(\\u00A0+\\\\)\"")))))
-
   )
 (test test-read-lists
   (is (equal `(el::a ,(pstrings:build-pstring "b"))
@@ -1127,6 +1137,8 @@
              (car (read-cl-string "(?\\x202a ?\\x202a)"))))
   (is (equal #o202
              (car (read-cl-string "?\\202"))))
+  (is (equal 8206
+             (car (read-cl-string "?\\N{left-to-right mark}"))))
   )
 
 (test test-reader-special-cases

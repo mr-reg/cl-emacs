@@ -145,6 +145,55 @@
     ((numberp obj)
      (cl:princ obj stream)
      )
+    ((hash-table-p obj)
+     (write-sequence "#s(hash-table size " stream)
+     (print-to-cl-stream printer (hash-table-size obj) stream raw-mode backquoted)
+     (write-sequence " test " stream)
+     (print-to-cl-stream printer (hash-table-test obj) stream raw-mode backquoted)
+     (write-sequence " rehash-size " stream)
+     (print-to-cl-stream printer (hash-table-rehash-size obj) stream raw-mode backquoted)
+     (write-sequence " rehash-threshold " stream)
+     (print-to-cl-stream printer (hash-table-rehash-threshold obj) stream raw-mode backquoted)
+     (write-sequence " data (" stream)
+     (let ((first t))
+       (maphash
+        #'(lambda (key value)
+            (unless first
+              (write-char #\space stream))
+            (setq first nil)
+            (print-to-cl-stream printer key stream raw-mode backquoted)
+            (write-char #\space stream)
+            (print-to-cl-stream printer value stream raw-mode backquoted)
+            ) obj))
+     (write-sequence "))" stream)
+     )
+    ((chartables:chartable-p obj)
+     (write-sequence "#^[" stream)
+     (print-to-cl-stream printer (chartables:chartable-default obj) stream raw-mode backquoted)
+     (write-char #\space stream)
+     (print-to-cl-stream printer (chartables:chartable-parent obj) stream raw-mode backquoted)
+     (write-char #\space stream)
+     (print-to-cl-stream printer (chartables:chartable-purpose obj) stream raw-mode backquoted)
+     (write-char #\space stream)
+     (print-to-cl-stream printer (chartables:chartable-ascii obj) stream raw-mode backquoted)
+     (loop for sub-table across (chartables:chartable-contents obj)
+           do (write-char #\space stream)
+              (print-to-cl-stream printer sub-table stream raw-mode backquoted))
+     (loop for extra-slot across (chartables:chartable-extra-slots obj)
+           do (write-char #\space stream)
+              (print-to-cl-stream printer extra-slot stream raw-mode backquoted))
+     (write-char #\] stream))
+    ((chartables:sub-chartable-p obj)
+     (when (= (chartables:sub-chartable-depth obj) 3)
+       (write-char #\newline stream))
+     (write-sequence "#^^[" stream)
+     (print-to-cl-stream printer (chartables:sub-chartable-depth obj) stream raw-mode backquoted)
+     (write-char #\space stream)
+     (print-to-cl-stream printer (chartables:sub-chartable-min-char obj) stream raw-mode backquoted)
+     (loop for sub-table across (chartables:sub-chartable-contents obj)
+           do (write-char #\space stream)
+              (print-to-cl-stream printer sub-table stream raw-mode backquoted))
+     (write-char #\] stream))
     (t (error 'unimplemented-error :details
               (cl:format nil "unsupported object type ~s" (cl:type-of obj)))))
   )
@@ -287,6 +336,35 @@
   (prin-test "#&8\"z\"" #*01011110)
   (prin-test "#&8\"\\377\"" #*11111111)
   (prin-test "#&14\"z#\"" #*01011110110001)
+  )
+
+(test test-print-hash-table
+  (let ((hash (make-hash-table :test 'eq)))
+    (puthash 'el::a (pstrings:build-pstring "2") hash)
+    (puthash 'el::b 3 hash)
+    (prin-test
+        "#s(hash-table size 65 test eq rehash-size 1.5 rehash-threshold 0.8125 data (a 2 b 3))"
+        "#s(hash-table size 65 test eq rehash-size 1.5 rehash-threshold 0.8125 data (a \"2\" b 3))"
+        hash)))
+
+(test test-print-chartable
+  (let ((ct (chartables:make-simple-chartable :purpose 'purpose :default nil)))
+    (chartables:set-chartable-range ct 4 15000 2)
+    (chartables:set-chartable-range ct 10 15 (pstrings:build-pstring "3"))
+    (prin-test
+        (cl:format nil "~a~%~a~%~a~%~a"
+                   "#^[nil nil purpose "
+                   "#^^[3 0 nil nil nil nil 2 2 2 2 2 2 3 3 3 3 3 3 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2] #^^[1 0 #^^[2 0 "
+                   "#^^[3 0 nil nil nil nil 2 2 2 2 2 2 3 3 3 3 3 3 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2] 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2] 2 2 #^^[2 12288 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 "
+                   "#^^[3 14976 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil] nil nil nil nil nil nil nil nil nil nil] nil nil nil nil nil nil nil nil nil nil nil nil] nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil]"
+                   )
+        (cl:format nil "~a~%~a~%~a~%~a"
+                   "#^[nil nil purpose "
+                   "#^^[3 0 nil nil nil nil 2 2 2 2 2 2 \"3\" \"3\" \"3\" \"3\" \"3\" \"3\" 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2] #^^[1 0 #^^[2 0 "
+                   "#^^[3 0 nil nil nil nil 2 2 2 2 2 2 \"3\" \"3\" \"3\" \"3\" \"3\" \"3\" 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2] 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2] 2 2 #^^[2 12288 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 "
+                   "#^^[3 14976 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil] nil nil nil nil nil nil nil nil nil nil] nil nil nil nil nil nil nil nil nil nil nil nil] nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil]"
+                   )
+        ct))
   )
 
 (defun test-me ()

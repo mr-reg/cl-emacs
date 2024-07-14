@@ -618,6 +618,7 @@
   (is (= 127 (read-emacs-character "\\"))) (is (= 127 (read-string-character "\\")))
   (is (= 160 (read-emacs-character "\\ "))) (is (= 160 (read-string-character "\\ ")))
   (is (= 1044 (read-emacs-character "\\Д"))) (is (= 1044 (read-string-character "\\Д")))
+  (is (= 1633 (read-emacs-character "\\١"))) (is (= 1633 (read-string-character "\\١")))
   )
 
 (test test-read-modifiers-general
@@ -892,6 +893,7 @@
 
   (signals invalid-character-spec-error (read-emacs-character "\\N{0.5}"))
   (signals invalid-character-spec-error (read-emacs-character "\\N{U+-0}"))
+
   )
 
 (test test-read-octal ()

@@ -28,14 +28,22 @@
   (:import-from #:alexandria
                 #:define-constant)
   (:export #:+chartab-size+
+           #:chartable-ascii
+           #:chartable-contents
+           #:chartable-default
            #:chartable-extra-slots
+           #:chartable-p
+           #:chartable-parent
+           #:chartable-purpose
            #:get-chartable-ranges
            #:make-chartable
            #:make-simple-chartable
            #:make-sub-chartable
+           #:set-chartable-range
            #:sub-chartable-contents
            #:sub-chartable-depth
            #:sub-chartable-min-char
+           #:sub-chartable-p
            )
   (:local-nicknames (#:el #:cl-emacs/elisp)))
 (in-package :cl-emacs/types/chartables)
@@ -122,13 +130,9 @@
 
 (defun* print-chartable ((ct chartable) (stream stream) depth)
   (declare (ignore depth))
-  (with-slots (default parent purpose ascii contents extra-slots) ct
-    (cl:format stream "#^[~s ~s ~s ~s" default parent purpose ascii)
-    (loop for sub-table across contents
-          do (cl:format stream " ~s" sub-table))
-    (loop for extra-slot across extra-slots
-          do (cl:format stream " ~s" extra-slot))
-    (cl:format stream "]")))
+  (let* ((pkg (find-package "CL-EMACS/LIB/PRINTER"))
+         (print-func  (find-symbol "PRIN1-TO-CL-STREAM" pkg)))
+    (funcall print-func ct stream)))
 
 (defstruct (sub-chartable (:copier nil)
                           (:print-function print-sub-chartable))
@@ -160,7 +164,7 @@
   (let ((ct (make-simple-chartable :purpose 'el::test-purpose :default 10)))
     (setf (aref (chartable-extra-slots ct) 0) 310)
     (setf (aref (chartable-extra-slots ct) 1) 311)
-    (is (string= "#^[10 NIL EL::TEST-PURPOSE 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 310 311 10 10 10 10]"
+    (is (string= "#^[10 nil test-purpose 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 310 311 10 10 10 10]"
                  (cl:format nil "~s" ct)))))
 
 ;; chartables has no equality check, function will always set value without
@@ -251,7 +255,7 @@
 (test test-set-chartable-range
   ;; simple set in ascii + big range + useless optimization
   (is (string= (cl:format nil "~a~%~a~%~a"
-                          "#^[8 NIL TEST "
+                          "#^[8 nil test "
                           "#^^[3 0 8 8 8 3 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] #^^[1 0 #^^[2 0 "
                           "#^^[3 0 8 8 8 3 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8]")
                (let ((ct (make-simple-chartable :default 8 :purpose 'test)))
@@ -260,7 +264,7 @@
                  (cl:format nil "~s" ct))))
   ;; simple set with zero-length range, still causes array expansion
   (is (string= (cl:format nil "~a~%~a~%~a"
-                          "#^[8 NIL TEST "
+                          "#^[8 nil test "
                           "#^^[3 0 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] #^^[1 0 #^^[2 0 "
                           "#^^[3 0 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8]")
                (let ((ct (make-simple-chartable :default 8 :purpose 'test)))
@@ -268,14 +272,14 @@
                  (cl:format nil "~s" ct))))
   ;; simple set in big range only
   (is (string= (cl:format nil "~a~%~a"
-                          "#^[8 NIL TEST 8 #^^[1 0 #^^[2 0 8 "
+                          "#^[8 nil test 8 #^^[1 0 #^^[2 0 8 "
                           "#^^[3 128 3 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8]")
                (let ((ct (make-simple-chartable :default 8 :purpose 'test)))
                  (set-chartable-range ct 128 128 3)
                  (cl:format nil "~s" ct))))
   ;; complex set
   (is (string= (cl:format nil "~a~%~a~%~a~%~a"
-                          "#^[8 NIL TEST "
+                          "#^[8 nil test "
                           "#^^[3 0 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3] #^^[1 0 #^^[2 0 "
                           "#^^[3 0 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3] 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3] 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3] #^^[1 65536 3 3 #^^[2 73728 3 "
                           "#^^[3 73856 3 3 3 3 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8]")
@@ -285,7 +289,7 @@
 
 
   ;; good optimization case
-  (is (string= "#^[8 NIL TEST 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8]"
+  (is (string= "#^[8 nil test 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8]"
                (let ((ct (make-simple-chartable :default 8 :purpose 'test)))
                  (set-chartable-range ct 3 3 3)
                  (set-chartable-range ct 3 3 8)
@@ -516,5 +520,3 @@
 ;;   (sb-profile:report)
 ;;   (sb-profile:unprofile "CL-EMACS/TYPES/CHARTABLES")
 ;;   )
-
-

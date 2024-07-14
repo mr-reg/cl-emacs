@@ -40,13 +40,13 @@
                         #:defmethod
                         #:defparameter
                         #:defun
-                        #:digit-char-p
                         #:dolist
                         #:dotimes
                         #:double-float
                         #:ecase
                         #:end-of-file
                         #:error
+                        #:find-package
                         #:find-symbol
                         #:fixnum
                         #:float
@@ -57,6 +57,7 @@
                         #:in-package
                         #:incf
                         #:inline
+                        #:integer
                         #:labels
                         #:lambda
                         #:list

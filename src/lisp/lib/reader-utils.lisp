@@ -29,6 +29,7 @@
    #:char-list-to-cl-string
    #:char-list-to-pstring
    #:char-whitespace-p
+   #:digit-char-p
    #:parse-elisp-number
    #:reversed-list-to-number
    )
@@ -119,3 +120,18 @@
   #M"return t if character is whitespace or nil or any
      special symbol that signals about new statement. "
   (or (char-whitespace-p char) (memq char '(#\( #\) #\[ #\] #\" #\' #\` #\, #\# #\;))))
+
+(defun* (digit-char-p -> (or integer null)) ((char character) &optional (radix 10))
+  #M"If char is a digit in the specified radix, returns the fixnum for which
+     that digit stands, else returns NIL."
+  (let* ((code (char-code char))
+         (digit (cond
+                  ((<= (char-code #\0) code (char-code #\9))
+                   (- code (char-code #\0)))
+                  ((<= (char-code #\a) code (char-code #\f))
+                   (+ 10 (- code (char-code #\a))))
+                  ((<= (char-code #\A) code (char-code #\F))
+                   (+ 10 (- code (char-code #\A))))
+                  (t radix))))
+    (when (< digit radix) digit)
+    ))
