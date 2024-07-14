@@ -322,14 +322,15 @@
                "pstring reader not initialized properly (bug)"))
       (log-debug2 "collector:~s" collector)
 
-      (unless multibyte
-        ;; string will be multibyte only if during reading procedure we encounter non-ascii charactor
-        ;; nobody cares about actualy multibyte characters during read, maybe because emacs postpone
-        ;; their processing on later time
-        (loop for char across cl-buffer
-              do (when (>= (char-code char) 128)
-                   (setf multibyte t)
-                   (return))))
+      (when el::string-multibyte-flag-emacs-compatible
+        (unless multibyte
+          ;; string will be multibyte only if during reading procedure we encounter non-ascii charactor
+          ;; nobody cares about actualy multibyte characters during read, maybe because emacs postpone
+          ;; their processing on later time
+          (loop for char across cl-buffer
+                do (when (>= (char-code char) 128)
+                     (setf multibyte t)
+                     (return)))))
       (setq
        current-chunk
        (with-output-to-string (stream)
@@ -338,16 +339,17 @@
           (loop
             while (< start-position buffer-len)
             for char = nil
-            for is-unicode-spec = (unless multibyte
-                                    (and (>= (cl:length cl-buffer) (1+ start-position))
-                                         (cl:char-equal (aref cl-buffer start-position) #\\)
-                                         (cl:char-equal (aref cl-buffer (1+ start-position)) #\u))
-                                    )
+            for is-unicode-spec = (when el::string-multibyte-flag-emacs-compatible
+                                    (unless multibyte
+                                      (and (>= (cl:length cl-buffer) (1+ start-position))
+                                           (cl:char-equal (aref cl-buffer start-position) #\\)
+                                           (cl:char-equal (aref cl-buffer (1+ start-position)) #\u))
+                                      ))
             do (labels ((write-new-char (code)
                           ;; character can be nil if it should be ignored according to
                           ;; the emacs escape syntax, like "\ "
                           (when char
-                            (when (and is-unicode-spec (>= code #x80))
+                            (when (and el::string-multibyte-flag-emacs-compatible  is-unicode-spec (>= code #x80))
                               (setq multibyte t))
                             (write-char (safe-code-char char) stream))))
                  (handler-case
@@ -391,18 +393,20 @@
             finally (return "")))))
 
       (log-debug2 "current-chunk:~s cl-buffer:~s" current-chunk cl-buffer)
-      (unless multibyte
-        ;; check for another magic "multibyte" constant
-        (loop for char across current-chunk
-              do (when (>= (char-code char) 2048)
-                   (setf multibyte t)
-                   (return))))
+      (when el::string-multibyte-flag-emacs-compatible
+        (unless multibyte
+          ;; check for another magic "multibyte" constant
+          (loop for char across current-chunk
+                do (when (>= (char-code char) 2048)
+                     (setf multibyte t)
+                     (return)))))
       ;; accumulate chunk to collector
       (pstrings:ninsert (pstrings:build-pstring current-chunk) collector)
-      ;; completely ignore what pstrings internal multibyte analyzer thinks
-      ;; during read process only reader approach is right (sarcazm)
-      (setf (pstrings:pstring-multibyte collector) multibyte)
-
+      (when el::string-multibyte-flag-emacs-compatible
+        ;; completely ignore what pstrings internal multibyte analyzer thinks
+        ;; during read process only reader approach is right (sarcazm)
+        (setf (pstrings:pstring-multibyte collector) multibyte)
+        )
       (when string-is-over
         ;; here cl-buffer may contain some unprocessed characters for main reader
         (log-debug2 "ending string reader, extra-characters:~s" cl-buffer)
@@ -1063,14 +1067,16 @@
        (car (read-cl-string "\"foo\\u00410bar\")"))))
   ;; (read-cl-string "\"\\x103000\")")
   (is (read-cl-string "\"\\x3FFF7F\""))
-  (is-false (pstrings:pstring-multibyte (car (read-cl-string "\"\\M-k\""))))
-  (is (pstrings:pstring-multibyte (car (read-cl-string "\"\\±\""))))
-  (is-false (pstrings:pstring-multibyte (car (read-cl-string "\"\\3757zXZ\\0\""))))
-  (is (pstrings:pstring-multibyte (car (read-cl-string "\"[1-9][0-9][0-9]\\u2044[0-9]+\""))))
-  (is (pstrings:pstring-multibyte (car (read-cl-string "\"\\u0080\""))))
-  (is-false (pstrings:pstring-multibyte (car (read-cl-string "\"\\u007F\""))))
-  ;; ( (car (read-cl-string "\"[1-9][0-9][0-9]\\u2044[0-9]+\"")))
-  (is (pstrings:pstring-multibyte (car (read-cl-string "\"\\\\(\\u00A0+\\\\)\""))))
+
+  (let ((el::string-multibyte-flag-emacs-compatible t))
+    (is-false (pstrings:pstring-multibyte (car (read-cl-string "\"\\M-k\""))))
+    (is (pstrings:pstring-multibyte (car (read-cl-string "\"\\±\""))))
+    (is-false (pstrings:pstring-multibyte (car (read-cl-string "\"\\3757zXZ\\0\""))))
+    (is (pstrings:pstring-multibyte (car (read-cl-string "\"[1-9][0-9][0-9]\\u2044[0-9]+\""))))
+    (is (pstrings:pstring-multibyte (car (read-cl-string "\"\\u0080\""))))
+    (is-false (pstrings:pstring-multibyte (car (read-cl-string "\"\\u007F\""))))
+    ;; ( (car (read-cl-string "\"[1-9][0-9][0-9]\\u2044[0-9]+\"")))
+    (is (pstrings:pstring-multibyte (car (read-cl-string "\"\\\\(\\u00A0+\\\\)\"")))))
 
   )
 (test test-read-lists

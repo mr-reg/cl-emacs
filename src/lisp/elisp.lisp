@@ -55,3 +55,6 @@
 
 (cl:defparameter float-output-format nil)
 ;; (cl:defparameter print-escape-multibyte nil)
+
+(cl:defparameter string-multibyte-flag-emacs-compatible nil
+  "if t, string multibyte flag computation will take longer, but will produce same weird results as emacs do. Needed only for hard compatibility testing")

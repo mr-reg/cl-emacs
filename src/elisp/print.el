@@ -46,5 +46,7 @@
 
       )
   (princ "\u2044фв"))
-(cdr (cadr (read "`(quote . ,_)")))
-(princ (read "`(a . '_)"))
+(car (cadr (read "`(quote . ,_)")))
+(prin1 (read "`(a . '_)"))
+
+(read "`(a . '_)")

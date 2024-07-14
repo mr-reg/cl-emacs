@@ -44,7 +44,9 @@
 
 (defparameter *emacs-source-folder* "~/github/emacs/")
 (defvar *good-tested-files* (make-hash-table :test 'equal))
-(defparameter *excluded-files* '("lisp/pcomplete.el"))
+(defparameter *excluded-files* '(
+                                 "lisp/pcomplete.el"
+                                 ))
 ;; (clrhash *good-tested-files*)
 (define-condition test-error (error-with-description)
   ())
@@ -57,7 +59,8 @@
                           (end-of-file ())))))
         (position 0)
         (el::float-output-format "~,6f")
-        (el::print-escape-multibyte t))
+        (el::print-escape-multibyte t)
+        (el::string-multibyte-flag-emacs-compatible t))
     (log-debug2 "raw-string: ~s" raw-string)
     (with-output-to-string (out-stream)
       (handler-case

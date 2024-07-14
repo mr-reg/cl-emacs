@@ -176,6 +176,7 @@
 
                      (write-char #\\ stream))
                    (let ((code (char-code char)))
+                     ;; emacs-compatible printing loginc
                      (if (or (and (pstring-multibyte pstr) (<= 128 code 159))
                              (and (not (pstring-multibyte pstr)) (<= 128 code)))
                          (cl:format stream "\\~o" code)
@@ -265,7 +266,6 @@
   (with-slots (len first tree multibyte) pstr
     (assert (<= 0 position len))
 
-    ;; TODO: move on build string level?
     (unless multibyte
       ;; check if this string should be marked as multibyte
       (loop for char across (interval-chunk new-interval)

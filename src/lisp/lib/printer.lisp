@@ -44,116 +44,116 @@
 (named-readtables:in-readtable mstrings:mstring-syntax)
 
 (defstruct printer
-  (mod-stack nil :type list)
+
   )
 
-(defun* print-to-cl-stream (printer obj stream raw-mode)
+(defun* print-to-cl-stream (printer obj stream raw-mode backquoted)
   #M"if raw-mode = t, then princ, else prin1"
-  (with-slots (mod-stack) printer
-    (cond
-      ((and (consp obj) (eq (car obj) 'el::quote))
-       (write-char #\' stream)
-       (print-to-cl-stream printer (car (cdr obj)) stream raw-mode))
-      ((consp obj)
-       (when (and (consp (cdr obj)) (null (cdr (cdr obj))))
-         ;; it is special form: list of exactly two elements, where first element may be some special symbol
-         (let ((processed t))
-           (cond
-             ((eq (car obj) 'el::function)
-              (write-sequence "#'" stream)
-              (print-to-cl-stream printer (car (cdr obj)) stream raw-mode)
-              )
-             ((eq (car obj) 'el::|`|)
-              (write-char #\` stream)
-              (push 'backquote mod-stack)
-              (print-to-cl-stream printer (car (cdr obj)) stream raw-mode)
-              (pop mod-stack)
-              )
-             ((and (memq (car obj) '(el::|,| el::|,@|))
-                   (cl:find 'backquote mod-stack))
-              (print-to-cl-stream printer (symbol-name (car obj)) stream t)
-              (print-to-cl-stream printer (car (cdr obj)) stream raw-mode)
-              )
-             (t (setq processed nil))
-             )
-           (when processed
-             (return-from print-to-cl-stream)))
-         )
-       (write-char #\( stream)
-       (loop with first = t
-             while (consp obj)
-             do (if first (setq first nil)
-                    (write-char #\space stream))
-                (print-to-cl-stream printer (car obj) stream raw-mode)
-                (setq obj (cdr obj))
-                (when (and obj (not (consp obj)))
-                  (write-sequence " . " stream)
-                  (print-to-cl-stream printer obj stream raw-mode)))
-       (write-char #\) stream))
-      ((or (symbolp obj) (null obj))
-       (let ((symbol-name (symbol-name obj)))
-         (when (pstrings:emptyp symbol-name)
-           (write-sequence "##" stream))
-         (if raw-mode
-             (pstrings:write-pstring-to-cl-stream symbol-name stream :escaped nil)
-             (pstrings:write-pstring-to-cl-stream symbol-name stream :escaped :symbol))))
-      ((pstrings:pstring-p obj)
-       (if raw-mode
-           (pstrings:write-pstring-to-cl-stream obj stream :escaped nil)
-           (pstrings:write-pstring-to-cl-stream obj stream :escaped :string)
-           ))
-      ((and (vectorp obj) (eq (array-element-type obj) 'cl:bit))
-       (cl:format stream "#&~d" (cl:length obj))
-       (pstrings:write-pstring-to-cl-stream
-        (pstrings:build-pstring
-         (with-output-to-string (stream)
-           (loop for bit across obj
-                 with code = 0
-                 with nbits = 0
-                 do (setf code (logior code (ash bit nbits)))
-                    (incf nbits)
-                    (when (= nbits 8)
-                      (write-char (safe-code-char code) stream)
-                      (setq nbits 0)
-                      (setq code 0))
-                 finally (when (> nbits 0)
-                           (write-char (safe-code-char code) stream))
-                 )))
-        stream :escaped :string)
+  (log-debug2 "print-to-cl-stream ~s" obj)
+  (cond
+    ((consp obj)
+     (log-debug2 "consp")
+     (when (and (consp (cdr obj)) (null (cdr (cdr obj))))
+       (log-debug2 "special form ~s ~s" (cdr obj) (cdr (cdr obj)))
+       ;; it is special form: list of exactly two elements, where first element may be some special symbol
+       (let ((processed t))
+         (cond
+           ((eq (car obj) 'el::function)
+            (write-sequence "#'" stream)
+            (print-to-cl-stream printer (car (cdr obj)) stream raw-mode backquoted)
+            )
+           ((eq (car obj) 'el::quote)
+            (write-char #\' stream)
+            (print-to-cl-stream printer (car (cdr obj)) stream raw-mode backquoted))
+           ((eq (car obj) 'el::|`|)
+            (write-char #\` stream)
+            (print-to-cl-stream printer (car (cdr obj)) stream raw-mode (1+ backquoted))
+            )
+           ((and (memq (car obj) '(el::|,| el::|,@|))
+                 (> backquoted 0))
+            (print-to-cl-stream printer (symbol-name (car obj)) stream t (1- backquoted))
+            (print-to-cl-stream printer (car (cdr obj)) stream raw-mode (1- backquoted))
+            )
+           (t (setq processed nil))
+           )
+         (when processed
+           (return-from print-to-cl-stream)))
        )
-      ((vectorp obj)
-       (write-char #\[ stream)
-       (loop for el across obj
-             with first = t
-             do (unless first
+     (write-char #\( stream)
+     (loop with first = t
+           while (consp obj)
+           do (if first (setq first nil)
                   (write-char #\space stream))
-                (print-to-cl-stream printer el stream raw-mode)
-                (setq first nil))
-       (write-char #\] stream))
-      ((floatp obj)
-       (cond
-         ((and (float-features:float-infinity-p obj) (> obj 0))
-          (write-sequence "1.0e+INF" stream))
-         ((and (float-features:float-infinity-p obj) (< obj 0))
-          (write-sequence "-1.0e+INF" stream))
-         ((isnan obj)
-          (write-sequence "0.0e+NaN" stream))
-         (t (if el::float-output-format
-                (cl:format stream el::float-output-format obj)
-                (cl:format stream "~f" obj))
-            )))
-      ((numberp obj)
-       (cl:princ obj stream)
-       )
-      (t (error 'unimplemented-error :details
-                (cl:format nil "unsupported object type ~s" (cl:type-of obj))))))
+              (print-to-cl-stream printer (car obj) stream raw-mode backquoted)
+              (setq obj (cdr obj))
+              (when (and obj (not (consp obj)))
+                (write-sequence " . " stream)
+                (print-to-cl-stream printer obj stream raw-mode backquoted)))
+     (write-char #\) stream))
+    ((or (symbolp obj) (null obj))
+     (let ((symbol-name (symbol-name obj)))
+       (when (pstrings:emptyp symbol-name)
+         (write-sequence "##" stream))
+       (if raw-mode
+           (pstrings:write-pstring-to-cl-stream symbol-name stream :escaped nil)
+           (pstrings:write-pstring-to-cl-stream symbol-name stream :escaped :symbol))))
+    ((pstrings:pstring-p obj)
+     (if raw-mode
+         (pstrings:write-pstring-to-cl-stream obj stream :escaped nil)
+         (pstrings:write-pstring-to-cl-stream obj stream :escaped :string)
+         ))
+    ((and (vectorp obj) (eq (array-element-type obj) 'cl:bit))
+     (cl:format stream "#&~d" (cl:length obj))
+     (pstrings:write-pstring-to-cl-stream
+      (pstrings:build-pstring
+       (with-output-to-string (stream)
+         (loop for bit across obj
+               with code = 0
+               with nbits = 0
+               do (setf code (logior code (ash bit nbits)))
+                  (incf nbits)
+                  (when (= nbits 8)
+                    (write-char (safe-code-char code) stream)
+                    (setq nbits 0)
+                    (setq code 0))
+               finally (when (> nbits 0)
+                         (write-char (safe-code-char code) stream))
+               )))
+      stream :escaped :string)
+     )
+    ((vectorp obj)
+     (write-char #\[ stream)
+     (loop for el across obj
+           with first = t
+           do (unless first
+                (write-char #\space stream))
+              (print-to-cl-stream printer el stream raw-mode backquoted)
+              (setq first nil))
+     (write-char #\] stream))
+    ((floatp obj)
+     (cond
+       ((and (float-features:float-infinity-p obj) (> obj 0))
+        (write-sequence "1.0e+INF" stream))
+       ((and (float-features:float-infinity-p obj) (< obj 0))
+        (write-sequence "-1.0e+INF" stream))
+       ((isnan obj)
+        (write-sequence "0.0e+NaN" stream))
+       (t (if el::float-output-format
+              (cl:format stream el::float-output-format obj)
+              (cl:format stream "~f" obj))
+          )))
+    ((numberp obj)
+     (cl:princ obj stream)
+     )
+    (t (error 'unimplemented-error :details
+              (cl:format nil "unsupported object type ~s" (cl:type-of obj)))))
   )
 (defun* princ-to-cl-stream (obj stream)
   (let ((printer (make-printer)))
-    (print-to-cl-stream printer obj stream t)))
+    (print-to-cl-stream printer obj stream t 0)))
 (defun* prin1-to-cl-stream (obj stream)
   (let ((printer (make-printer)))
-    (print-to-cl-stream printer obj stream nil)))
+    (print-to-cl-stream printer obj stream nil 0)))
 
 (defun* (princ-to-cl-string -> string) (obj)
   (with-output-to-string (stream)
@@ -202,7 +202,24 @@
   )
 
 (test test-print-quote
-  (prin-test "'test" (quote (el::quote el::test))))
+  (prin-test "'test" (quote (el::quote el::test)))
+  (prin-test "`(,a,b (,@nil))" "`(,a\\,b (,@nil))"
+      '(el::|`| ((el::|,| el::|a,b|) ((el::|,@| el::nil)))))
+  (prin-test "'((, a,b) ((,@ nil)))" "'((\\, a\\,b) ((\\,@ nil)))"
+      '(el::quote ((el::|,| el::|a,b|) ((el::|,@| el::nil)))))
+  ;; (princ (read "`(a . '_)"))
+  (prin-test "`(a quote _)"
+      '(el::|`| (el::a . (el::quote el::__))))
+  (prin-test "`(quote , _)" "`(quote \\, _)"
+      '(el::|`| (el::quote . (el::|,| el::__))))
+
+  (prin-test "(, (, a))" "(\\, (\\, a))"
+      '(el::|,| (el::|,| el::a)))
+  (prin-test "`,(, a)" "`,(\\, a)"
+      '(el::|`| (el::|,| (el::|,| el::a))))
+  (prin-test "``,,a"
+      '(el::|`| (el::|`| (el::|,| (el::|,| el::a)))))
+  )
 
 (test test-print-string
   (prin-test " " "\" \"" (pstrings:build-pstring " "))
@@ -252,12 +269,6 @@
   (prin-test "(function . test)" '(el::function . el::test))
   (prin-test "(function test a)" '(el::function el::test el::a))
   (prin-test "(function)" '(el::function))
-
-  (prin-test "`(,a,b (,@nil))" "`(,a\\,b (,@nil))"
-      '(el::|`| ((el::|,| el::|a,b|) ((el::|,@| el::nil)))))
-  (prin-test "'((, a,b) ((,@ nil)))" "'((\\, a\\,b) ((\\,@ nil)))"
-      '(el::quote ((el::|,| el::|a,b|) ((el::|,@| el::nil)))))
-  ;; (princ (read "`(a . '_)"))
 
   )
 
