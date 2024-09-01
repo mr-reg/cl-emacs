@@ -39,13 +39,32 @@
 (def-suite cl-emacs/lib/read-print-test)
 (in-suite cl-emacs/lib/read-print-test)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-
+(defparameter *test-cache-enabled* t)
+(defparameter *parse-errors-enabled* nil)
 (defun* read-emacs-file ())
 
 (defparameter *emacs-source-folder* "~/github/emacs/")
 (defvar *good-tested-files* (make-hash-table :test 'equal))
 (defparameter *excluded-files* '(
                                  "lisp/pcomplete.el"
+                                 "lisp/international/titdic-cnv.el"
+                                 "lisp/international/uni-bidi.el"
+                                 "lisp/international/uni-brackets.el"
+                                 "lisp/international/uni-category.el"
+                                 "lisp/international/uni-combining.el"
+                                 "lisp/international/uni-comment.el"
+                                 "lisp/international/uni-decimal.el"
+                                 "lisp/international/uni-decomposition.el"
+                                 "lisp/international/uni-digit.el"
+                                 "lisp/international/uni-mirrored.el"
+                                 "lisp/international/uni-name.el"
+                                 "lisp/international/uni-numeric.el"
+                                 "lisp/international/uni-old-name.el"
+                                 "lisp/language/ethio-util.el"
+                                 "lisp/language/ethiopic.el"
+                                 "lisp/language/ind-util.el"
+                                 "lisp/language/tibet-util.el"
+                                 "lisp/language/tibetan.el"
                                  ))
 ;; (clrhash *good-tested-files*)
 (define-condition test-error (error-with-description)
@@ -59,21 +78,23 @@
                           (end-of-file ())))))
         (position 0)
         (el::float-output-format "~,6f")
-        (el::print-escape-multibyte t)
         (el::string-multibyte-flag-emacs-compatible t))
     (log-debug2 "raw-string: ~s" raw-string)
     (with-output-to-string (out-stream)
       (handler-case
-          (loop do (let ((read-result (reader:read-cl-string raw-string position)))
-                     (log-debug2 "one read result ~s" read-result)
-                     (printer:princ-to-cl-stream (car read-result) out-stream)
-                     (write-char #\newline out-stream)
-                     (incf position (cdr read-result))
-                     (log-debug2 "new read position ~s" position)))
-        (reader:eof-reader-error ()
-          ))))
+          (handler-bind ((reader:incomplete-reader-error #'(lambda (condition)
+                                                             (when *parse-errors-enabled*
+                                                               (error condition)))))
+            (loop do (let ((read-result (reader:read-cl-string raw-string position)))
+                       (log-debug2 "one read result ~s" read-result)
+                       (printer:princ-to-cl-stream (car read-result) out-stream)
+                       (write-char #\newline out-stream)
+                       (incf position (cdr read-result))
+                       (log-debug2 "new read position ~s" position)))
 
-  )
+            )
+        (reader:empty-reader-error ())))))
+
 (defun* el-read-princ-file ((file pathname))
   (let* ((filename (cl:namestring file))
          (cmd (cl:format nil "emacs --batch -Q --load src/elisp/read.el --eval '(read-princ-el-file \"~a\" \"raw-emacs.log\")'" filename))
@@ -92,7 +113,8 @@
 (defun* one-test ((filename pathname))
   ;; ~/github/emacs/lisp/calendar/cal-x.el
   (cl:format t "filename ~s " filename)
-  (when (gethash (cl:namestring filename) *good-tested-files*)
+  (when (and *test-cache-enabled*
+             (gethash (cl:namestring filename) *good-tested-files*))
     (cl:format t "previously tested~%")
     (return-from one-test))
   (dolist (suffix *excluded-files*)
@@ -143,6 +165,7 @@
 (defun run-test ()
   ;; (let ((roo)))
   ;; (uiop/filesystem:directory-files )
+  ;; (clrhash *good-tested-files*)
   (handler-case
       (run-test-for-subdirectories
        (truename (concatenate 'string
@@ -155,7 +178,16 @@
   )
 (defun debug-one-test ()
   (handler-case
-      (one-test (truename "~/github/cl-emacs/test.el"))
-    (test-error ()
-      (log-debug "error")))
+      (let ((*test-cache-enabled* nil)
+            (*parse-errors-enabled* t))
+        (one-test (truename (concatenate 'string
+                                         *emacs-source-folder*
+                                         ;; "lisp/"
+                                         ;; "double.el"
+                                         "../cl-emacs/.tmp.el"
+                                         ;; "lisp/calendar/"
+                                         ))))
+    ;; (test-error ()
+    ;;   (log-debug "error"))
+    )
   )

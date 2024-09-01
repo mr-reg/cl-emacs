@@ -47,7 +47,9 @@
   ;;  ;; :cl-emacs/elisp/xfns
   ;;  )
   (:export #:read-cl-string
-           #:eof-reader-error)
+           #:eof-reader-error
+           #:empty-reader-error
+           #:incomplete-reader-error)
   )
 
 (in-package :cl-emacs/lib/reader)
@@ -56,7 +58,6 @@
 (def-suite cl-emacs/lib/reader)
 (in-suite cl-emacs/lib/reader)
 (named-readtables:in-readtable mstrings:mstring-syntax)
-
 ;; main reader documentation is here
 ;; https://www.gnu.org/software/emacs/manual/html_mono/elisp.html#Lisp-Data-Types
 
@@ -68,6 +69,10 @@
   ())
 
 (define-condition eof-reader-error (reader-signal)
+  ())
+(define-condition incomplete-reader-error (eof-reader-error)
+  ())
+(define-condition empty-reader-error (eof-reader-error)
   ())
 
 
@@ -274,7 +279,7 @@
          )
         ((eq char #\;)
          (when active-modifier
-           (error 'eof-reader-error :details (cl:format nil "unexpected semicolon inside ~s" active-modifier)))
+           (error 'incomplete-reader-error :details (cl:format nil "unexpected semicolon inside ~s" active-modifier)))
          (change-state reader state/line-comment)
          (push-extra-char reader char))
         ((eq char #\")
@@ -459,7 +464,7 @@
        (push char (car stack))
        (end-character reader)
        (change-state reader state/toplevel))
-      ((eq char #\{)
+      ((and (eq char #\{) (equal (car stack) '(#\N #\\)))
        (push char (car stack))
        (change-state reader state/named-character))
       (t
@@ -878,10 +883,12 @@
     (with-slots (state stack mod-stack character-counter extra-buffer pointers) reader
       (push nil stack)
       (push nil mod-stack)
+      (log-debug2 "start read from position: ~s" external-position)
       (handler-case
           (handler-case
               (loop for read-position from external-position
                     do (let ((char (read-char stream)))
+                         (log-debug2 "read char result: ~s" char)
                          (incf character-counter)
                          (process-char reader char)
                          (process-extra-buffer reader)))
@@ -896,11 +903,11 @@
           (log-debug1 "reader stopped")))
       (log-debug2 "stack: ~s" stack)
       (when (or (null stack) (equal '(nil) stack))
-        (error 'eof-reader-error :details "Reader not started - empty input"))
+        (error 'empty-reader-error :details "Reader not started - empty input"))
       (when  (cdr stack)
-        (error 'eof-reader-error :details "Lisp structure is not complete"))
+        (error 'incomplete-reader-error :details "Lisp structure is not complete"))
       (when (car mod-stack)
-        (error 'eof-reader-error :details (cl:format nil "modifiers ~s without defined body" (car mod-stack))))
+        (error 'incomplete-reader-error :details (cl:format nil "modifiers ~s without defined body" (car mod-stack))))
       (maphash #'(lambda (pointer-num cons)
                    (unless (car cons)
                      (error 'invalid-reader-input-error
@@ -1139,6 +1146,8 @@
              (car (read-cl-string "?\\202"))))
   (is (equal 8206
              (car (read-cl-string "?\\N{left-to-right mark}"))))
+  (is (equal 123
+             (car (read-cl-string "?\\{"))))
   )
 
 (test test-reader-special-cases
@@ -1155,32 +1164,7 @@
              (car (read-cl-string "[a b c .]"))))
   (signals invalid-reader-input-error (read-cl-string "[1 . a]"))
   )
-(test test-read-cl-string
-;;;###autoload
-  ;; #&8"\0"
-  ;; #'test
-  ;; #'(lambda (x) (use-package-require-after-load x body))
-  ;; #'*
-  ;; #'.
-  ;; #'gnus-article-jump-to-part
-  ;; #+A invalid syntax
-  ;; '#'test - function
-  ;; #'test - symbol
-  ;; #[1 2] - bytecode?
-  ;; #\" eof?
-  ;; lisp_file_lexically_bound_p supports some lexical env while loading using lexical-binding variable
-  ;; #&N bool vector?
-  ;; #@number skip. #@00 - skip to eof/eob
-  ;; strings:
-  ;;  \s \  \\n ?\C-SPC ?\^SPC \C-SPC' and `\^SPC
-  ;; #s( record
-  ;; #^[ char table
-  ;; #^^[ sub-char table
-  ;; #[ byte code
-  ;; #$ ???
-  ;; #NrDIGITS -- radix-N number, any radix 0-36, r or R
-  ;; obarrays?
-  )
+
 
 (test test-reader-functions
   (is (equal (quote (el::function el::a))
@@ -1305,6 +1289,34 @@
              (car (read-cl-string "#&0\"\""))))
   (is (equal #*01011110110001
              (car (read-cl-string "#&14\"z#\""))))
+  )
+
+(test test-read-cl-string
+  (read-cl-string "(defcustom double-map '((?\; \"\\346\" \";\")))")
+;;;###autoload
+  ;; #&8"\0"
+  ;; #'test
+  ;; #'(lambda (x) (use-package-require-after-load x body))
+  ;; #'*
+  ;; #'.
+  ;; #'gnus-article-jump-to-part
+  ;; #+A invalid syntax
+  ;; '#'test - function
+  ;; #'test - symbol
+  ;; #[1 2] - bytecode?
+  ;; #\" eof?
+  ;; lisp_file_lexically_bound_p supports some lexical env while loading using lexical-binding variable
+  ;; #&N bool vector?
+  ;; #@number skip. #@00 - skip to eof/eob
+  ;; strings:
+  ;;  \s \  \\n ?\C-SPC ?\^SPC \C-SPC' and `\^SPC
+  ;; #s( record
+  ;; #^[ char table
+  ;; #^^[ sub-char table
+  ;; #[ byte code
+  ;; #$ ???
+  ;; #NrDIGITS -- radix-N number, any radix 0-36, r or R
+  ;; obarrays?
   )
 
 (defun test-me ()

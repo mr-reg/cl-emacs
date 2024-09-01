@@ -51,6 +51,7 @@
                         #:fixnum
                         #:float
                         #:hash-table
+                        #:handler-bind
                         #:handler-case
                         #:ignore
                         #:ignore-errors
