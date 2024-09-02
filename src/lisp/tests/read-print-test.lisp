@@ -65,6 +65,17 @@
                                  "lisp/language/ind-util.el"
                                  "lisp/language/tibet-util.el"
                                  "lisp/language/tibetan.el"
+                                 "lisp/leim/leim-list.el"
+                                 "lisp/leim/quail/ARRAY30.el"
+                                 "leim/quail/ECDICT.el"
+                                 "leim/quail/Punct-b5.el"
+                                 "leim/quail/Punct.el"
+                                 "leim/quail/ethiopic.el"
+                                 "leim/quail/quick-cns.el"
+                                 "leim/quail/tibetan.el"
+                                 "leim/quail/tsang-cns.el"
+                                 "org/org-entities.el"
+
                                  ))
 ;; (clrhash *good-tested-files*)
 (define-condition test-error (error-with-description)
@@ -184,7 +195,8 @@
                                          *emacs-source-folder*
                                          ;; "lisp/"
                                          ;; "double.el"
-                                         "../cl-emacs/.tmp.el"
+                                         "lisp/org/org-table.el"
+                                         ;; "../cl-emacs/.tmp.el"
                                          ;; "lisp/calendar/"
                                          ))))
     ;; (test-error ()

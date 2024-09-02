@@ -169,6 +169,7 @@
       (when full-pstring-form
         (write-sequence "#(" stream))
       (write-string "\"" stream))
+    (log-debug2 "pstring multibyte=~s" (pstring-multibyte pstr))
     (map-chars #'(lambda (char)
                    (when  (or (and (eq escaped :symbol) (or (cl:char<= char #\space)
                                                             (funcall eos-func char)))
@@ -176,11 +177,16 @@
 
                      (write-char #\\ stream))
                    (let ((code (char-code char)))
-                     ;; emacs-compatible printing loginc
+                     ;; emacs-compatible printing logic
+                     (log-debug2 "char ~s code ~s" char code)
                      (if (or (and (pstring-multibyte pstr) (<= 128 code 159))
                              (and (not (pstring-multibyte pstr)) (<= 128 code)))
-                         (cl:format stream "\\~o" code)
-                         (write-char char stream))))
+                         (progn
+                           (log-debug2 "slashed char")
+                           (cl:format stream "\\~o" code))
+                         (progn
+                           (log-debug2 "raw char")
+                           (write-char char stream)))))
                pstr)
     (when (eq escaped :string)
       (write-char #\" stream)

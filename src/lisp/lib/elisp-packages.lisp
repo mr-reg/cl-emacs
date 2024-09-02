@@ -50,6 +50,7 @@
                         #:find-symbol
                         #:fixnum
                         #:float
+                        #:floating-point-overflow
                         #:hash-table
                         #:handler-bind
                         #:handler-case

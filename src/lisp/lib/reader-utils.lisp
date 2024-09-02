@@ -45,16 +45,28 @@
 (in-suite cl-emacs/lib/reader-utils)
 
 (defun* parse-elisp-number (chardata)
+  (log-debug2 "parse-elisp-number ~s" chardata)
   (let ((has-nan (str:ends-with-p "NaN" chardata))
         (has-inf (str:ends-with-p "INF" chardata))
         (to-parse chardata))
     (when (or has-nan has-inf)
-      (setq to-parse (str:concat (str:substring 0 -3 chardata) "0")))
-    (log-debug2 "parsing number from chardata ~s" to-parse)
+      (setq to-parse (str:substring 0 -3 chardata))
+      (when (or (str:ends-with-p "e+" to-parse)
+                (str:ends-with-p "e-" to-parse)
+                (str:ends-with-p "E-" to-parse)
+                (str:ends-with-p "E+" to-parse)
+                )
+        (setq to-parse (str:concat to-parse "0")))
+      )
+    ;; (log-debug2 "parsing number from chardata ~s" to-parse)
     (when (emptyp to-parse)
       (return-from parse-elisp-number nil))
     (handler-case
-        (let ((parsed (parse-number:parse-real-number to-parse :float-format 'double-float)))
+        (let ((parsed (handler-case
+                          (parse-number:parse-real-number to-parse :float-format 'double-float)
+                        (common-lisp:floating-point-overflow ()
+                          (setq has-inf t)
+                          (if (str:starts-with-p "-" to-parse) -1 1)))))
           ;; here we know that number notation is correct
           (cond
             (has-nan cl-emacs/data::*nan*)

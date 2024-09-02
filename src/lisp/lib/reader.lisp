@@ -216,8 +216,8 @@
             (push-modifier reader '\#\:))
            ((eq char #\#)
             (pop (car mod-stack))
-            (push-extra-char reader char)
-            (push-extra-char reader char)
+            ;; (push-extra-char reader char)
+            ;; (push-extra-char reader char)
             (start-collector reader)
             (change-state reader state/symbol))
            ((digit-char-p char)
@@ -969,6 +969,8 @@
              (car (read-cl-string "#_"))))
   (is (equal (quote el::|-|)
              (car (read-cl-string "-"))))
+  (is (equal (quote (el::quote el::_na_n))
+             (car (read-cl-string "'NaN"))))
   )
 
 (test test-read-shorthands
@@ -999,6 +1001,8 @@
   (is (equal cl-emacs/data::*positive-infinity* (car (read-cl-string "1.0e+INF"))))
   (is (equal cl-emacs/data::*negative-infinity* (car (read-cl-string "-4.0e+INF"))))
   (is (= 425.19685d0 (car (read-cl-string "425.19685"))))
+  (is (equal cl-emacs/data::*positive-infinity* (car (read-cl-string "1.0e+309"))))
+  (is (equal cl-emacs/data::*negative-infinity* (car (read-cl-string "-4.0e+309"))))
   )
 (test test-read-quotes
   (is (equal (quote (el::quote el::test-symbol))
@@ -1155,7 +1159,10 @@
   (is (equal '(el::quote el::test)
              (car (read-cl-string #M" ' #!some-stuff
                                         #!some-stuff
-                                        test")))))
+                                        test"))))
+  (is (equal '(el::|.| el::|.| el::e)
+             (car (read-cl-string "'(\\. \\. e)"))))
+  )
 
 (test test-read-vectors
   (is (equal (quote #(1 el::a))
