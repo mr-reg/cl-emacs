@@ -32,9 +32,10 @@
 
 (defun test-all ()
   (let ((mem-f cl-emacs/lib/log:*loglevel-file*))
-    (setq cl-emacs/lib/log:*loglevel-file* 4)
+    ;; (setq cl-emacs/lib/log:*loglevel-file* 4)
     (run-all-tests)
-    (setq cl-emacs/lib/log:*loglevel-file* mem-f))
+    ;; (setq cl-emacs/lib/log:*loglevel-file* mem-f)
+    )
 
   ;; (dolist (suite fiveam::*toplevel-suites*)
   ;;   (run suite))

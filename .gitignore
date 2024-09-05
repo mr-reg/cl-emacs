@@ -7,3 +7,7 @@ alien-injection.*
 .ccl
 .volumes
 *.tem
+*.txt
+*.log
+*.patch
+.tmp.el

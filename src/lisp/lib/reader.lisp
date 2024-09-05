@@ -91,6 +91,7 @@
                       `(let ((sym (find-symbol ,sym-name)))
                          (unless sym
                            (error "can't find function ~a" ,sym-name))
+                         (setf (aref *state-names* ,id) ,(cl:symbol-name state))
                          (setf (aref *transitions* ,id) (cl:symbol-function sym))
                          )))
      body1)
@@ -99,6 +100,7 @@
                                   collect `(defparameter ,state ,id))
                             body1))
     (push `(defparameter *transitions* (make-array ,(cl:length states))) body1)
+    (push `(defparameter *state-names* (make-array ,(cl:length states))) body1)
 
     (cons 'progn body1)))
 (define-states
@@ -165,38 +167,48 @@
       (error 'reader-stopped-signal))))
 
 (defun* end-list ((reader reader))
-  (log-debug1 "end list")
+  (log-debug1 "<- end list")
   (multiple-value-bind (reversed-list mod-frame) (pop-stack-frame reader)
     (let (result-list)
+      (log-debug2 "reversed-list ~s" reversed-list)
       (loop for element in reversed-list
             for idx from 0
             do (cond
-                 ((eq element 'el::.)
+                 ((eq element '|.|)
                   (cond
                     ((= idx 0)
                      ;; dot in 0 index is considered as normal symbol
-                     (push element result-list))
+                     (push 'el::|.| result-list))
                     ((= idx 1)
                      (let ((last-element (car result-list)))
                        (setq result-list (if (eq last-element 'el::nil)
                                              nil
                                              last-element) )))
                     (t
-                     (error 'invalid-reader-input-error :details "dot in wrong position"))))
+                     ;; (push element result-list)
+                     (error 'invalid-reader-input-error :details "dot in wrong position")
+                     )))
                  (t (push element result-list))))
       (log-debug2 "result list:~s" result-list)
       (end-collector reader result-list mod-frame))))
 
 (defun* end-vector ((reader reader))
-  (log-debug1 "end vector")
+  (log-debug1 "<- end vector")
   (multiple-value-bind (reversed-list mod-frame) (pop-stack-frame reader)
-    (loop for element in reversed-list
-          for pos from 0
-          do (when (and (eq element 'el::.) (> pos 0))
-               (error 'invalid-reader-input-error :details "dot makes no sense in vector")))
-    (let* ((result-list (nreverse reversed-list))
-           (parsed (make-array (cl:length result-list) :initial-contents result-list)))
-      (end-collector reader parsed mod-frame))))
+    (let* ((len (cl:length reversed-list))
+           (parsed (make-array len)))
+      (loop for element in reversed-list
+            for pos from 0
+            for idx from (1- len) downto 0
+            do (when (and (eq element '|.|) (> pos 0))
+                 (error 'invalid-reader-input-error :details "dot makes no sense in vector"))
+               (setf (aref parsed idx) (if (eq element '|.|)
+                                           'el::|.|
+                                           element))
+            )
+      (end-collector reader parsed mod-frame)
+      )
+    ))
 
 (defun* state/toplevel-transition ((reader reader) (char character))
   (with-slots (stack mod-stack) reader
@@ -311,7 +323,7 @@
   ;; this function should try to process stack frame and return t
   ;; if string was really finished
   ;; if string is really finished, stack should contain only last double quote
-  (log-debug1 "end pstring started")
+  (log-debug1 "<- end pstring started")
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
     (let* ((rev-frame (nreverse stack-frame))
            (collector (car rev-frame))
@@ -439,7 +451,7 @@
         (change-state reader state/toplevel)))))
 ;; character
 (defun* end-character ((reader reader))
-  (log-debug1 "end character")
+  (log-debug1 "<- end character")
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
     (with-slots (extra-buffer) reader
       (let ((parsed (char-list-to-cl-string (nreverse stack-frame)))
@@ -491,7 +503,7 @@
 
 ;; symbol
 (defun* end-symbol ((reader reader))
-  (log-debug1 "end symbol")
+  (log-debug1 "<- end symbol")
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
     (let* ((chardata (char-list-to-cl-string (nreverse stack-frame)))
            (elisp-number (unless (memq 'symbol mod-frame)
@@ -505,7 +517,11 @@
          (setq parsed (make-el-symbol chardata :intern nil)))
         (elisp-number (setq parsed elisp-number))
         (t (setq parsed (make-el-symbol chardata :intern t))))
+      ;; dot special case
+      (when (eq parsed 'el::|.|)
+        (setq parsed '|.|))
       (log-debug2 "chardata parsed: ~s" parsed)
+
       (end-collector reader parsed mod-frame))))
 
 (defun* push-to-reader-stack ((reader reader) char)
@@ -561,7 +577,7 @@
 ;; pointer
 
 (defun* end-pointer ((reader reader) &key new-pointer)
-  (log-debug1 "end pointer")
+  (log-debug1 "<- end pointer")
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
     (with-slots (pointers) reader
       (let* ((chardata (char-list-to-cl-string (nreverse stack-frame)))
@@ -591,7 +607,7 @@
 
                 ;;; radix
 (defun* end-radix ((reader reader) (radix-bits fixnum))
-  (log-debug1 "end radix")
+  (log-debug1 "<- end radix")
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
     (unless stack-frame
       (error 'invalid-reader-input-error :details "empty number definition"))
@@ -599,12 +615,16 @@
       (end-collector reader parsed mod-frame))))
 (defun* generic-radix-transition ((reader reader) (char character) (radix-bits fixnum))
   (let* ((radix (ash 1 radix-bits))
-         (parsed (and (characterp char) (digit-char-p char radix))))
+         (parsed (and (characterp char) (digit-char-p char radix)))
+         (sign (and (characterp char) (memq char '(#\+ #\-)))))
     (with-slots (stack) reader
       (cond
+        ((and sign (null (car (reader-stack reader))))
+         (when (cl:char-equal char #\-)
+           (push-modifier reader '-)))
         (parsed
          (push-to-reader-stack reader parsed))
-        ((char-end-of-statement-p char)
+        ((or (char-end-of-statement-p char) sign)
          (end-radix reader radix-bits)
          (push-extra-char reader char)
          (change-state reader state/toplevel))
@@ -618,7 +638,7 @@
   (generic-radix-transition reader char 4))
 
 (defun* end-bool-vector-len ((reader reader) )
-  (log-debug1 "end bool-vector-len")
+  (log-debug1 "<- end bool-vector-len")
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
     (let* ((chardata (char-list-to-cl-string (nreverse stack-frame)))
            (elisp-number (parse-elisp-number chardata)))
@@ -812,7 +832,10 @@
       do (let ((modifier (pop modifiers)))
            (log-debug1 "process ~s modifier" modifier)
            (case modifier
-             ((symbol \#\:) (progn))
+             ((symbol \#\:)
+              (when (eq something '|.|)
+                (log-debug2 "processing dot as symbol")
+                (setq something 'el::|.|)))
              (\'
               (setq something (list 'el::quote something)))
              (\`
@@ -823,6 +846,9 @@
               (setq something (list 'el::\,@ something)))
              (\#\'
               (setq something (list 'el::function something)))
+             (\-
+              (setq something (- something))
+              )
              (new-pointer
               (let* ((pointer-number (pop modifiers))
                      (actual-cons (get-pointer-cons reader pointer-number)))
@@ -853,9 +879,9 @@
 
 (defun* change-state ((reader reader) new-state)
   (with-slots (state stack mod-stack) reader
-    (log-debug1 "transition to state ~s" new-state)
-    (log-debug2 "mod-stack: ~s" mod-stack)
-    (log-debug2 "stack: ~s" stack)
+    (log-debug1 "-> transition to ~s" (aref *state-names* new-state))
+    (log-debug2 "   mod-stack: ~s" mod-stack)
+    (log-debug2 "   stack: ~s" stack)
     (setq state new-state)
     ))
 (defun* process-char ((reader reader) (char character) &key new-state)
@@ -923,6 +949,7 @@
                      a substring of STRING from which to read;  they default to 0 and
                      \(length STRING) respectively.  Negative values are counted from
                      the end of STRING."
+  (log-debug2 "* read cl-string:~s start:~s end:~s" cl-string start end)
   (with-input-from-string (stream cl-string :start start :end end)
     (multiple-value-bind (result reader) (read-internal stream start)
       (with-slots (character-counter) reader
@@ -1154,13 +1181,13 @@
              (car (read-cl-string "?\\{"))))
   )
 
-(test test-reader-special-cases
+(test test-read-special-cases
   (signals eof-reader-error (read-cl-string ""))
   (is (equal '(el::quote el::test)
              (car (read-cl-string #M" ' #!some-stuff
                                         #!some-stuff
                                         test"))))
-  (is (equal '(el::|.| el::|.| el::e)
+  (is (equal '(el::quote (el::|.| el::|.| el::e))
              (car (read-cl-string "'(\\. \\. e)"))))
   )
 
@@ -1208,6 +1235,13 @@
              (car (read-cl-string "('#1='a #1#)"))))
   (signals invalid-reader-input-error (read-cl-string "#1=(#1# #2#)"))
   (signals invalid-reader-input-error (read-cl-string "#1=#1#"))
+
+  (let* ((sample (car (read-cl-string "(#1=(a . #1#) #1=(a . #1#))")))
+         (first (first sample))
+         (second (second sample)))
+    (is (eq first (cdr first)))
+    (is (eq second (cdr second)))
+    (is-false (eq first second)))
   ;; check in other collection types, like hashmap and string properties
   )
 
@@ -1215,13 +1249,24 @@
   (signals invalid-reader-input-error (read-cl-string "#b"))
   (is (equal (quote #b10)
              (car (read-cl-string "#b010"))))
+  (is (equal (quote #b10)
+             (car (read-cl-string "#b+010"))))
+  (is (equal (quote #b-10)
+             (car (read-cl-string "#b-010"))))
+  (is (equal (quote (0 -10))
+             (car (read-cl-string "(#b0-10)"))))
+
   (is (equal (quote #b1010)
              (car (read-cl-string "#B01010"))))
+  (is (equal (quote #b-1010)
+             (car (read-cl-string "#B-01010"))))
   (signals invalid-reader-input-error (read-cl-string "#b013"))
 
   (signals invalid-reader-input-error (read-cl-string "#o"))
   (is (equal (quote #o10)
              (car (read-cl-string "#o010"))))
+  (is (equal (quote #o-10)
+             (car (read-cl-string "#o-010"))))
   (is (equal (quote #o1010)
              (car (read-cl-string "#O01010"))))
   (signals invalid-reader-input-error (read-cl-string "#o013a"))
@@ -1229,6 +1274,8 @@
   (signals invalid-reader-input-error (read-cl-string "#x"))
   (is (equal (quote #x010aaf)
              (car (read-cl-string "#x010aAF"))))
+  (is (equal (quote #x-010aaf)
+             (car (read-cl-string "#x-010aAF"))))
   (is (equal (quote #x010aaf)
              (car (read-cl-string "#X010aAF"))))
   (signals invalid-reader-input-error (read-cl-string "#x013aw"))
@@ -1328,6 +1375,7 @@
 
 (defun test-me ()
   (run! 'cl-emacs/lib/reader))
+(cl-emacs/lib/log::get-max-loglevel)
 
 (in-package :cl-emacs/elisp)
 (reexport-symbols :cl-emacs/lib/reader)

@@ -75,7 +75,17 @@
                                  "leim/quail/tibetan.el"
                                  "leim/quail/tsang-cns.el"
                                  "org/org-entities.el"
-
+                                 "progmodes/ebnf-abn.el"
+                                 "progmodes/ebnf-bnf.el"
+                                 "progmodes/ebnf-dtd.el"
+                                 "progmodes/ebnf-ebx.el"
+                                 "progmodes/ebnf-iso.el"
+                                 "progmodes/ebnf-yac.el"
+                                 "json-tests.el"
+                                 "subr-tests.el"
+                                 "xml-tests.el"
+                                 "emacs-lisp/bindat-tests.el"
+                                 "emacs-lisp/cl-lib-tests.el"
                                  ))
 ;; (clrhash *good-tested-files*)
 (define-condition test-error (error-with-description)
@@ -115,7 +125,8 @@
       (handler-case
           (loop for char = (read-char in-stream)
                 do (write-char char out-stream))
-        (end-of-file ())))
+        (end-of-file ()))
+      (cl:close in-stream))
     )
 
 
@@ -181,7 +192,8 @@
       (run-test-for-subdirectories
        (truename (concatenate 'string
                               *emacs-source-folder*
-                              "lisp/"
+                              ;; "lisp/"
+                              "test/lisp/"
                               ;; "lisp/calendar/"
                               )))
     (test-error ()
@@ -192,10 +204,10 @@
       (let ((*test-cache-enabled* nil)
             (*parse-errors-enabled* t))
         (one-test (truename (concatenate 'string
-                                         *emacs-source-folder*
                                          ;; "lisp/"
                                          ;; "double.el"
-                                         "lisp/org/org-table.el"
+                                         "/home/re9/github/emacs/test/lisp/emacs-lisp/macroexp-tests.el"
+
                                          ;; "../cl-emacs/.tmp.el"
                                          ;; "lisp/calendar/"
                                          ))))
