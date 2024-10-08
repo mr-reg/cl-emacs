@@ -1,4 +1,5 @@
-#-asdf3.1 (error "CL-EMACS requires ASDF 3.1 or later.")
+#-asdf3.3 (error "CL-EMACS requires ASDF 3.3 or later.")
+#-PACKAGE-LOCAL-NICKNAMES (error "CL-EMACS requires ASDF PACKAGE-LOCAL-NICKNAMES capability.")
 (load "lib/elisp-packages.lisp")
 
 (asdf:defsystem :cl-emacs
