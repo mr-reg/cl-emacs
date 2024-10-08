@@ -140,6 +140,17 @@
                )))
       stream :escaped :string)
      )
+    ((recordp obj)
+     (write-sequence "#s(" stream)
+     (loop for el across obj
+           with first = t
+           do (unless first
+                (write-char #\space stream))
+
+              (let* ((circle-num (check-if-obj-in-circle-refs el circle-refs)))
+                (safe-print-to-cl-stream el stream raw-mode backquoted circle-refs circle-num))
+              (setq first nil))
+     (write-char #\) stream))
     ((vectorp obj)
      (write-char #\[ stream)
      (loop for el across obj
@@ -392,24 +403,24 @@
   (let ((val (make-array 2)))
     (setf (aref val 0) 'el::a)
     (setf (aref val 1) val)
-    (prin-test "[a #0]" "[a #0]" val))
+    (prin-test "[a #0]" val))
 
   (let ((val (make-array 3)))
     (setf (aref val 0) 'el::a)
     (setf (aref val 1) val)
     (setf (aref val 2) 'el::b)
-    (prin-test "[a #0 b]" "[a #0 b]" val))
+    (prin-test "[a #0 b]" val))
 
   (let* ((ref nil)
          (val (cons 'el::a ref)))
     (setf (cdr val) val)
-    (prin-test "(a . #0)" "(a . #0)" val))
+    (prin-test "(a . #0)" val))
 
   (let* ((ref nil)
          (val `(el::a ,ref el::b . ,ref)))
     (setf (nth 1 val) val)
     (setf (cdr (cl:nthcdr 2 val)) val)
-    (prin-test "(a #0 b . #0)" "(a #0 b . #0)" val)
+    (prin-test "(a #0 b . #0)" val)
     )
 
   (let ((val (make-array 4)))
@@ -417,9 +428,14 @@
     (setf (aref val 1) val)
     (setf (aref val 2) 'el::b)
     (setf (aref val 3) val)
-    (prin-test "[a #0 b #0]" "[a #0 b #0]" val))
+    (prin-test "[a #0 b #0]" val))
 
   )
+
+(test test-print-record
+  (let ((record #(el::test-rec el::abc 123 (1 2 3))))
+    (setf (cl:get 'el::test-rec'el::type) 'el::record)
+    (prin-test "#s(test-rec abc 123 (1 2 3))" record)))
 
 
 (defun test-me ()

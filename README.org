@@ -8,7 +8,7 @@ This is port of the Beast from C to Common Lisp.
 Development just started
 
 * Progress
-** reader [7/10]
+** reader [8/11]
    * [X] basic elisp reader 
    * [X] character syntax reader
    * [X] string reader [4/4]
@@ -20,12 +20,13 @@ Development just started
    * [X] float number reader
    * [X] char tables && sub-char tables
    * [X] bool-vectors
-   * [ ] #s( syntax for structs
+   * [X] #s( syntax for records
+   * [ ] ^M ignore
    * [ ] shorthands
-   * [ ] other special reader syntax
+   * [ ] other special reader syntax?
    * [ ] markers?
-** printer [0/2]
-   * [ ] basic print implementation
+** printer [1/3]
+   * [X] basic print implementation
    * [ ] format
    * [ ] print-circle variable support
 ** eval [0/1]

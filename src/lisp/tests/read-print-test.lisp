@@ -88,6 +88,9 @@
                                  "emacs-lisp/cl-lib-tests.el"
                                  "emacs-lisp/macroexp-tests.el"
                                  "emacs-lisp/rx-tests.el"
+                                 "international/textsec-tests.el"
+                                 "net/tramp-tests.el"
+                                 "compat/compat-tests.el"
                                  ))
 ;; (clrhash *good-tested-files*)
 (define-condition test-error (error-with-description)
@@ -192,12 +195,14 @@
   ;; (clrhash *good-tested-files*)
   (handler-case
       (run-test-for-subdirectories
-       (truename (concatenate 'string
-                              *emacs-source-folder*
-                              ;; "lisp/"
-                              "test/lisp/"
-                              ;; "lisp/calendar/"
-                              )))
+       (truename 
+        "~/.emacs.d/straight/repos/"
+        ;; (concatenate 'string
+        ;;              *emacs-source-folder* "lisp/"
+        ;;              ;; "test/lisp/"
+        ;;              ;; "lisp/calendar/"
+        ;;              )
+        ))
     (test-error ()
       (log-debug "error")))
   )
@@ -208,8 +213,9 @@
         (one-test (truename (concatenate 'string
                                          ;; "lisp/"
                                          ;; "double.el"
-                                         "/home/re9/github/emacs/test/lisp/emacs-lisp/macroexp-tests.el"
-
+                                         ;; "/home/re9/github/emacs/test/lisp/emacs-lisp/macroexp-tests.el"
+                                         "/root/.emacs.d/straight/repos/dap-mode/dap-magik.el"
+                                         
                                          ;; "../cl-emacs/.tmp.el"
                                          ;; "lisp/calendar/"
                                          ))))

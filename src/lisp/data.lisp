@@ -79,10 +79,11 @@
    #:max
    #:null
    #:numberp
+   #:recordp
    #:symbolp
-   #:vectorp
    #:symbol-name
-
+   #:type-of
+   #:vectorp
    )
   (:local-nicknames (#:pstrings #:cl-emacs/types/pstrings)
                     (#:el #:cl-emacs/elisp)))
@@ -642,11 +643,13 @@ the position will be taken.
 
 (fn SYM POS)"
   (error 'unimplemented-error))
-(defun* recordp ()
+(defun* recordp (object)
   #M"Return t if OBJECT is a record.
 
 (fn OBJECT)"
-  (error 'unimplemented-error))
+  (when (and (vectorp object) (> (cl:length object) 0))
+    (let ((record-type (aref object 0)))
+      (and (symbolp record-type) (eq 'el::record (cl:get record-type 'el::type))))))
 (defun* remove-pos-from-symbol ()
   #M"If ARG is a symbol with position, return it without the position.
 Otherwise, return ARG unchanged.  Compare with ‘bare-symbol'.
@@ -798,13 +801,15 @@ global value outside of any lexical scope.
 
 (fn OBJECT)"
   (error 'unimplemented-error))
-(defun* type-of ()
+(defun* type-of (obj)
   #M"Return a symbol representing the type of OBJECT.
 The symbol returned names the object's basic type;
 for example, (type-of 1) returns ‘integer'.
 
 (fn OBJECT)"
-  (error 'unimplemented-error))
+  (cond
+    ((recordp obj) (aref obj 0))
+    (t (cl:type-of obj))))
 (defun* user-ptrp ()
   #M"Return t if OBJECT is a module user pointer.
 

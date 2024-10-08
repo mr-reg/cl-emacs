@@ -262,7 +262,7 @@
             (start-collector reader))
            ((eq char #\s)
             (pop (car mod-stack))
-            (push-modifier reader 'hash-table))
+            (push-modifier reader 'record-or-hash-table))
            ((eq char #\^)
             (pop (car mod-stack))
             (push-modifier reader 'chartable))
@@ -759,9 +759,6 @@
 
 (defun* transform-to-hash-table (something)
   (log-debug2 "starting hash-table parsing ~s" something)
-  (unless (eq (pop something) 'el::hash-table)
-    (error 'invalid-reader-input-error :details
-           "hash-table definition should start from the word \"hash-table\""))
   (let (args data ht)
     (ignore-errors ;; like emacs does
      (doplist (key val something)
@@ -783,6 +780,24 @@
              (puthash key val ht))
     ht)
   )
+
+(defun* transform-to-record (something)
+  (log-debug2 "starting record parsing ~s" something)
+  (let* ((len (cl:length something))
+         (record-type (car something))
+         (parsed (make-array len)))
+    (unless (> len 0)
+      (error 'invalid-reader-input-error
+             :details "record definition is not complete"))
+    (unless (symbolp record-type)
+      (error 'invalid-reader-input-error
+             :details (cl:format nil "record type should be a symbol: ~s" record-type)))
+    
+    (loop for element in something
+          for idx from 0
+          do (setf (aref parsed idx) element))
+    (setf (cl:get record-type 'el::type) 'el::record)
+    parsed))
 
 (defun* transform-to-chartable ((something cl:vector))
   (let* ((normal-size (aref chartables:+chartab-size+ 0))
@@ -884,8 +899,10 @@
                 (setq stack (replace-placeholder-in-tree stack placeholder something))))
              (pstring-full
               (setq something (transform-to-pstring something)))
-             (hash-table
-              (setq something (transform-to-hash-table something)))
+             (record-or-hash-table
+              (if (eq (car something) 'el::hash-table)
+                  (setq something (transform-to-hash-table (cdr something)))
+                  (setq something (transform-to-record something))))
              (chartable
               (setq something (transform-to-chartable something)))
              (sub-chartable
@@ -1343,6 +1360,15 @@
     (is (eq 'el::equal (hash-table-test ht)))
     (is (= 0 (hash-table-count ht)))))
 
+
+(test test-read-records
+  (let ((record (car (read-cl-string 
+                      #M"#s(test-rec abc 123 (1 2 3))"))))
+    (is (eq 'el::test-rec (type-of record)))
+    (is (equal record #(el::test-rec el::abc 123 (1 2 3))))
+    
+    
+    ))
 ;; (defun* real-file-test ()
 ;;   (with-open-file (stream "../emacs/lisp/master.el" :direction :input)
 ;;     (read stream)
