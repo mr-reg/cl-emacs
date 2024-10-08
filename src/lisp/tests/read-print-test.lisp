@@ -86,6 +86,8 @@
                                  "xml-tests.el"
                                  "emacs-lisp/bindat-tests.el"
                                  "emacs-lisp/cl-lib-tests.el"
+                                 "emacs-lisp/macroexp-tests.el"
+                                 "emacs-lisp/rx-tests.el"
                                  ))
 ;; (clrhash *good-tested-files*)
 (define-condition test-error (error-with-description)

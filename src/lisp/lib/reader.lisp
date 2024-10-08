@@ -563,12 +563,15 @@
        )
       (t (progn)))))
 
-(defun* get-pointer-cons ((reader reader) (pointer-number fixnum))
+(defun* get-pointer-cons ((reader reader) (pointer-number fixnum) &key force-recreate)
   #M"return already defined pointer value if it exists,
-     or creates empty placeholder and return it"
+     or creates empty placeholder and return it
+     car = T if pointer is defined
+     cdr = fake placeholder memory cell if pointer is not defined, or real value if car is T"
+  (log-debug1 "get-pointer-cons pointer-number:~s force-recreate:~s" pointer-number force-recreate)
   (with-slots (pointers) reader
     (multiple-value-bind (cons found) (gethash pointer-number pointers)
-      (unless found
+      (when (or force-recreate (not found))
         (let ((placeholder (cons nil nil)))
           (setq cons (cons nil placeholder))
           (setf (gethash pointer-number pointers) cons)))
@@ -577,7 +580,7 @@
 ;; pointer
 
 (defun* end-pointer ((reader reader) &key new-pointer)
-  (log-debug1 "<- end pointer")
+  (log-debug1 "<- end pointer (new-pointer:~s)" new-pointer)
   (multiple-value-bind (stack-frame mod-frame) (pop-stack-frame reader)
     (with-slots (pointers) reader
       (let* ((chardata (char-list-to-cl-string (nreverse stack-frame)))
@@ -586,9 +589,18 @@
         (unless pointer-number
           (error 'invalid-reader-input-error :details "can't parse pointer number"))
         (if new-pointer
-            (progn (push-modifier reader pointer-number)
-                   (push-modifier reader 'new-pointer)
-                   (change-state reader state/toplevel))
+            ;;; following emacs logic:
+            ;;; recreate pointer on reader event, not memory structure logic.
+            ;;; So here we should just forget about previous pointer information
+            (let ((placeholder (cdr (get-pointer-cons reader pointer-number :force-recreate t))))
+              ;;; we can't use pointer number as reference, because when we will finish reading operation
+              ;;; pointer with this number may be already very different. But we still have our unique
+              ;;; placeholder, so we should care about them
+              (push-modifier reader placeholder)
+              (push-modifier reader pointer-number)
+              (push-modifier reader 'new-pointer)
+              ;;; this modifier will be processed later, if on this moment pointer will be not defined yet
+              (change-state reader state/toplevel))
             (end-collector reader (cdr (get-pointer-cons reader pointer-number)) mod-frame))))))
 
 (defun* state/pointer-transition ((reader reader) (char character))
@@ -672,6 +684,10 @@
 
 
 (defun* replace-placeholder-in-tree (tree old-value new-value &optional stack)
+  #M"tree - memory structure
+     old-value - placeholder
+     new-value - real-value
+     stack - internal structure for recursion"
   (when (memq tree stack)
     ;; protection from circles
     (return-from replace-placeholder-in-tree tree))
@@ -707,16 +723,22 @@
 (defun* transform-to-new-pointer (something
                                   &key
                                   pointer-number
-                                  actual-cons
+                                  placeholder
                                   pointers-hash
                                   )
-  (log-debug2 "actual-cons:~s" actual-cons)
-  (when (car actual-cons)
-    (error 'invalid-reader-input-error
-           :details (cl:format nil "pointer #~a already defined" pointer-number)))
-  (log-debug2 "setting pointer #~a to current object ~s" pointer-number something)
-  (setf (gethash pointer-number pointers-hash) (cons t something))
-  (replace-placeholder-in-tree something (cdr actual-cons) something))
+  #M"something - memory structure, what pointer will reference to
+     pointer-number - pointer id
+     placeholder - link to pointer placeholder cons
+     pointers-hash - all pointers storage"
+
+  ;;; redefine pointer to new value, if passed placeholder really equal to stored in hashmap
+  ;;; otherwise it means that pointer with this number was already redefined in reader memory,
+  ;;; so we don't care about new reads with same pointer anymore
+  (when (eq placeholder (cdr (gethash pointer-number pointers-hash)))
+    (log-debug2 "setting pointer #~a to current object ~s" pointer-number something)
+    (setf (gethash pointer-number pointers-hash) (cons t something)))
+
+  (replace-placeholder-in-tree something placeholder something))
 
 (defun* transform-to-pstring (something)
   (log-debug2 "starting pstring-full transformation ~s" something)
@@ -851,15 +873,15 @@
               )
              (new-pointer
               (let* ((pointer-number (pop modifiers))
-                     (actual-cons (get-pointer-cons reader pointer-number)))
+                     (placeholder (pop modifiers)))
+                (log-debug2 "processing new-pointer modifier: pointer-number:~s" pointer-number)
                 (setq something
                       (transform-to-new-pointer
                        something
                        :pointer-number pointer-number
-                       :actual-cons actual-cons
+                       :placeholder placeholder
                        :pointers-hash pointers))
-                (setq stack (replace-placeholder-in-tree stack (cdr actual-cons) something))
-                ))
+                (setq stack (replace-placeholder-in-tree stack placeholder something))))
              (pstring-full
               (setq something (transform-to-pstring something)))
              (hash-table
@@ -886,7 +908,7 @@
     ))
 (defun* process-char ((reader reader) (char character) &key new-state)
   (with-slots (state) reader
-    (log-debug2 "process char ~s in state ~s" char state)
+    (log-debug2 ".. process char ~s in state ~s" char state)
     (when new-state
       (change-state reader new-state))
     (let ((handler (aref *transitions* state)))
@@ -1236,13 +1258,33 @@
   (signals invalid-reader-input-error (read-cl-string "#1=(#1# #2#)"))
   (signals invalid-reader-input-error (read-cl-string "#1=#1#"))
 
-  (let* ((sample (car (read-cl-string "(#1=(a . #1#) #1=(a . #1#))")))
-         (first (first sample))
-         (second (second sample)))
+  (is (equal (quote ((el::a el::b el::b) el::b))
+             (car (read-cl-string "(#1=(a #1=b #1#) #1#)"))))
+
+  (let* ((sample (car (read-cl-string "(#1=(a . #1#) #1=(b . #1#))")))
+         (first (cl:first sample))
+         (second (cl:second sample)))
     (is (eq first (cdr first)))
     (is (eq second (cdr second)))
     (is-false (eq first second)))
-  ;; check in other collection types, like hashmap and string properties
+
+  (let* ((sample (car (read-cl-string "(#1=(a #1# #1=b #1#) #1#)")))
+         (first (cl:first sample))
+         (second (cl:second sample)))
+    (is (eq first (cl:second first)))
+    (is (eq 'el::b (nth 2 first)))
+    (is (eq 'el::b (nth 3 first)))
+    (is (eq 'el::b second))
+    )
+
+  (let* ((sample (car (read-cl-string "#1=(a #1# b #1#)")))
+         (first (cl:first sample))
+         (second (cl:second sample))
+         (fourth (cl:fourth sample)))
+    (is (eq second sample))
+    (is (eq fourth sample))
+    )
+
   )
 
 (test test-read-radix

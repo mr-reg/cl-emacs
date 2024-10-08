@@ -20,12 +20,14 @@ Development just started
    * [X] float number reader
    * [X] char tables && sub-char tables
    * [X] bool-vectors
+   * [ ] #s( syntax for structs
    * [ ] shorthands
    * [ ] other special reader syntax
    * [ ] markers?
 ** printer [0/2]
    * [ ] basic print implementation
    * [ ] format
+   * [ ] print-circle variable support
 ** eval [0/1]
    * [ ] lexical scope
    * [ ] let/let*
@@ -101,6 +103,20 @@ pass all tests.
    Emacs has very poor understanding if string contains multibyte
    character without some additional processing. According to emacs
    this "\3757zXZ\0" is not a multibyte string.
+
+** printing of circled data structures in emacs is strange sometimes
+   
+   Emacs will do this:
+   #+begin_src elisp
+     > (prin1 (read "#1=(a b c d e f g h . #1#)"))
+     (a b c d e f g h a b c d e f g h a b c d e f . #14)
+   #+end_src
+   
+   I barely can understand why it tries to go through the list again.
+   But why it does it twice and stops on 'f? No idea, even looking
+   into the source code.
+
+   My code does handles such cases more reliable, I hope.
 
 * License
 
