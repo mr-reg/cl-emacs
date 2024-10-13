@@ -270,6 +270,15 @@
             (pop (car mod-stack))
             (start-collector reader)
             (change-state reader state/bool-vector-len))
+           ((eq char #\$)
+            (pop (car mod-stack))
+            (start-collector reader)
+            (change-state reader state/symbol)
+            ;;; always return nil, because this is bytecode-specific stuff
+            (push-to-reader-stack reader #\n)
+            (push-to-reader-stack reader #\i)
+            (push-to-reader-stack reader #\l)
+            )
            (t (error 'invalid-reader-input-error :details "unsupported character after #"))
            ))
         ((and (eq active-modifier 'chartable)
@@ -792,7 +801,7 @@
     (unless (symbolp record-type)
       (error 'invalid-reader-input-error
              :details (cl:format nil "record type should be a symbol: ~s" record-type)))
-    
+
     (loop for element in something
           for idx from 0
           do (setf (aref parsed idx) element))
@@ -1037,6 +1046,14 @@
              (car (read-cl-string "-"))))
   (is (equal (quote (el::quote el::_na_n))
              (car (read-cl-string "'NaN"))))
+  (is (equal (quote (el::a el::b))
+             (car (read-cl-string (cl:format nil "(a~cb)" #\return)))))
+  (is (equal (quote (el::a el::b))
+             (car (read-cl-string (cl:format nil "(a~cb ~c)" #\tab #\tab)))))
+  (is (equal (quote (el::a el::b))
+             (car (read-cl-string (cl:format nil "(a~cb ~c)" #\dc4 #\dc4)))))
+  (is (equal (quote (el::a el::b el::nil))
+             (car (read-cl-string "(a b #$)"))))
   )
 
 (test test-read-shorthands
@@ -1362,12 +1379,12 @@
 
 
 (test test-read-records
-  (let ((record (car (read-cl-string 
+  (let ((record (car (read-cl-string
                       #M"#s(test-rec abc 123 (1 2 3))"))))
     (is (eq 'el::test-rec (type-of record)))
     (is (equal record #(el::test-rec el::abc 123 (1 2 3))))
-    
-    
+
+
     ))
 ;; (defun* real-file-test ()
 ;;   (with-open-file (stream "../emacs/lisp/master.el" :direction :input)
@@ -1436,7 +1453,7 @@
   ;; #^[ char table
   ;; #^^[ sub-char table
   ;; #[ byte code
-  ;; #$ ???
+  ;; #$ current file name
   ;; #NrDIGITS -- radix-N number, any radix 0-36, r or R
   ;; obarrays?
   )

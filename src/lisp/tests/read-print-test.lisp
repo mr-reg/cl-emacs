@@ -91,20 +91,35 @@
                                  "international/textsec-tests.el"
                                  "net/tramp-tests.el"
                                  "compat/compat-tests.el"
+                                 "flycheck/test/resources/language/emacs-lisp/syntax-error.el"
+                                 "org/lisp/org-entities.el"
+                                 "org/testing/lisp/test-org-element.el"
+                                 "parseedn/test/parseedn-el-parity-test.el"
+                                 "parseedn/test/parseedn-test.el"
+                                 "slime/contrib/slime-xref-browser.el"
                                  ))
 ;; (clrhash *good-tested-files*)
 (define-condition test-error (error-with-description)
   ())
 
 (defun* cl-read-princ-file ((file pathname))
-  (let ((raw-string (with-output-to-string (out-stream)
-                      (with-open-file (in-stream file)
-                        (handler-case
-                            (loop do (write-char (read-char in-stream) out-stream))
-                          (end-of-file ())))))
+  (let ((raw-string "")
         (position 0)
         (el::float-output-format "~,6f")
         (el::string-multibyte-flag-emacs-compatible t))
+    (setq raw-string (handler-case
+                         (with-output-to-string (out-stream)
+                           (with-open-file (in-stream file :external-format :utf-8)
+                             (handler-case
+                                 (loop do (write-char (read-char in-stream) out-stream))
+                               (end-of-file ()))))
+                       (cl:stream-error ()
+                         (with-output-to-string (out-stream)
+                           (with-open-file (in-stream file :external-format :iso-8859-1)
+                             (handler-case
+                                 (loop do (write-char (read-char in-stream) out-stream))
+                               (end-of-file ())))))))
+
     (log-debug2 "raw-string: ~s" raw-string)
     (with-output-to-string (out-stream)
       (handler-case
@@ -140,10 +155,14 @@
 (defun* one-test ((filename pathname))
   ;; ~/github/emacs/lisp/calendar/cal-x.el
   (cl:format t "filename ~s " filename)
+  (unless (uiop:probe-file* filename)
+    (cl:format t "does not exist~%")
+    (return-from one-test))
   (when (and *test-cache-enabled*
              (gethash (cl:namestring filename) *good-tested-files*))
     (cl:format t "previously tested~%")
     (return-from one-test))
+
   (dolist (suffix *excluded-files*)
     (when (str:ends-with-p suffix (cl:namestring filename))
       (cl:format t "excluded~%")
@@ -195,7 +214,7 @@
   ;; (clrhash *good-tested-files*)
   (handler-case
       (run-test-for-subdirectories
-       (truename 
+       (truename
         "~/.emacs.d/straight/repos/"
         ;; (concatenate 'string
         ;;              *emacs-source-folder* "lisp/"
@@ -214,9 +233,9 @@
                                          ;; "lisp/"
                                          ;; "double.el"
                                          ;; "/home/re9/github/emacs/test/lisp/emacs-lisp/macroexp-tests.el"
-                                         "/root/.emacs.d/straight/repos/dap-mode/dap-magik.el"
-                                         
-                                         ;; "../cl-emacs/.tmp.el"
+                                         ;; "/root/.emacs.d/straight/repos/dap-mode/dap-magik.el"
+
+                                         "../cl-emacs/test.el"
                                          ;; "lisp/calendar/"
                                          ))))
     ;; (test-error ()

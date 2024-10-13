@@ -2,13 +2,13 @@
 #+TODO: TODO IN-PROGRESS | DONE
 
 * What is this?
-This is port of the Beast from C to Common Lisp.
+This is just another attempt port of The Beast from C to Common Lisp.
 
 * State
 Development just started
 
 * Progress
-** reader [8/11]
+** reader [8/10]
    * [X] basic elisp reader 
    * [X] character syntax reader
    * [X] string reader [4/4]
@@ -21,9 +21,7 @@ Development just started
    * [X] char tables && sub-char tables
    * [X] bool-vectors
    * [X] #s( syntax for records
-   * [ ] ^M ignore
    * [ ] shorthands
-   * [ ] other special reader syntax?
    * [ ] markers?
 ** printer [1/3]
    * [X] basic print implementation
