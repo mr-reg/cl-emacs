@@ -22,6 +22,7 @@
      :alexandria
      :fiveam
      :cl-emacs/data
+     :cl-emacs/eval
      :defstar)
   (:export
    #:char-end-of-statement-p

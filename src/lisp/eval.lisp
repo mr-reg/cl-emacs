@@ -51,8 +51,7 @@
            #:quote
            #:setq
            )
-  (:local-nicknames (#:el #:cl-emacs/elisp)
-                    (#:reader #:cl-emacs/lib/reader))
+  
   )
 (in-package :cl-emacs/eval)
 (log-enable :cl-emacs/eval :debug2)
@@ -241,19 +240,6 @@ The return value is BASE-VARIABLE.
 
 (fn NEW-ALIAS BASE-VARIABLE &optional DOCSTRING)"
   (error 'unimplemented-error))
-(defun* eval (form &optional lexical)
-  #M"Evaluate FORM and return its value.
-     If LEXICAL is t, evaluate using lexical scoping.
-     LEXICAL can also be an actual lexical environment, in the form of an
-     alist mapping symbols to their value."
-  (cond
-    (t form)
-    )
-  (error 'unimplemented-error))
-
-(test test-read-symbols
-  (is (equal 3 (eval (reader:read-simple "3"))))
-  )
 
 (defun* fetch-bytecode ()
   #M"If byte-compiled OBJECT is lazy-loaded, fetch it now.

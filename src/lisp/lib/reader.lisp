@@ -24,6 +24,7 @@
      :cl-emacs/lib/reader-utils
      :cl-emacs/lib/character-reader
      :cl-emacs/data
+     :cl-emacs/eval
      :cl-emacs/alloc
      :cl-emacs/fns
      :cl-emacs/lib/commons)
@@ -1165,7 +1166,7 @@
   (is (equal (pstrings:build-pstring "abc\\z\"")
              (read-simple "\"abc\\\\\\x7a\\\"\"" )))
   (is (equal (pstrings:build-pstring "sample string without newline.")
-             (car-read
+             (read-simple
               #M"#(\"sampl\\ e \\
                       string without newline.\" 0 4 (face bold))")))
   (is (equal (pstrings:build-pstring (cl:format nil "~c, \"\"~c" #\tab #\soh))
@@ -1365,8 +1366,8 @@
   )
 
 (test test-read-hash-tables
-  (let ((ht (car-read
-                  #M"#s(hash-table
+  (let ((ht (read-simple
+             #M"#s(hash-table
                      size 1000 test eq
                      rehash-size 1.3
                      rehash-threshold 0.6
@@ -1377,15 +1378,15 @@
     (is (= 0.6 (hash-table-rehash-threshold ht)))
     (is (= 2 (gethash 'el::a ht)))
     (is (= 3 (gethash 'el::b ht))))
-  (let ((ht (car-read
-                  "#s(hash-table bad-parameter some-value test equal data)")))
+  (let ((ht (read-simple
+             "#s(hash-table bad-parameter some-value test equal data)")))
     (is (eq 'el::equal (hash-table-test ht)))
     (is (= 0 (hash-table-count ht)))))
 
 
 (test test-read-records
-  (let ((record (car-read
-                      #M"#s(test-rec abc 123 (1 2 3))")))
+  (let ((record (read-simple
+                 #M"#s(test-rec abc 123 (1 2 3))")))
     (is (eq 'el::test-rec (type-of record)))
     (is (equal record #(el::test-rec el::abc 123 (1 2 3))))
 
@@ -1405,7 +1406,7 @@
     (is (= 3 (aref (chartables:sub-chartable-contents sub-ct) 3)))
     )
   (signals invalid-reader-input-error (read-cl-string "#^^[3 12 8 8 8 3 8]"))
-  (let ((ct (car-read
+  (let ((ct (read-simple
              #M"#^[8 nil test
                      #^^[3 0 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3]
                      #^^[1 0 #^^[2 0 #^^[3 0 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3]
