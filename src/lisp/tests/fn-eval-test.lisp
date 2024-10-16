@@ -16,41 +16,31 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/fn-eval
+(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/tests/fn-eval-test
     (:use
      :defstar
      :cl-emacs/lib/log
-     :cl-emacs/eval
-     :cl-emacs/data
-     :alexandria
+     :fiveam
      :cl-emacs/lib/commons
-     :cl-emacs/lib/errors
+     :cl-emacs/fn-eval
      )
-  (:export #:eval)
-  (:local-nicknames (#:el #:cl-emacs/elisp))
+  (:local-nicknames (#:el #:cl-emacs/elisp)
+                    (#:reader #:cl-emacs/lib/reader))
   )
-(in-package :cl-emacs/fn-eval)
-(log-enable :cl-emacs/fn-eval :debug2)
+(in-package :cl-emacs/tests/fn-eval-test)
+(log-enable :cl-emacs/tests/fn-eval-test :debug2)
+(def-suite cl-emacs/tests/fn-eval-test)
+(in-suite cl-emacs/tests/fn-eval-test)
 (named-readtables:in-readtable mstrings:mstring-syntax)
 
-(defun* eval (form &optional lexical)
-  #M"Evaluate FORM and return its value.
-     If LEXICAL is t, evaluate using lexical scoping.
-     LEXICAL can also be an actual lexical environment, in the form of an
-     alist mapping symbols to their value."
-  (cl:cond
-    ((consp form)
-     (let ((func (car form))
-           (args (cdr form)))
-       (unless (consp args)
-         (error 'wrong-type-argument :details (cl:format nil "~s should be a list" args)))
-       
-       ))
-    ((symbolp form)
-     (error "unimplemented")
-     )
-    (t form)
-    )
+(test test-read-symbols
+  (is (equal 3 (eval (reader:read-simple "3"))))
+  (is (equal 0 (eval (reader:read-simple "(+)"))))
+  (is (equal 1 (eval (reader:read-simple "(+ 1)"))))
+  (is (equal 3 (eval (reader:read-simple "(+ 1 2)"))))
+  (is (equal 3 (eval (reader:read-simple "(+ 1 . 2)"))))
+  (is (equal 3 (eval (reader:read-simple "(+ . 2)"))))
   )
 
-
+(defun test-me ()
+  (run! 'cl-emacs/tests/fn-eval-test))

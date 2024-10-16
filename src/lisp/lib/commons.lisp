@@ -22,11 +22,8 @@
   (:shadow #:code-char)
   (:export
    #:safe-code-char
-   #:error-with-description
    #:reexport-symbols
    #:safe-code
-   #:simple-print-condition-with-slots
-   #:unimplemented-error
    ))
 (in-package :cl-emacs/lib/commons)
 (log-enable :cl-emacs/lib/commons :debug1)
@@ -44,48 +41,6 @@
     (shadowing-import sym)
     (export sym)))
 
-(defun* simple-print-condition-with-slots (obj (stream stream))
-  "emulate emacs error formatting syntax"
-  (format stream "#<~a" (class-name (class-of obj)))
-  (let ((cls (class-of obj)))
-    (dolist (slot
-             (or
-              #+ccl
-              (cl-user::class-slots cls)
-              #+sbcl
-              (sb-mop:class-slots cls)
-              #+ecl
-              (clos:class-slots cls)
-              ))
-      (let ((slot-sym (or
-                       #+ccl
-                       (cl-user::slot-definition-name slot)
-                       #+sbcl
-                       (sb-mop:slot-definition-name slot)
-                       #+ecl
-                       (clos:slot-definition-name slot)
-                       )))
-        (format stream " ~a:~s" slot-sym
-                (slot-value obj slot-sym)
-                )
-        )
-      ))
-  (format stream ">"))
-
-(define-condition base-error ()
-  ()
-  (:report simple-print-condition-with-slots))
-
-
-
-
-(define-condition error-with-description (base-error)
-  ((details :initarg :details
-            :initform ""
-            :type string)))
-
-(define-condition unimplemented-error (error-with-description)
-  ())
 
 (defmacro import-cl-basics ()
   )

@@ -26,7 +26,9 @@
      :cl-emacs/editfns
      :cl-emacs/alloc
      :cl-emacs/eval
-     :cl-emacs/lib/commons)
+     :cl-emacs/lib/commons
+     :cl-emacs/lib/errors
+     )
   (:import-from #:cl
                 #:copy-alist
                 #:clrhash

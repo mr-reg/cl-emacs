@@ -27,7 +27,9 @@
      :cl-emacs/eval
      :cl-emacs/alloc
      :cl-emacs/fns
-     :cl-emacs/lib/commons)
+     :cl-emacs/lib/commons
+     :cl-emacs/lib/errors
+     )
   (:import-from #:alexandria
                 #:doplist)
   (:local-nicknames (#:el #:cl-emacs/elisp)

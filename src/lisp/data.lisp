@@ -22,6 +22,7 @@
      :cl-emacs/lib/log
      :fiveam
      :cl-emacs/lib/commons
+     :cl-emacs/lib/errors
      :cl-emacs/alloc
      :cl-emacs/eval
      )

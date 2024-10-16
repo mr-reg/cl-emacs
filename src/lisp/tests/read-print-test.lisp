@@ -23,6 +23,7 @@
      :cl-emacs/eval
      :cl-emacs/fns
      :cl-emacs/lib/commons
+     :cl-emacs/lib/errors
      :cl-emacs/lib/log
      :fiveam
      )

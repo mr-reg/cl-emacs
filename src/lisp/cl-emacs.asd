@@ -63,6 +63,7 @@
                :cl-emacs/lib/printer
                :cl-emacs/main
                :cl-emacs/tests/read-print-test
+               :cl-emacs/tests/all-tests
                )
   ;; :components ((:module "src/lisp"
   ;;               :components (

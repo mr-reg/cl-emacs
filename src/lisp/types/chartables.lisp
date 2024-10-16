@@ -24,7 +24,9 @@
      :cl-emacs/fns
      :cl-emacs/eval
      :fiveam
-     :cl-emacs/lib/commons)
+     :cl-emacs/lib/commons
+     :cl-emacs/lib/errors
+     )
   (:import-from #:alexandria
                 #:define-constant)
   (:export #:+chartab-size+

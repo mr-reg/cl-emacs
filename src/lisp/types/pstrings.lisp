@@ -22,7 +22,9 @@
      :common-lisp
      :cl-emacs/lib/log
      :fiveam
-     :cl-emacs/lib/commons)
+     :cl-emacs/lib/commons
+     :cl-emacs/lib/errors
+     )
   (:import-from #:serapeum
                 #:memq)
   (:export #:build-pstring
