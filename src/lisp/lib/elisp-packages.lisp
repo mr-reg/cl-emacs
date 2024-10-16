@@ -74,8 +74,6 @@
                         #:pop
                         #:position
                         #:push
-                        #:read-char
-                        #:read-sequence
                         #:return
                         #:return-from
                         #:second
@@ -98,8 +96,6 @@
                         #:with-open-file
                         #:with-output-to-string
                         #:with-slots
-                        #:write-char
-                        #:write-sequence
                         #:zerop
                         #:&key
                         #:&optional

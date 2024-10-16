@@ -22,7 +22,8 @@
      :cl-emacs/lib/log
      :alexandria
      :fiveam
-     :cl-emacs/lib/commons)
+     :cl-emacs/lib/commons
+     )
   (:import-from #:cl
                 #:and
                 #:apply
@@ -49,9 +50,14 @@
            #:progn
            #:quote
            #:setq
-           ))
+           )
+  (:local-nicknames (#:el #:cl-emacs/elisp)
+                    (#:reader #:cl-emacs/lib/reader))
+  )
 (in-package :cl-emacs/eval)
 (log-enable :cl-emacs/eval :debug2)
+(def-suite cl-emacs/eval)
+(in-suite cl-emacs/eval)
 (named-readtables:in-readtable mstrings:mstring-syntax)
 
 (defun* autoload ()
@@ -240,7 +246,15 @@ The return value is BASE-VARIABLE.
      If LEXICAL is t, evaluate using lexical scoping.
      LEXICAL can also be an actual lexical environment, in the form of an
      alist mapping symbols to their value."
+  (cond
+    (t form)
+    )
   (error 'unimplemented-error))
+
+(test test-read-symbols
+  (is (equal 3 (eval (reader:read-simple "3"))))
+  )
+
 (defun* fetch-bytecode ()
   #M"If byte-compiled OBJECT is lazy-loaded, fetch it now.
 
@@ -455,3 +469,6 @@ The value of a ‘while' form is always nil.
 
 (fn TEST BODY...)"
   (error 'unimplemented-error))
+
+(defun test-me ()
+  (run! 'cl-emacs/eval))

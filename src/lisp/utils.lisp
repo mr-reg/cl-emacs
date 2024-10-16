@@ -23,7 +23,7 @@
 (log-enable :cl-emacs/utils)
 ;; (defun read-literal-string (stream delimiter arg)
 ;;   (declare (ignore arg))
-;;   (loop for char = (read-char stream nil stream)
+;;   (loop for char = (cl:read-char stream nil stream)
 ;;         when (eq char stream)
 ;;           do (error "hit end of stream")
 ;;         until (char= char delimiter)

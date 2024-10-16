@@ -16,14 +16,17 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/lread
+(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/lread
     (:use
-     :common-lisp
      :defstar
      :cl-emacs/lib/log
-     :alexandria
      :fiveam
-     :cl-emacs/lib/commons))
+     :cl-emacs/lib/commons)
+  (:local-nicknames (#:el #:cl-emacs/elisp)
+                    (#:pstrings #:cl-emacs/types/pstrings)
+                    (#:reader #:cl-emacs/lib/reader))
+  (:export #:read)
+  )
 (in-package :cl-emacs/lread)
 (log-enable :cl-emacs/lread :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
@@ -173,7 +176,7 @@ OBARRAY defaults to the value of ‘obarray'.
 
 (fn FUNCTION &optional OBARRAY)"
   (error 'unimplemented-error))
-(defun* read ()
+(defun* read (source)
   #M"Read one Lisp expression as text from STREAM, return as Lisp object.
 If STREAM is nil, use the value of ‘standard-input' (which see).
 STREAM or the value of ‘standard-input' may be:
@@ -186,7 +189,11 @@ STREAM or the value of ‘standard-input' may be:
     standard input in batch mode).
 
 (fn &optional STREAM)"
-  (error 'unimplemented-error))
+  (cl:cond
+    ;;; common lisp string here for is just for convenience
+    ;; ((cl:stringp source)
+    ;;  (reader:read-cl-string source))
+    (t (error 'unimplemented-error))))
 (defun* read-char ()
   #M"Read a character event from the command input (keyboard or macro).
 It is returned as a number.

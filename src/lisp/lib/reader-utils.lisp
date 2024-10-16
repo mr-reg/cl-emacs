@@ -21,7 +21,6 @@
      :cl-emacs/lib/log
      :alexandria
      :fiveam
-     :cl-emacs/eval
      :cl-emacs/data
      :defstar)
   (:export
@@ -101,12 +100,12 @@
 (defun* (char-list-to-cl-string -> string) (char-list)
   (with-output-to-string (stream)
     (dolist (char char-list)
-      (write-char char stream))))
+      (cl:write-char char stream))))
 
 (defun* (char-list-to-pstring -> pstrings:pstring) (char-list)
   (pstrings:build-pstring (with-output-to-string (stream)
                             (dolist (char char-list)
-                              (write-char char stream)))))
+                              (cl:write-char char stream)))))
 
 (test parse-elisp-number
   (is (= (parse-elisp-number "+1") 1))

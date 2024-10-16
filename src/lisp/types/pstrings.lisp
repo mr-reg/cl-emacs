@@ -525,11 +525,11 @@
 ;;   (let (result)
 ;;     (cond
 ;;       ((char= subchar #\P)
-;;        (unless (char-equal (read-char stream) #\")
+;;        (unless (char-equal (cl:read-char stream) #\")
 ;;          (error "double quote not found after #P"))
 ;;        (let ((cl-string
 ;;                (with-output-to-string (str-stream)
-;;                  (loop for next-char = (read-char stream)
+;;                  (loop for next-char = (cl:read-char stream)
 ;;                        until (char-equal #\" next-char)
 ;;                        do (write-char next-char str-stream)))))
 ;;          (setq result (build-pstring cl-string))))

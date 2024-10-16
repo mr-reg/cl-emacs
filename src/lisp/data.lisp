@@ -765,10 +765,10 @@ function or t otherwise.
                                   do (if esc-mode
                                          (progn
                                            (setq esc-mode nil)
-                                           (write-char char stream))
+                                           (cl:write-char char stream))
                                          (if (cl:eq char #\_)
                                              (setq esc-mode t)
-                                             (write-char (char-downcase char) stream)))))))
+                                             (cl:write-char (char-downcase char) stream)))))))
 (test test-symbol-name
   ;; TODO: add proper tests for (symbol-name)
   (is (pstrings:pstring= (pstrings:build-pstring "test") (symbol-name 'el::test)))

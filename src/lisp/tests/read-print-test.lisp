@@ -111,13 +111,13 @@
                          (with-output-to-string (out-stream)
                            (with-open-file (in-stream file :external-format :utf-8)
                              (handler-case
-                                 (loop do (write-char (read-char in-stream) out-stream))
+                                 (loop do (cl:write-char (cl:read-char in-stream) out-stream))
                                (end-of-file ()))))
                        (cl:stream-error ()
                          (with-output-to-string (out-stream)
                            (with-open-file (in-stream file :external-format :iso-8859-1)
                              (handler-case
-                                 (loop do (write-char (read-char in-stream) out-stream))
+                                 (loop do (cl:write-char (cl:read-char in-stream) out-stream))
                                (end-of-file ())))))))
 
     (log-debug2 "raw-string: ~s" raw-string)
@@ -129,7 +129,7 @@
             (loop do (let ((read-result (reader:read-cl-string raw-string position)))
                        (log-debug2 "one read result ~s" read-result)
                        (printer:princ-to-cl-stream (car read-result) out-stream)
-                       (write-char #\newline out-stream)
+                       (cl:write-char #\newline out-stream)
                        (incf position (cdr read-result))
                        (log-debug2 "new read position ~s" position)))
 
@@ -143,8 +143,8 @@
          (in-stream (uiop:process-info-output process-info)))
     (with-output-to-string (out-stream)
       (handler-case
-          (loop for char = (read-char in-stream)
-                do (write-char char out-stream))
+          (loop for char = (cl:read-char in-stream)
+                do (cl:write-char char out-stream))
         (end-of-file ()))
       (cl:close in-stream))
     )
@@ -179,18 +179,18 @@
           (with-open-file (stream "cl.txt" :direction :output
                                            :if-does-not-exist :create
                                            :if-exists :supersede)
-            (write-sequence cl-str stream))
+            (cl:write-sequence cl-str stream))
           (with-open-file (stream "el.txt" :direction :output
                                            :if-does-not-exist :create
                                            :if-exists :supersede)
-            (write-sequence el-str stream))
+            (cl:write-sequence el-str stream))
 
           (let* ((process-info (uiop:launch-program
                                 "wdiff -3 cl.txt el.txt" :output :stream))
                  (in-stream (uiop:process-info-output process-info)))
             (handler-case
-                (loop for char = (read-char in-stream)
-                      do (write-char char t))
+                (loop for char = (cl:read-char in-stream)
+                      do (cl:write-char char t))
               (end-of-file ()))
             )
           (error 'test-error))

@@ -24,7 +24,6 @@
      :cl-emacs/lib/reader-utils
      :cl-emacs/lib/character-reader
      :cl-emacs/data
-     :cl-emacs/eval
      :cl-emacs/alloc
      :cl-emacs/fns
      :cl-emacs/lib/commons)
@@ -49,7 +48,9 @@
   (:export #:read-cl-string
            #:eof-reader-error
            #:empty-reader-error
-           #:incomplete-reader-error)
+           #:incomplete-reader-error
+           #:read-simple
+           )
   )
 
 (in-package :cl-emacs/lib/reader)
@@ -378,7 +379,7 @@
                           (when char
                             (when (and el::string-multibyte-flag-emacs-compatible  is-unicode-spec (>= code #x80))
                               (setq multibyte t))
-                            (write-char (safe-code-char char) stream))))
+                            (cl:write-char (safe-code-char char) stream))))
                  (handler-case
                      (progn
                        (log-debug2 "read character start-position:~s cl-buffer:~s"
@@ -503,8 +504,8 @@
   (let ((symbol-name (with-output-to-string (stream)
                        (loop for char across string
                              do (when (or (upper-case-p char) (eq char #\_))
-                                  (write-char #\_ stream))
-                                (write-char (char-upcase char) stream)))))
+                                  (cl:write-char #\_ stream))
+                                (cl:write-char (char-upcase char) stream)))))
     (if intern
         ;; TODO: use emacs functions here
         (cl:intern symbol-name :cl-emacs/elisp )
@@ -961,7 +962,7 @@
       (handler-case
           (handler-case
               (loop for read-position from external-position
-                    do (let ((char (read-char stream)))
+                    do (let ((char (cl:read-char stream)))
                          (log-debug2 "read char result: ~s" char)
                          (incf character-counter)
                          (process-char reader char)
@@ -991,69 +992,73 @@
 
 (defun* read-cl-string (cl-string &optional (start 0) (end (cl:length cl-string)))
   #M"Read one Lisp expression which is represented as text by STRING.
-                     Returns a cons: (OBJECT-READ . FINAL-STRING-INDEX).
-                     FINAL-STRING-INDEX is an integer giving the position of the next
-                     remaining character in STRING.  START and END optionally delimit
-                     a substring of STRING from which to read;  they default to 0 and
-                     \(length STRING) respectively.  Negative values are counted from
-                     the end of STRING."
+     Returns a cons: (OBJECT-READ . FINAL-STRING-INDEX).
+     FINAL-STRING-INDEX is an integer giving the position of the next
+     remaining character in STRING.  START and END optionally delimit
+     a substring of STRING from which to read;  they default to 0 and
+     \(length STRING) respectively.  Negative values are counted from
+     the end of STRING."
   (log-debug2 "* read cl-string:~s start:~s end:~s" cl-string start end)
   (with-input-from-string (stream cl-string :start start :end end)
     (multiple-value-bind (result reader) (read-internal stream start)
       (with-slots (character-counter) reader
         (cons result character-counter)))))
 
+(defun* read-simple ((cl-string cl:string))
+  #M"Simple read function interface for unit testing, returns just resulting FORM"
+  (car (read-cl-string cl-string)))
+
 ;; last function, should be called after all transitions definition
 (define-transitions)
 
 (test test-read-symbols
   (is (equal (quote el::||)
-             (car (read-cl-string "##"))))
+             (read-simple "##")))
   (is (equal (quote (el::test . 4))
              (read-cl-string "test")))
   (is (equal (quote (el::test . 5))
              (read-cl-string "test two")))
   (is (equal (quote (el::\:test))
-             (car (read-cl-string "(:test))"))))
+             (read-simple "(:test))")))
   (is (equal (quote el::|AB123-+=*/C|)
-             (car (read-cl-string "ab123-+=*/c"))))
+             (read-simple "ab123-+=*/c")))
   (is (equal (quote el::|AB__~!@$%^&:<>{}?C|)
-             (car (read-cl-string "ab_~!@$%^&:<>{}?c"))))
-  (is-false (equal (car (read-cl-string "FOO"))
-                   (car (read-cl-string "foo"))))
+             (read-simple "ab_~!@$%^&:<>{}?c")))
+  (is-false (equal (read-simple "FOO")
+                   (read-simple "foo")))
   (is (equal (quote el::_AB_CD)
-             (car (read-cl-string "AbCd"))))
+             (read-simple "AbCd")))
   (is (equal (quote el::nil)
-             (car (read-cl-string "nil"))))
+             (read-simple "nil")))
   (is (equal (quote el::|ABC, [/]'`|)
-             (car (read-cl-string "a\\b\\c\\,\\ \\[\\/\\]\\'\\`"))))
+             (read-simple "a\\b\\c\\,\\ \\[\\/\\]\\'\\`")))
   (is (equal (quote el::\,)
-             (car (read-cl-string "\\,"))))
+             (read-simple "\\,")))
   (is (equal (quote el::+1)
-             (car (read-cl-string "\\+1"))))
+             (read-simple "\\+1")))
   (is (equal (pstrings:build-pstring "non-intern-symbol")
-             (symbol-name (car (read-cl-string "#:non-intern-symbol")))))
+             (symbol-name (read-simple "#:non-intern-symbol"))))
   (is-false (find-symbol "non-intern-symbol" :el))
   (is (equal (pstrings:build-pstring "+1")
-             (symbol-name (car (read-cl-string "#:+1")))))
+             (symbol-name (read-simple "#:+1"))))
   (is (equal (pstrings:build-pstring "")
-             (symbol-name (car (read-cl-string "#:,")))))
+             (symbol-name (read-simple "#:,"))))
   (is (equal 'el::test
-             (car (read-cl-string "#_test"))))
+             (read-simple "#_test")))
   (is (equal (quote el::||)
-             (car (read-cl-string "#_"))))
+             (read-simple "#_")))
   (is (equal (quote el::|-|)
-             (car (read-cl-string "-"))))
+             (read-simple "-")))
   (is (equal (quote (el::quote el::_na_n))
-             (car (read-cl-string "'NaN"))))
+             (read-simple "'NaN")))
   (is (equal (quote (el::a el::b))
-             (car (read-cl-string (cl:format nil "(a~cb)" #\return)))))
+             (read-simple (cl:format nil "(a~cb)" #\return))))
   (is (equal (quote (el::a el::b))
-             (car (read-cl-string (cl:format nil "(a~cb ~c)" #\tab #\tab)))))
+             (read-simple (cl:format nil "(a~cb ~c)" #\tab #\tab))))
   (is (equal (quote (el::a el::b))
-             (car (read-cl-string (cl:format nil "(a~cb ~c)" #\dc4 #\dc4)))))
+             (read-simple (cl:format nil "(a~cb ~c)" #\dc4 #\dc4))))
   (is (equal (quote (el::a el::b el::nil))
-             (car (read-cl-string "(a b #$)"))))
+             (read-simple "(a b #$)")))
   )
 
 (test test-read-shorthands
@@ -1065,42 +1070,42 @@
   )
 
 (test test-read-numbers
-  (is (= 1 (car (read-cl-string "1"))))
-  (is (= 1 (car (read-cl-string "1."))))
-  (is (= 1 (car (read-cl-string "+1"))))
-  (is (= -1 (car (read-cl-string "-1"))))
-  (is (= 0 (car (read-cl-string "+0"))))
-  (is (= 0 (car (read-cl-string "-0"))))
-  (is (= 0 (car (read-cl-string "-0.0"))))
+  (is (= 1 (read-simple "1")))
+  (is (= 1 (read-simple "1.")))
+  (is (= 1 (read-simple "+1")))
+  (is (= -1 (read-simple "-1")))
+  (is (= 0 (read-simple "+0")))
+  (is (= 0 (read-simple "-0")))
+  (is (= 0 (read-simple "-0.0")))
 
-  (is (= 1500 (car (read-cl-string "1500.0"))))
-  (is (= 1500 (car (read-cl-string "+15E2"))))
-  (is (= 1600 (car (read-cl-string "+160000e-2"))))
-  (is (= 1500 (car (read-cl-string "15.0e+2"))))
-  (is (= 12.34d0 (car (read-cl-string "1.234e+01"))))
-  (is (= 1500 (car (read-cl-string ".15e4"))))
-  (is (equal cl-emacs/data::*nan* (car (read-cl-string "0.0e+NaN"))))
-  (is (equal cl-emacs/data::*nan* (car (read-cl-string "-4.5E+NaN"))))
-  (is (equal cl-emacs/data::*positive-infinity* (car (read-cl-string "1.0e+INF"))))
-  (is (equal cl-emacs/data::*negative-infinity* (car (read-cl-string "-4.0e+INF"))))
-  (is (= 425.19685d0 (car (read-cl-string "425.19685"))))
-  (is (equal cl-emacs/data::*positive-infinity* (car (read-cl-string "1.0e+309"))))
-  (is (equal cl-emacs/data::*negative-infinity* (car (read-cl-string "-4.0e+309"))))
+  (is (= 1500 (read-simple "1500.0")))
+  (is (= 1500 (read-simple "+15E2")))
+  (is (= 1600 (read-simple "+160000e-2")))
+  (is (= 1500 (read-simple "15.0e+2")))
+  (is (= 12.34d0 (read-simple "1.234e+01")))
+  (is (= 1500 (read-simple ".15e4")))
+  (is (equal cl-emacs/data::*nan* (read-simple "0.0e+NaN")))
+  (is (equal cl-emacs/data::*nan* (read-simple "-4.5E+NaN")))
+  (is (equal cl-emacs/data::*positive-infinity* (read-simple "1.0e+INF")))
+  (is (equal cl-emacs/data::*negative-infinity* (read-simple "-4.0e+INF")))
+  (is (= 425.19685d0 (read-simple "425.19685")))
+  (is (equal cl-emacs/data::*positive-infinity* (read-simple "1.0e+309")))
+  (is (equal cl-emacs/data::*negative-infinity* (read-simple "-4.0e+309")))
   )
 (test test-read-quotes
   (is (equal (quote (el::quote el::test-symbol))
-             (car (read-cl-string "'test-symbol"))))
+             (read-simple "'test-symbol")))
   (is (equal (quote (el::quote (el::quote el::test-sym)))
-             (car (read-cl-string "''test-sym"))))
+             (read-simple "''test-sym")))
   (is (equal (quote (el::quote (el::test-symbol)))
-             (car (read-cl-string "'(test-symbol)"))))
+             (read-simple "'(test-symbol)")))
   (is (equal (quote ((el::quote 3)))
-             (car (read-cl-string "(' 3)"))))
+             (read-simple "(' 3)")))
   (signals eof-reader-error (read-cl-string "';; test comment"))
   (is (equal `(el::quote ,(pstrings:build-pstring "abc ("))
-             (car (read-cl-string "'\"abc (\""))))
+             (read-simple "'\"abc (\"")))
   (is (equal (quote (el::quote 66))
-             (car (read-cl-string "'?B"))))
+             (read-simple "'?B")))
 
   (is (equal (quote (el::quote
                      (el::quote
@@ -1109,37 +1114,37 @@
                             (el::quote
                              (el::quote
                               (2 (el::quote (el::quote (el::quote (el::quote 3)))))))) 4)) 5))))
-             (car (read-cl-string "''(1 '('''(2 ''''3) 4) 5)"))))
+             (read-simple "''(1 '('''(2 ''''3) 4) 5)")))
   (is (equal (quote (el::quote (el::a (el::quote el::b))))
-             (car (read-cl-string "'(a'b)"))))
+             (read-simple "'(a'b)")))
   (is (equal `(el::quote (,(pstrings:build-pstring "a") (el::quote el::b)))
-             (car (read-cl-string "'(\"a\"'b)"))))
+             (read-simple "'(\"a\"'b)")))
   (is (equal (quote (el::quote (65 (el::quote el::b))))
-             (car (read-cl-string "'(?A'b)"))))
+             (read-simple "'(?A'b)")))
   (is (equal (quote (el::\` el::test-symbol))
-             (car (read-cl-string "`test-symbol"))))
+             (read-simple "`test-symbol")))
   (is (equal (quote (el::\` (el::test-symbol)))
-             (car (read-cl-string "`(test-symbol)"))))
+             (read-simple "`(test-symbol)")))
   (is (equal (quote (el::\` (el::\` el::test-symbol)))
-             (car (read-cl-string "``test-symbol"))))
+             (read-simple "``test-symbol")))
   (is (equal (quote ((el::\` el::test-symbol) (el::\, 3)))
-             (car (read-cl-string "(`test-symbol ,3)"))))
-  ;; real emacs test (equal (quote (\` (form ((\, a) (\, ((\` (b (\, c))))))))) (car (read-cl-string "`(form (,a ,(`(b ,c))))")))
+             (read-simple "(`test-symbol ,3)")))
+  ;; real emacs test (equal (quote (\` (form ((\, a) (\, ((\` (b (\, c))))))))) (read-simple "`(form (,a ,(`(b ,c))))"))
   (is (equal (quote (el::\` (el::form ((el::\, el::a) (el::\, ((el::\` (el::b (el::\, el::c)))))))))
-             (car (read-cl-string "`(form (,a ,(`(b ,c))))"))))
+             (read-simple "`(form (,a ,(`(b ,c))))")))
   (signals eof-reader-error (read-cl-string "'"))
   (signals eof-reader-error (read-cl-string "`,"))
 
   (is (equal (quote (el::quote el::\,))
-             (car (read-cl-string "'\\,"))))
+             (read-simple "'\\,")))
   (is (equal (quote (el::\` (el::a (el::\,@ el::b))))
-             (car (read-cl-string "`(a ,@b)"))))
+             (read-simple "`(a ,@b)")))
   (is (equal (quote (el::|,| (el::|,| el::a)))
-             (car (read-cl-string ",,a"))))
+             (read-simple ",,a")))
   (is (equal (quote (el::|`| el::|,| el::a))
-             (car (read-cl-string "(\\` . ,a)"))))
+             (read-simple "(\\` . ,a)")))
   (is (equal (quote (el::|`| (el::quote (el::|,| (el::and)))))
-             (car (read-cl-string "`',(and)"))))
+             (read-simple "`',(and)")))
   )
 
 (test test-read-strings
@@ -1148,161 +1153,161 @@
   (is (equal `(el::defvar el::test-var el::nil
                 ,(pstrings:build-pstring #M"some
                                             multiline docstring `with symbols'."))
-             (car (read-cl-string #M"(defvar test-var nil \"some
-                                     multiline docstring `with symbols'.\")"))))
+             (read-simple #M"(defvar test-var nil \"some
+                                     multiline docstring `with symbols'.\")")))
   ;; TODO: add better pstring property validation after more complicated reads
   (is (equal
        (pstrings:build-pstring " ")
-       (car (read-cl-string "#(\" \" 0 1 (invisible t))"))))
+       (read-simple "#(\" \" 0 1 (invisible t))")))
   (is (equal
        (pstrings:build-pstring "foo bar")
-       (car (read-cl-string "#(\"foo bar\" 0 3 (face bold) 3 4 nil 4 7 (face italic))"))))
+       (read-simple "#(\"foo bar\" 0 3 (face bold) 3 4 nil 4 7 (face italic))")))
   (is (equal (pstrings:build-pstring "abc\\z\"")
-             (car (read-cl-string "\"abc\\\\\\x7a\\\"\"" ))))
+             (read-simple "\"abc\\\\\\x7a\\\"\"" )))
   (is (equal (pstrings:build-pstring "sample string without newline.")
-             (car (read-cl-string
-                   #M"#(\"sampl\\ e \\
-                      string without newline.\" 0 4 (face bold))"))))
+             (car-read
+              #M"#(\"sampl\\ e \\
+                      string without newline.\" 0 4 (face bold))")))
   (is (equal (pstrings:build-pstring (cl:format nil "~c, \"\"~c" #\tab #\soh))
-             (car (read-cl-string "\"\\t, \\\"\\\"\\C-a\""))))
+             (read-simple "\"\\t, \\\"\\\"\\C-a\"")))
   (is (equal  (pstrings:build-pstring "")
-              (car (read-cl-string "#(\"\" 0 0 (invisible t))"))))
+              (read-simple "#(\"\" 0 0 (invisible t))")))
   (is (equal
        (pstrings:build-pstring "fooA0bar")
-       (car (read-cl-string "\"foo\\u00410bar\")"))))
+       (read-simple "\"foo\\u00410bar\")")))
   ;; (read-cl-string "\"\\x103000\")")
   (is (read-cl-string "\"\\x3FFF7F\""))
 
   (let ((el::string-multibyte-flag-emacs-compatible t))
-    (is-false (pstrings:pstring-multibyte (car (read-cl-string "\"\\M-k\""))))
-    (is (pstrings:pstring-multibyte (car (read-cl-string "\"\\±\""))))
-    (is-false (pstrings:pstring-multibyte (car (read-cl-string "\"\\3757zXZ\\0\""))))
-    (is (pstrings:pstring-multibyte (car (read-cl-string "\"[1-9][0-9][0-9]\\u2044[0-9]+\""))))
-    (is (pstrings:pstring-multibyte (car (read-cl-string "\"\\u0080\""))))
-    (is-false (pstrings:pstring-multibyte (car (read-cl-string "\"\\u007F\""))))
-    ;; ( (car (read-cl-string "\"[1-9][0-9][0-9]\\u2044[0-9]+\"")))
-    (is (pstrings:pstring-multibyte (car (read-cl-string "\"\\\\(\\u00A0+\\\\)\"")))))
+    (is-false (pstrings:pstring-multibyte (read-simple "\"\\M-k\"")))
+    (is (pstrings:pstring-multibyte (read-simple "\"\\±\"")))
+    (is-false (pstrings:pstring-multibyte (read-simple "\"\\3757zXZ\\0\"")))
+    (is (pstrings:pstring-multibyte (read-simple "\"[1-9][0-9][0-9]\\u2044[0-9]+\"")))
+    (is (pstrings:pstring-multibyte (read-simple "\"\\u0080\"")))
+    (is-false (pstrings:pstring-multibyte (read-simple "\"\\u007F\"")))
+    ;; ( (read-simple "\"[1-9][0-9][0-9]\\u2044[0-9]+\""))
+    (is (pstrings:pstring-multibyte (read-simple "\"\\\\(\\u00A0+\\\\)\""))))
   )
 (test test-read-lists
   (is (equal `(el::a ,(pstrings:build-pstring "b"))
-             (car (read-cl-string "(a\"b\") "))))
+             (read-simple "(a\"b\") ")))
   (is (equal `(el::test 2 3 ,(pstrings:build-pstring "A ( B"))
-             (car (read-cl-string "(test 2 3 \"A ( B\")"))))
+             (read-simple "(test 2 3 \"A ( B\")")))
   (is (equal (quote (el::test (2 3) 4 ()))
-             (car (read-cl-string "(test (2 3) 4 ())"))))
+             (read-simple "(test (2 3) 4 ())")))
   (is (equal (quote (el::.))
-             (car (read-cl-string "(.)"))))
+             (read-simple "(.)")))
   (is (equal (quote (el::a el::.))
-             (car (read-cl-string "(a .)"))))
+             (read-simple "(a .)")))
   (is (equal (quote (el::a el::.b))
-             (car (read-cl-string "(a .b)"))))
+             (read-simple "(a .b)")))
   (is (equal (quote (3 . 4))
-             (car (read-cl-string "(3 .  4)"))))
+             (read-simple "(3 .  4)")))
   (is (equal (quote 4)
-             (car (read-cl-string "(. 4)"))))
+             (read-simple "(. 4)")))
   (signals invalid-reader-input-error (read-cl-string "(a b . c d)"))
   (is (equal (quote (65 . 66))
-             (car (read-cl-string "(?A.?B)"))))
+             (read-simple "(?A.?B)")))
   (is (equal (quote (65 . 66))
-             (car (read-cl-string "(?A. ?B))"))))
-  (is (equal nil (car (read-cl-string "()"))))
+             (read-simple "(?A. ?B))")))
+  (is (equal nil (read-simple "()")))
   (signals eof-reader-error (read-cl-string "("))
   (is (equal (quote (1 2 3))
-             (car (read-cl-string "(1 . (2 . (3 . nil)))"))))
+             (read-simple "(1 . (2 . (3 . nil)))")))
   (is (equal (quote (el::quote nil))
-             (car (read-cl-string "'()"))))
+             (read-simple "'()")))
   )
 (test test-read-comments
   (is (equal 'el::test
-             (car (read-cl-string #M";;; comment line
-                                        test symbol"))))
+             (read-simple #M";;; comment line
+                                        test symbol")))
   (signals eof-reader-error (read-cl-string ";; just comment"))
   )
 (test test-read-characters
   (is (equal '(65 66)
-             (car (read-cl-string "(?A?B))"))))
+             (read-simple "(?A?B))")))
   (is (equal '(el::a 92 65 66 65 32 . 3)
-             (car (read-cl-string "(a ?\\\\ ?A?B ?A?\\s. 3)"))))
+             (read-simple "(a ?\\\\ ?A?B ?A?\\s. 3)")))
   (is (equal 32
-             (car (read-cl-string "?\\ "))))
+             (read-simple "?\\ ")))
   (is (equal #x202a
-             (car (read-cl-string "?\\x202a"))))
+             (read-simple "?\\x202a")))
   (is (equal '(#x202a #x202a)
-             (car (read-cl-string "(?\\x202a ?\\x202a)"))))
+             (read-simple "(?\\x202a ?\\x202a)")))
   (is (equal #o202
-             (car (read-cl-string "?\\202"))))
+             (read-simple "?\\202")))
   (is (equal 8206
-             (car (read-cl-string "?\\N{left-to-right mark}"))))
+             (read-simple "?\\N{left-to-right mark}")))
   (is (equal 123
-             (car (read-cl-string "?\\{"))))
+             (read-simple "?\\{")))
   )
 
 (test test-read-special-cases
   (signals eof-reader-error (read-cl-string ""))
   (is (equal '(el::quote el::test)
-             (car (read-cl-string #M" ' #!some-stuff
+             (read-simple #M" ' #!some-stuff
                                         #!some-stuff
-                                        test"))))
+                                        test")))
   (is (equal '(el::quote (el::|.| el::|.| el::e))
-             (car (read-cl-string "'(\\. \\. e)"))))
+             (read-simple "'(\\. \\. e)")))
   )
 
 (test test-read-vectors
   (is (equal (quote #(1 el::a))
-             (car (read-cl-string "[1 a]"))))
+             (read-simple "[1 a]")))
   (is (equal (quote #(el::a el::b el::c el::.))
-             (car (read-cl-string "[a b c .]"))))
+             (read-simple "[a b c .]")))
   (signals invalid-reader-input-error (read-cl-string "[1 . a]"))
   )
 
 
 (test test-reader-functions
   (is (equal (quote (el::function el::a))
-             (car (read-cl-string "#'a"))))
+             (read-simple "#'a")))
   )
 
 (test test-read-circles
-  (let ((sample (car (read-cl-string "#1=(a #1#)"))))
+  (let ((sample (read-simple "#1=(a #1#)")))
     (is (eq sample (second sample))))
-  (let ((sample (car (read-cl-string "#1=[a #1#]"))))
+  (let ((sample (read-simple "#1=[a #1#]")))
     (is (eq sample (aref sample 1))))
-  (let ((sample (car (read-cl-string "#1=[#1# a #1#]"))))
+  (let ((sample (read-simple "#1=[#1# a #1#]")))
     (is (eq sample (aref sample 0)))
     (is (eq sample (aref sample 2))))
-  (let ((sample (car (read-cl-string "#1=(a . #1#)"))))
+  (let ((sample (read-simple "#1=(a . #1#)")))
     (is (eq sample (cdr sample))))
-  (let ((sample (car (read-cl-string "#1=(#2=[#1# #2#] . #1#)"))))
+  (let ((sample (read-simple "#1=(#2=[#1# #2#] . #1#)")))
     (is (eq sample (cdr sample)))
     (is (eq sample (aref (car sample) 0)))
     (is (eq (car sample) (aref (car sample) 1))))
-  (let ((sample (car (read-cl-string "#1=(#2=[#1# #2#] . #2#)"))))
+  (let ((sample (read-simple "#1=(#2=[#1# #2#] . #2#)")))
     (is (eq sample (aref (car sample) 0)))
     (is (eq (car sample) (cdr sample)))
     (is (eq (car sample) (aref (car sample) 1))))
-  (let ((sample (car (read-cl-string "#1=[#2=(#1# . #2#)]"))))
+  (let ((sample (read-simple "#1=[#2=(#1# . #2#)]")))
     (is (eq sample (car (aref sample 0))))
     (is (eq (aref sample 0) (cdr (aref sample 0)))))
-  (let ((sample (car (read-cl-string "#1=(#2=[#3=(#1# . #2#) #4=(#3# . #4#)])"))))
+  (let ((sample (read-simple "#1=(#2=[#3=(#1# . #2#) #4=(#3# . #4#)])")))
     (is (eq sample (car (aref (car sample) 0))))
     (is (eq (car sample) (cdr (aref (car sample) 0))))
     (is (eq (aref (car sample) 0) (car (aref (car sample) 1))))
     (is (eq (aref (car sample) 1) (cdr (aref (car sample) 1)))))
   (is (equal (quote ((el::quote (el::quote el::a)) (el::quote el::a)))
-             (car (read-cl-string "('#1='a #1#)"))))
+             (read-simple "('#1='a #1#)")))
   (signals invalid-reader-input-error (read-cl-string "#1=(#1# #2#)"))
   (signals invalid-reader-input-error (read-cl-string "#1=#1#"))
 
   (is (equal (quote ((el::a el::b el::b) el::b))
-             (car (read-cl-string "(#1=(a #1=b #1#) #1#)"))))
+             (read-simple "(#1=(a #1=b #1#) #1#)")))
 
-  (let* ((sample (car (read-cl-string "(#1=(a . #1#) #1=(b . #1#))")))
+  (let* ((sample (read-simple "(#1=(a . #1#) #1=(b . #1#))"))
          (first (cl:first sample))
          (second (cl:second sample)))
     (is (eq first (cdr first)))
     (is (eq second (cdr second)))
     (is-false (eq first second)))
 
-  (let* ((sample (car (read-cl-string "(#1=(a #1# #1=b #1#) #1#)")))
+  (let* ((sample (read-simple "(#1=(a #1# #1=b #1#) #1#)"))
          (first (cl:first sample))
          (second (cl:second sample)))
     (is (eq first (cl:second first)))
@@ -1311,7 +1316,7 @@
     (is (eq 'el::b second))
     )
 
-  (let* ((sample (car (read-cl-string "#1=(a #1# b #1#)")))
+  (let* ((sample (read-simple "#1=(a #1# b #1#)"))
          (first (cl:first sample))
          (second (cl:second sample))
          (fourth (cl:fourth sample)))
@@ -1324,63 +1329,63 @@
 (test test-read-radix
   (signals invalid-reader-input-error (read-cl-string "#b"))
   (is (equal (quote #b10)
-             (car (read-cl-string "#b010"))))
+             (read-simple "#b010")))
   (is (equal (quote #b10)
-             (car (read-cl-string "#b+010"))))
+             (read-simple "#b+010")))
   (is (equal (quote #b-10)
-             (car (read-cl-string "#b-010"))))
+             (read-simple "#b-010")))
   (is (equal (quote (0 -10))
-             (car (read-cl-string "(#b0-10)"))))
+             (read-simple "(#b0-10)")))
 
   (is (equal (quote #b1010)
-             (car (read-cl-string "#B01010"))))
+             (read-simple "#B01010")))
   (is (equal (quote #b-1010)
-             (car (read-cl-string "#B-01010"))))
+             (read-simple "#B-01010")))
   (signals invalid-reader-input-error (read-cl-string "#b013"))
 
   (signals invalid-reader-input-error (read-cl-string "#o"))
   (is (equal (quote #o10)
-             (car (read-cl-string "#o010"))))
+             (read-simple "#o010")))
   (is (equal (quote #o-10)
-             (car (read-cl-string "#o-010"))))
+             (read-simple "#o-010")))
   (is (equal (quote #o1010)
-             (car (read-cl-string "#O01010"))))
+             (read-simple "#O01010")))
   (signals invalid-reader-input-error (read-cl-string "#o013a"))
 
   (signals invalid-reader-input-error (read-cl-string "#x"))
   (is (equal (quote #x010aaf)
-             (car (read-cl-string "#x010aAF"))))
+             (read-simple "#x010aAF")))
   (is (equal (quote #x-010aaf)
-             (car (read-cl-string "#x-010aAF"))))
+             (read-simple "#x-010aAF")))
   (is (equal (quote #x010aaf)
-             (car (read-cl-string "#X010aAF"))))
+             (read-simple "#X010aAF")))
   (signals invalid-reader-input-error (read-cl-string "#x013aw"))
   (is (equal (quote (el::test #x123))
-             (car (read-cl-string "(test #x123)"))))
+             (read-simple "(test #x123)")))
   )
 
 (test test-read-hash-tables
-  (let ((ht (car (read-cl-string
+  (let ((ht (car-read
                   #M"#s(hash-table
                      size 1000 test eq
                      rehash-size 1.3
                      rehash-threshold 0.6
-                     data (a 2 b 3))"))))
+                     data (a 2 b 3))")))
     (is (= 1000 (hash-table-size ht)))
     (is (eq 'el::eq (hash-table-test ht)))
     (is (= 1.3 (hash-table-rehash-size ht)))
     (is (= 0.6 (hash-table-rehash-threshold ht)))
     (is (= 2 (gethash 'el::a ht)))
     (is (= 3 (gethash 'el::b ht))))
-  (let ((ht (car (read-cl-string
-                  "#s(hash-table bad-parameter some-value test equal data)"))))
+  (let ((ht (car-read
+                  "#s(hash-table bad-parameter some-value test equal data)")))
     (is (eq 'el::equal (hash-table-test ht)))
     (is (= 0 (hash-table-count ht)))))
 
 
 (test test-read-records
-  (let ((record (car (read-cl-string
-                      #M"#s(test-rec abc 123 (1 2 3))"))))
+  (let ((record (car-read
+                      #M"#s(test-rec abc 123 (1 2 3))")))
     (is (eq 'el::test-rec (type-of record)))
     (is (equal record #(el::test-rec el::abc 123 (1 2 3))))
 
@@ -1393,15 +1398,15 @@
 
 
 (test test-read-chartables ()
-  (let ((sub-ct (car (read-cl-string "#^^[3 12 8 8 8 3 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8]"))))
+  (let ((sub-ct (read-simple "#^^[3 12 8 8 8 3 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8]")))
     (is (= 3 (chartables:sub-chartable-depth sub-ct)))
     (is (= 12 (chartables:sub-chartable-min-char sub-ct)))
     (is (= 8 (aref (chartables:sub-chartable-contents sub-ct) 0)))
     (is (= 3 (aref (chartables:sub-chartable-contents sub-ct) 3)))
     )
   (signals invalid-reader-input-error (read-cl-string "#^^[3 12 8 8 8 3 8]"))
-  (let ((ct (car (read-cl-string
-                  #M"#^[8 nil test
+  (let ((ct (car-read
+             #M"#^[8 nil test
                      #^^[3 0 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3]
                      #^^[1 0 #^^[2 0 #^^[3 0 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3]
                      3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3]
@@ -1410,8 +1415,8 @@
                      8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8]
                      8 8 8 8 8 8 8 8 8 8 8 8 8]
                      8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8
-                     slot0 slot1 slot2]")
-                 )))
+                     slot0 slot1 slot2]"
+             )))
     (is (equal
          '((0 79 8) (80 73859 3) (73860 4194303 8))
          (chartables:get-chartable-ranges ct)))
@@ -1421,13 +1426,13 @@
 
 (test test-read-bool-vector ()
   (is (equal #*1010
-             (car (read-cl-string "#&4\"\""))))
+             (read-simple "#&4\"\"")))
   (is (equal #*10
-             (car (read-cl-string "#&2\"a\""))))
+             (read-simple "#&2\"a\"")))
   (is (equal #*
-             (car (read-cl-string "#&0\"\""))))
+             (read-simple "#&0\"\"")))
   (is (equal #*01011110110001
-             (car (read-cl-string "#&14\"z#\""))))
+             (read-simple "#&14\"z#\"")))
   )
 
 (test test-read-cl-string
