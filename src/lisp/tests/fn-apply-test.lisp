@@ -16,34 +16,36 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/tests/fn-eval-test
+(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/tests/fn-apply-test
     (:use
      :defstar
      :cl-emacs/lib/log
      :fiveam
      :cl-emacs/lib/commons
      :cl-emacs/lib/errors
-     :cl-emacs/fn-eval
+     :cl-emacs/fn-apply
      :cl-emacs/fns
+     :cl-emacs/alloc
      )
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:reader #:cl-emacs/lib/reader))
   )
-(in-package :cl-emacs/tests/fn-eval-test)
-(log-enable :cl-emacs/tests/fn-eval-test :debug2)
-(def-suite cl-emacs/tests/fn-eval-test)
-(in-suite cl-emacs/tests/fn-eval-test)
+(in-package :cl-emacs/tests/fn-apply-test)
+(log-enable :cl-emacs/tests/fn-apply-test :debug2)
+(def-suite cl-emacs/tests/fn-apply-test)
+(in-suite cl-emacs/tests/fn-apply-test)
 (named-readtables:in-readtable mstrings:mstring-syntax)
 
-(test test-fn-eval
-  (is (equal 3 (eval (reader:read-simple "3"))))
-  (is (equal 0 (eval (reader:read-simple "(+)"))))
-  (is (equal 1 (eval (reader:read-simple "(+ 1)"))))
-  (is (equal 3 (eval (reader:read-simple "(+ 1 2)"))))
-  (signals wrong-type-argument (eval (reader:read-simple "(+ . 2)")))
-  (signals wrong-type-argument (eval (reader:read-simple "(+ 1 . 2)")))
-  (is (equal 9 (eval (reader:read-simple "(+ 1 (+ 3 3) 2)"))))
+(test test-fn-apply
+  (signals wrong-type-argument (apply 'el::+ 1))
+  (is (equal 3 (apply 'el::+ '(1 2))))
+  (is (equal 10 (apply 'el::+ 1 2 '(3 4))))
+  (signals wrong-type-argument (apply 'el::+ 1 '(3 4) 2))
+  (signals void-function (apply 'el::++ '(1)))
+  (is (equal '(1 2 (5) 3 4) (apply 'el::list 1 2 '(5) '(3 4))))
+  (signals wrong-type-argument (apply 'el::+))
+  (is (equal 0 (apply 'el::+ '())))
   )
 
 (defun test-me ()
-  (run! 'cl-emacs/tests/fn-eval-test))
+  (run! 'cl-emacs/tests/fn-apply-test))

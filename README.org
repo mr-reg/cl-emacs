@@ -2,7 +2,7 @@
 #+TODO: TODO IN-PROGRESS | DONE
 
 * What is this?
-This is just another attempt port of The Beast from C to Common Lisp.
+This is just another attempt to port The Beast from C to Common Lisp.
 
 * State
 Development just started

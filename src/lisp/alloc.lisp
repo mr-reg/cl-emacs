@@ -237,3 +237,6 @@ Allows any number of arguments, including zero.
 
 (fn &rest OBJECTS)"
   (error 'unimplemented-error))
+
+(in-package :cl-emacs/elisp)
+(reexport-symbols :cl-emacs/alloc)

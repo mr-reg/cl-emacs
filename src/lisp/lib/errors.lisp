@@ -25,10 +25,11 @@
 
   (:export
    #:error-with-description
+   #:evaluation-error
    #:simple-print-condition-with-slots
    #:unimplemented-error
+   #:void-function
    #:wrong-type-argument
-   #:evaluation-error
    ))
 (in-package :cl-emacs/lib/errors)
 (log-enable :cl-emacs/lib/errors :debug1)
@@ -78,6 +79,8 @@
 (define-condition evaluation-error (error-with-description)
   ())
 
-
 (define-condition wrong-type-argument (evaluation-error)
+  ())
+
+(define-condition void-function (evaluation-error)
   ())

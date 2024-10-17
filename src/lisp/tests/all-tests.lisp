@@ -21,6 +21,7 @@
      :common-lisp
      :cl-emacs/lib/log
      :cl-emacs/tests/fn-eval-test
+     :cl-emacs/tests/fn-apply-test
      :fiveam)
   
   )

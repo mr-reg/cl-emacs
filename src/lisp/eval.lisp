@@ -26,7 +26,6 @@
      )
   (:import-from #:cl
                 #:and
-                #:apply
                 #:cond
                 #:defvar
                 #:funcall
@@ -39,7 +38,6 @@
                 #:setq
                 )
   (:export #:and
-           #:apply
            #:cond
            #:defvar
            #:funcall
