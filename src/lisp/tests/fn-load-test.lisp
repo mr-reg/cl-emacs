@@ -16,23 +16,32 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/tests/all-tests
-    (:use 
-     :common-lisp
+(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/tests/fn-load-test
+    (:use
+     :defstar
      :cl-emacs/lib/log
-     :cl-emacs/tests/fn-apply-test
-     :cl-emacs/tests/fn-eval-test
-     :cl-emacs/tests/fn-load-test
-     :cl-emacs/tests/fn-substitute-in-file-name-test
-     :fiveam)
-  
+     :fiveam
+     :cl-emacs/lib/commons
+     :cl-emacs/lib/errors
+     :cl-emacs/fn-eval
+     :cl-emacs/fn-load
+     :cl-emacs/fns
+     )
+  (:local-nicknames (#:el #:cl-emacs/elisp)
+                    (#:reader #:cl-emacs/lib/reader))
   )
-(in-package :cl-emacs/tests/all-tests)
-(log-enable :cl-emacs/tests/all-tests)
+(in-package :cl-emacs/tests/fn-load-test)
+(log-enable :cl-emacs/tests/fn-load-test :debug2)
+(def-suite cl-emacs/tests/fn-load-test)
+(in-suite cl-emacs/tests/fn-load-test)
+(named-readtables:in-readtable mstrings:mstring-syntax)
 
-;; (defparameter *emacs-source-path* "../emacs/")
-;; (defparameter *print-circle* t)
-
-(defun test-all ()
-  (run-all-tests)
+(defun loadup ()
+  (eval (reader:read-simple "(load \"loadup.el\")"))
   )
+
+(test test-fn-load
+  )
+
+(defun test-me ()
+  (run! 'cl-emacs/tests/fn-load-test))

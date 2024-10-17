@@ -62,7 +62,7 @@ pass all tests.
    * ocicl
 
 * Out of scope
-  * any bytecode support: 
+  * any bytecode and .elc support: 
 
     you can use common lisp memory image system to speedup loading.
 

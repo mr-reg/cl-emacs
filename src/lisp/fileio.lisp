@@ -569,22 +569,7 @@ in ‘current-time' or an integer flag as returned by ‘visited-file-modtime'.
 
 (fn &optional TIME-FLAG)"
   (error 'unimplemented-error))
-(defun* substitute-in-file-name ()
-  #M"Substitute environment variables referred to in FILENAME.
-‘$FOO' where FOO is an environment variable name means to substitute
-the value of that variable.  The variable name should be terminated
-with a character not a letter, digit or underscore; otherwise, enclose
-the entire variable name in braces.
 
-If FOO is not defined in the environment, ‘$FOO' is left unchanged in
-the value of this function.
-
-If ‘/~' appears, all of FILENAME through that ‘/' is discarded.
-If ‘//' appears, everything up to and including the first of
-those ‘/' is discarded.
-
-(fn FILENAME)"
-  (error 'unimplemented-error))
 (defun* unhandled-file-name-directory ()
   #M"Return a directly usable directory name somehow associated with FILENAME.
 A ‘directly usable' directory name is one that may be used without the
