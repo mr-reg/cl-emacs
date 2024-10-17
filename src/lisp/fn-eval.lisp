@@ -33,18 +33,28 @@
 (log-enable :cl-emacs/fn-eval :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
 
-(defun* eval (form &optional lexical)
+
+(defconstant +eval-max-depth+ 1600)
+
+(defun* eval-impl (form &key lexical (depth 0))
   #M"Evaluate FORM and return its value.
      If LEXICAL is t, evaluate using lexical scoping.
      LEXICAL can also be an actual lexical environment, in the form of an
      alist mapping symbols to their value."
+  (when (> depth +eval-max-depth+)
+    (error 'evaluation-error :details (cl:format nil "evaluation depth can't be more than ~s" +eval-max-depth+)))
   (cl:cond
     ((consp form)
      (let ((func (car form))
-           (args (cdr form)))
-       (unless (consp args)
-         (error 'wrong-type-argument :details (cl:format nil "~s should be a list" args)))
-       
+           (args (cdr form))
+           (ev-args nil))
+
+       (loop while args
+             do (unless (listp args)
+                  (error 'wrong-type-argument :details (cl:format nil "~s should be a list" args)))
+                (push (eval-impl (car args) lexical (1+ depth)) ev-args)
+                (setq args (cdr args)))
+       (log-info "function ~s ~s" (type-of func) func)
        ))
     ((symbolp form)
      (error "unimplemented")
@@ -53,4 +63,6 @@
     )
   )
 
-
+(defun* eval (form &optional lexical)
+  (eval-impl form :lexical lexical)
+  )

@@ -22,7 +22,9 @@
      :cl-emacs/lib/log
      :fiveam
      :cl-emacs/lib/commons
+     :cl-emacs/lib/errors
      :cl-emacs/fn-eval
+     :cl-emacs/fns
      )
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:reader #:cl-emacs/lib/reader))
@@ -38,8 +40,9 @@
   (is (equal 0 (eval (reader:read-simple "(+)"))))
   (is (equal 1 (eval (reader:read-simple "(+ 1)"))))
   (is (equal 3 (eval (reader:read-simple "(+ 1 2)"))))
-  (is (equal 3 (eval (reader:read-simple "(+ 1 . 2)"))))
-  (is (equal 3 (eval (reader:read-simple "(+ . 2)"))))
+  (signals wrong-type-argument (eval (reader:read-simple "(+ . 2)")))
+  (signals wrong-type-argument (eval (reader:read-simple "(+ 1 . 2)")))
+
   )
 
 (defun test-me ()

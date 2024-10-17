@@ -17,8 +17,8 @@
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (uiop:define-package :cl-emacs/lib/errors
-    (:use 
-     :common-lisp 
+    (:use
+     :common-lisp
      :cl-emacs/lib/log
      :defstar
      )
@@ -28,6 +28,7 @@
    #:simple-print-condition-with-slots
    #:unimplemented-error
    #:wrong-type-argument
+   #:evaluation-error
    ))
 (in-package :cl-emacs/lib/errors)
 (log-enable :cl-emacs/lib/errors :debug1)
@@ -74,7 +75,9 @@
 (define-condition unimplemented-error (error-with-description)
   ())
 
-(define-condition wrong-type-argument (error-with-description)
+(define-condition evaluation-error (error-with-description)
   ())
 
 
+(define-condition wrong-type-argument (evaluation-error)
+  ())

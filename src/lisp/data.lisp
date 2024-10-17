@@ -43,6 +43,7 @@
                 #:consp
                 #:floatp
                 #:integerp
+                #:listp
                 #:logand
                 #:logior
                 #:min
@@ -74,6 +75,7 @@
    #:floatp
    #:integerp
    #:isnan
+   #:listp
    #:logand
    #:logior
    #:min
@@ -483,12 +485,6 @@ interned in the initial obarray.
 From now on the default value will apply in this buffer.  Return VARIABLE.
 
 (fn VARIABLE)"
-  (error 'unimplemented-error))
-(defun* listp ()
-  #M"Return t if OBJECT is a list, that is, a cons cell or nil.
-Otherwise, return nil.
-
-(fn OBJECT)"
   (error 'unimplemented-error))
 (defun* local-variable-if-set-p ()
   #M"Non-nil if VARIABLE is local in buffer BUFFER when set there.
