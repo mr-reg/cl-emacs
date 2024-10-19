@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/xmenu)
 (log-enable :cl-emacs/xmenu :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* menu-or-popup-active-p ()
   #M"Return t if a menu or popup dialog is active.
 (On MS Windows, this refers to the selected frame.)

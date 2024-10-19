@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/terminal)
 (log-enable :cl-emacs/terminal :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* delete-terminal ()
   #M"Delete TERMINAL by deleting all frames on it and closing the terminal.
 TERMINAL may be a terminal object, a frame, or nil (meaning the

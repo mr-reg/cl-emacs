@@ -25,16 +25,11 @@
      :fiveam
      :cl-emacs/lib/commons)
   (:shadow #:string #:make-string)
-  (:export #:string
-           #:make-string
-           #:string-chardata
-           #:string-properties
-           #:build-string
-           #:buffer)
+  
   )
 (in-package :cl-emacs/types)
 (log-enable :cl-emacs/types :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 
 (defstruct string
   (chardata "" :type cl:string)

@@ -16,22 +16,22 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/lib/reader
+(uiop:define-package :cl-emacs/lib/reader
     (:use
      :defstar
      :cl-emacs/lib/log
+     :common-lisp
      :fiveam
      :cl-emacs/lib/reader-utils
      :cl-emacs/lib/character-reader
-     :cl-emacs/data
-     :cl-emacs/eval
-     :cl-emacs/alloc
-     :cl-emacs/fns
      :cl-emacs/lib/commons
      :cl-emacs/lib/errors
      )
-  (:import-from #:alexandria
+  (:import-from :alexandria
                 #:doplist)
+  (:import-from :serapeum
+                #:fixnump
+                #:memq)
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:pstrings #:cl-emacs/types/pstrings)
                     (#:chartables #:cl-emacs/types/chartables)
@@ -61,7 +61,7 @@
 (log-enable :cl-emacs/lib/reader :info)
 (def-suite cl-emacs/lib/reader)
 (in-suite cl-emacs/lib/reader)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 ;; main reader documentation is here
 ;; https://www.gnu.org/software/emacs/manual/html_mono/elisp.html#Lisp-Data-Types
 
@@ -129,7 +129,7 @@
   (extra-buffer nil :type list)
   (mod-stack nil :type list)
   ;; key = pointer number, value = cons (nil . placeholder) or (t . real value)
-  (pointers (make-hash-table :test 'el::eq)))
+  (pointers (make-hash-table :test 'eq)))
 
 (defun* push-extra-char ((reader reader) (char character))
   (with-slots (extra-buffer) reader
@@ -236,7 +236,7 @@
             ;; (push-extra-char reader char)
             (start-collector reader)
             (change-state reader state/symbol))
-           ((digit-char-p char)
+           ((simple-digit-char-p char)
             (pop (car mod-stack))
             (start-collector reader)
             (change-state reader state/pointer)
@@ -321,7 +321,7 @@
         ((eq char #\,)
          (push-modifier reader '\,))
         ((and (eq char #\@) (eq active-modifier '\,))
-         (push-modifier reader '\,@ :replace-last t))
+         (push-modifier reader '|,@| :replace-last t))
         ((eq char #\#)
          (push-modifier reader '\#))
         (t
@@ -619,7 +619,7 @@
 (defun* state/pointer-transition ((reader reader) (char character))
   (with-slots (stack) reader
     (cond
-      ((digit-char-p char)
+      ((simple-digit-char-p char)
        (push-to-reader-stack reader char))
       ((eq char #\=)
        (end-pointer reader :new-pointer t)
@@ -640,7 +640,7 @@
       (end-collector reader parsed mod-frame))))
 (defun* generic-radix-transition ((reader reader) (char character) (radix-bits fixnum))
   (let* ((radix (ash 1 radix-bits))
-         (parsed (and (characterp char) (digit-char-p char radix)))
+         (parsed (and (characterp char) (simple-digit-char-p char radix)))
          (sign (and (characterp char) (memq char '(#\+ #\-)))))
     (with-slots (stack) reader
       (cond
@@ -682,7 +682,7 @@
 (defun* state/bool-vector-len-transition ((reader reader) (char character))
   (with-slots (stack) reader
     (cond
-      ((digit-char-p char)
+      ((simple-digit-char-p char)
        (push-to-reader-stack reader char))
       ((eq char #\")
        (end-bool-vector-len reader)
@@ -892,8 +892,8 @@
               (setq something (list 'el::\` something)))
              (\,
               (setq something (list 'el::\, something)))
-             (\,@
-              (setq something (list 'el::\,@ something)))
+             (|,@|
+              (setq something (list 'el::|,@| something)))
              (\#\'
               (setq something (list 'el::function something)))
              (\-
@@ -1015,52 +1015,52 @@
 (define-transitions)
 
 (test test-read-symbols
-  (is (equal (quote el::||)
+  (is (@equal (quote el::||)
              (read-simple "##")))
-  (is (equal (quote (el::test . 4))
+  (is (@equal (quote (el::test . 4))
              (read-cl-string "test")))
-  (is (equal (quote (el::test . 5))
+  (is (@equal (quote (el::test . 5))
              (read-cl-string "test two")))
-  (is (equal (quote (el::\:test))
+  (is (@equal (quote (el::\:test))
              (read-simple "(:test))")))
-  (is (equal (quote el::|AB123-+=*/C|)
+  (is (@equal (quote el::|AB123-+=*/C|)
              (read-simple "ab123-+=*/c")))
-  (is (equal (quote el::|AB__~!@$%^&:<>{}?C|)
+  (is (@equal (quote el::|AB__~!@$%^&:<>{}?C|)
              (read-simple "ab_~!@$%^&:<>{}?c")))
-  (is-false (equal (read-simple "FOO")
+  (is-false (@equal (read-simple "FOO")
                    (read-simple "foo")))
-  (is (equal (quote el::_AB_CD)
+  (is (@equal (quote el::_AB_CD)
              (read-simple "AbCd")))
-  (is (equal (quote el::nil)
+  (is (@equal (quote el::nil)
              (read-simple "nil")))
-  (is (equal (quote el::|ABC, [/]'`|)
+  (is (@equal (quote el::|ABC, [/]'`|)
              (read-simple "a\\b\\c\\,\\ \\[\\/\\]\\'\\`")))
-  (is (equal (quote el::\,)
+  (is (@equal (quote el::\,)
              (read-simple "\\,")))
-  (is (equal (quote el::+1)
+  (is (@equal (quote el::+1)
              (read-simple "\\+1")))
-  (is (equal (pstrings:build-pstring "non-intern-symbol")
-             (symbol-name (read-simple "#:non-intern-symbol"))))
+  (is (@equal (pstrings:build-pstring "non-intern-symbol")
+              (@symbol-name (read-simple "#:non-intern-symbol"))))
   (is-false (find-symbol "non-intern-symbol" :el))
-  (is (equal (pstrings:build-pstring "+1")
-             (symbol-name (read-simple "#:+1"))))
-  (is (equal (pstrings:build-pstring "")
-             (symbol-name (read-simple "#:,"))))
-  (is (equal 'el::test
+  (is (@equal (pstrings:build-pstring "+1")
+             (@symbol-name (read-simple "#:+1"))))
+  (is (@equal (pstrings:build-pstring "")
+             (@symbol-name (read-simple "#:,"))))
+  (is (@equal 'el::test
              (read-simple "#_test")))
-  (is (equal (quote el::||)
+  (is (@equal (quote el::||)
              (read-simple "#_")))
-  (is (equal (quote el::|-|)
+  (is (@equal (quote el::|-|)
              (read-simple "-")))
-  (is (equal (quote (el::quote el::_na_n))
+  (is (@equal (quote (el::quote el::_na_n))
              (read-simple "'NaN")))
-  (is (equal (quote (el::a el::b))
+  (is (@equal (quote (el::a el::b))
              (read-simple (cl:format nil "(a~cb)" #\return))))
-  (is (equal (quote (el::a el::b))
+  (is (@equal (quote (el::a el::b))
              (read-simple (cl:format nil "(a~cb ~c)" #\tab #\tab))))
-  (is (equal (quote (el::a el::b))
+  (is (@equal (quote (el::a el::b))
              (read-simple (cl:format nil "(a~cb ~c)" #\dc4 #\dc4))))
-  (is (equal (quote (el::a el::b el::nil))
+  (is (@equal (quote (el::a el::b el::nil))
              (read-simple "(a b #$)")))
   )
 
@@ -1087,31 +1087,31 @@
   (is (= 1500 (read-simple "15.0e+2")))
   (is (= 12.34d0 (read-simple "1.234e+01")))
   (is (= 1500 (read-simple ".15e4")))
-  (is (equal cl-emacs/data::*nan* (read-simple "0.0e+NaN")))
-  (is (equal cl-emacs/data::*nan* (read-simple "-4.5E+NaN")))
-  (is (equal cl-emacs/data::*positive-infinity* (read-simple "1.0e+INF")))
-  (is (equal cl-emacs/data::*negative-infinity* (read-simple "-4.0e+INF")))
+  (is (@equal cl-emacs/data::*nan* (read-simple "0.0e+NaN")))
+  (is (@equal cl-emacs/data::*nan* (read-simple "-4.5E+NaN")))
+  (is (@equal cl-emacs/data::*positive-infinity* (read-simple "1.0e+INF")))
+  (is (@equal cl-emacs/data::*negative-infinity* (read-simple "-4.0e+INF")))
   (is (= 425.19685d0 (read-simple "425.19685")))
   ;;; does not work for Android SBCL:
-  ;; (is (equal cl-emacs/data::*positive-infinity* (read-simple "1.0e+309")))
-  ;; (is (equal cl-emacs/data::*negative-infinity* (read-simple "-4.0e+309")))
+  ;; (is (@equal cl-emacs/data::*positive-infinity* (read-simple "1.0e+309")))
+  ;; (is (@equal cl-emacs/data::*negative-infinity* (read-simple "-4.0e+309")))
   )
 (test test-read-quotes
-  (is (equal (quote (el::quote el::test-symbol))
+  (is (@equal (quote (el::quote el::test-symbol))
              (read-simple "'test-symbol")))
-  (is (equal (quote (el::quote (el::quote el::test-sym)))
+  (is (@equal (quote (el::quote (el::quote el::test-sym)))
              (read-simple "''test-sym")))
-  (is (equal (quote (el::quote (el::test-symbol)))
+  (is (@equal (quote (el::quote (el::test-symbol)))
              (read-simple "'(test-symbol)")))
-  (is (equal (quote ((el::quote 3)))
+  (is (@equal (quote ((el::quote 3)))
              (read-simple "(' 3)")))
   (signals eof-reader-error (read-cl-string "';; test comment"))
-  (is (equal `(el::quote ,(pstrings:build-pstring "abc ("))
+  (is (@equal `(el::quote ,(pstrings:build-pstring "abc ("))
              (read-simple "'\"abc (\"")))
-  (is (equal (quote (el::quote 66))
+  (is (@equal (quote (el::quote 66))
              (read-simple "'?B")))
 
-  (is (equal (quote (el::quote
+  (is (@equal (quote (el::quote
                      (el::quote
                       (1 (el::quote
                           ((el::quote
@@ -1119,64 +1119,64 @@
                              (el::quote
                               (2 (el::quote (el::quote (el::quote (el::quote 3)))))))) 4)) 5))))
              (read-simple "''(1 '('''(2 ''''3) 4) 5)")))
-  (is (equal (quote (el::quote (el::a (el::quote el::b))))
+  (is (@equal (quote (el::quote (el::a (el::quote el::b))))
              (read-simple "'(a'b)")))
-  (is (equal `(el::quote (,(pstrings:build-pstring "a") (el::quote el::b)))
+  (is (@equal `(el::quote (,(pstrings:build-pstring "a") (el::quote el::b)))
              (read-simple "'(\"a\"'b)")))
-  (is (equal (quote (el::quote (65 (el::quote el::b))))
+  (is (@equal (quote (el::quote (65 (el::quote el::b))))
              (read-simple "'(?A'b)")))
-  (is (equal (quote (el::\` el::test-symbol))
+  (is (@equal (quote (el::\` el::test-symbol))
              (read-simple "`test-symbol")))
-  (is (equal (quote (el::\` (el::test-symbol)))
+  (is (@equal (quote (el::\` (el::test-symbol)))
              (read-simple "`(test-symbol)")))
-  (is (equal (quote (el::\` (el::\` el::test-symbol)))
+  (is (@equal (quote (el::\` (el::\` el::test-symbol)))
              (read-simple "``test-symbol")))
-  (is (equal (quote ((el::\` el::test-symbol) (el::\, 3)))
+  (is (@equal (quote ((el::\` el::test-symbol) (el::\, 3)))
              (read-simple "(`test-symbol ,3)")))
-  ;; real emacs test (equal (quote (\` (form ((\, a) (\, ((\` (b (\, c))))))))) (read-simple "`(form (,a ,(`(b ,c))))"))
-  (is (equal (quote (el::\` (el::form ((el::\, el::a) (el::\, ((el::\` (el::b (el::\, el::c)))))))))
+  ;; real emacs test (@equal (quote (\` (form ((\, a) (\, ((\` (b (\, c))))))))) (read-simple "`(form (,a ,(`(b ,c))))"))
+  (is (@equal (quote (el::\` (el::form ((el::\, el::a) (el::\, ((el::\` (el::b (el::\, el::c)))))))))
              (read-simple "`(form (,a ,(`(b ,c))))")))
   (signals eof-reader-error (read-cl-string "'"))
   (signals eof-reader-error (read-cl-string "`,"))
 
-  (is (equal (quote (el::quote el::\,))
+  (is (@equal (quote (el::quote el::\,))
              (read-simple "'\\,")))
-  (is (equal (quote (el::\` (el::a (el::\,@ el::b))))
+  (is (@equal (quote (el::\` (el::a (el::|,@| el::b))))
              (read-simple "`(a ,@b)")))
-  (is (equal (quote (el::|,| (el::|,| el::a)))
+  (is (@equal (quote (el::|,| (el::|,| el::a)))
              (read-simple ",,a")))
-  (is (equal (quote (el::|`| el::|,| el::a))
+  (is (@equal (quote (el::|`| el::|,| el::a))
              (read-simple "(\\` . ,a)")))
-  (is (equal (quote (el::|`| (el::quote (el::|,| (el::and)))))
+  (is (@equal (quote (el::|`| (el::quote (el::|,| (el::and)))))
              (read-simple "`',(and)")))
   )
 
 (test test-read-strings
-  (is (equal `(,(pstrings:build-pstring "test") . 6)
+  (is (@equal `(,(pstrings:build-pstring "test") . 6)
              (read-cl-string "\"test\" ")))
-  (is (equal `(el::defvar el::test-var el::nil
+  (is (@equal `(el::defvar el::test-var el::nil
                 ,(pstrings:build-pstring #M"some
                                             multiline docstring `with symbols'."))
              (read-simple #M"(defvar test-var nil \"some
                                      multiline docstring `with symbols'.\")")))
   ;; TODO: add better pstring property validation after more complicated reads
-  (is (equal
+  (is (@equal
        (pstrings:build-pstring " ")
        (read-simple "#(\" \" 0 1 (invisible t))")))
-  (is (equal
+  (is (@equal
        (pstrings:build-pstring "foo bar")
        (read-simple "#(\"foo bar\" 0 3 (face bold) 3 4 nil 4 7 (face italic))")))
-  (is (equal (pstrings:build-pstring "abc\\z\"")
+  (is (@equal (pstrings:build-pstring "abc\\z\"")
              (read-simple "\"abc\\\\\\x7a\\\"\"" )))
-  (is (equal (pstrings:build-pstring "sample string without newline.")
+  (is (@equal (pstrings:build-pstring "sample string without newline.")
              (read-simple
               #M"#(\"sampl\\ e \\
                       string without newline.\" 0 4 (face bold))")))
-  (is (equal (pstrings:build-pstring (cl:format nil "~c, \"\"~c" #\tab #\soh))
+  (is (@equal (pstrings:build-pstring (cl:format nil "~c, \"\"~c" #\tab #\soh))
              (read-simple "\"\\t, \\\"\\\"\\C-a\"")))
-  (is (equal  (pstrings:build-pstring "")
+  (is (@equal  (pstrings:build-pstring "")
               (read-simple "#(\"\" 0 0 (invisible t))")))
-  (is (equal
+  (is (@equal
        (pstrings:build-pstring "fooA0bar")
        (read-simple "\"foo\\u00410bar\")")))
   ;; (read-cl-string "\"\\x103000\")")
@@ -1193,80 +1193,80 @@
     (is (pstrings:pstring-multibyte (read-simple "\"\\\\(\\u00A0+\\\\)\""))))
   )
 (test test-read-lists
-  (is (equal `(el::a ,(pstrings:build-pstring "b"))
+  (is (@equal `(el::a ,(pstrings:build-pstring "b"))
              (read-simple "(a\"b\") ")))
-  (is (equal `(el::test 2 3 ,(pstrings:build-pstring "A ( B"))
+  (is (@equal `(el::test 2 3 ,(pstrings:build-pstring "A ( B"))
              (read-simple "(test 2 3 \"A ( B\")")))
-  (is (equal (quote (el::test (2 3) 4 ()))
+  (is (@equal (quote (el::test (2 3) 4 ()))
              (read-simple "(test (2 3) 4 ())")))
-  (is (equal (quote (el::.))
+  (is (@equal (quote (el::.))
              (read-simple "(.)")))
-  (is (equal (quote (el::a el::.))
+  (is (@equal (quote (el::a el::.))
              (read-simple "(a .)")))
-  (is (equal (quote (el::a el::.b))
+  (is (@equal (quote (el::a el::.b))
              (read-simple "(a .b)")))
-  (is (equal (quote (3 . 4))
+  (is (@equal (quote (3 . 4))
              (read-simple "(3 .  4)")))
-  (is (equal (quote 4)
+  (is (@equal (quote 4)
              (read-simple "(. 4)")))
   (signals invalid-reader-input-error (read-cl-string "(a b . c d)"))
-  (is (equal (quote (65 . 66))
+  (is (@equal (quote (65 . 66))
              (read-simple "(?A.?B)")))
-  (is (equal (quote (65 . 66))
+  (is (@equal (quote (65 . 66))
              (read-simple "(?A. ?B))")))
-  (is (equal nil (read-simple "()")))
+  (is (@equal nil (read-simple "()")))
   (signals eof-reader-error (read-cl-string "("))
-  (is (equal (quote (1 2 3))
+  (is (@equal (quote (1 2 3))
              (read-simple "(1 . (2 . (3 . nil)))")))
-  (is (equal (quote (el::quote nil))
+  (is (@equal (quote (el::quote nil))
              (read-simple "'()")))
   )
 (test test-read-comments
-  (is (equal 'el::test
+  (is (@equal 'el::test
              (read-simple #M";;; comment line
                                         test symbol")))
   (signals eof-reader-error (read-cl-string ";; just comment"))
   )
 (test test-read-characters
-  (is (equal '(65 66)
+  (is (@equal '(65 66)
              (read-simple "(?A?B))")))
-  (is (equal '(el::a 92 65 66 65 32 . 3)
+  (is (@equal '(el::a 92 65 66 65 32 . 3)
              (read-simple "(a ?\\\\ ?A?B ?A?\\s. 3)")))
-  (is (equal 32
+  (is (@equal 32
              (read-simple "?\\ ")))
-  (is (equal #x202a
+  (is (@equal #x202a
              (read-simple "?\\x202a")))
-  (is (equal '(#x202a #x202a)
+  (is (@equal '(#x202a #x202a)
              (read-simple "(?\\x202a ?\\x202a)")))
-  (is (equal #o202
+  (is (@equal #o202
              (read-simple "?\\202")))
-  (is (equal 8206
+  (is (@equal 8206
              (read-simple "?\\N{left-to-right mark}")))
-  (is (equal 123
+  (is (@equal 123
              (read-simple "?\\{")))
   )
 
 (test test-read-special-cases
   (signals eof-reader-error (read-cl-string ""))
-  (is (equal '(el::quote el::test)
+  (is (@equal '(el::quote el::test)
              (read-simple #M" ' #!some-stuff
                                         #!some-stuff
                                         test")))
-  (is (equal '(el::quote (el::|.| el::|.| el::e))
+  (is (@equal '(el::quote (el::|.| el::|.| el::e))
              (read-simple "'(\\. \\. e)")))
   )
 
 (test test-read-vectors
-  (is (equal (quote #(1 el::a))
+  (is (@equal (quote #(1 el::a))
              (read-simple "[1 a]")))
-  (is (equal (quote #(el::a el::b el::c el::.))
+  (is (@equal (quote #(el::a el::b el::c el::.))
              (read-simple "[a b c .]")))
   (signals invalid-reader-input-error (read-cl-string "[1 . a]"))
   )
 
 
 (test test-reader-functions
-  (is (equal (quote (el::function el::a))
+  (is (@equal (quote (el::function el::a))
              (read-simple "#'a")))
   )
 
@@ -1296,12 +1296,12 @@
     (is (eq (car sample) (cdr (aref (car sample) 0))))
     (is (eq (aref (car sample) 0) (car (aref (car sample) 1))))
     (is (eq (aref (car sample) 1) (cdr (aref (car sample) 1)))))
-  (is (equal (quote ((el::quote (el::quote el::a)) (el::quote el::a)))
+  (is (@equal (quote ((el::quote (el::quote el::a)) (el::quote el::a)))
              (read-simple "('#1='a #1#)")))
   (signals invalid-reader-input-error (read-cl-string "#1=(#1# #2#)"))
   (signals invalid-reader-input-error (read-cl-string "#1=#1#"))
 
-  (is (equal (quote ((el::a el::b el::b) el::b))
+  (is (@equal (quote ((el::a el::b el::b) el::b))
              (read-simple "(#1=(a #1=b #1#) #1#)")))
 
   (let* ((sample (read-simple "(#1=(a . #1#) #1=(b . #1#))"))
@@ -1332,40 +1332,40 @@
 
 (test test-read-radix
   (signals invalid-reader-input-error (read-cl-string "#b"))
-  (is (equal (quote #b10)
-             (read-simple "#b010")))
-  (is (equal (quote #b10)
-             (read-simple "#b+010")))
-  (is (equal (quote #b-10)
-             (read-simple "#b-010")))
-  (is (equal (quote (0 -10))
-             (read-simple "(#b0-10)")))
+  (is (@equal (quote #b10)
+              (read-simple "#b010")))
+  (is (@equal (quote #b10)
+              (read-simple "#b+010")))
+  (is (@equal (quote #b-10)
+              (read-simple "#b-010")))
+  (is (@equal (quote (0 -10))
+              (read-simple "(#b0-10)")))
 
-  (is (equal (quote #b1010)
-             (read-simple "#B01010")))
-  (is (equal (quote #b-1010)
-             (read-simple "#B-01010")))
+  (is (@equal (quote #b1010)
+              (read-simple "#B01010")))
+  (is (@equal (quote #b-1010)
+              (read-simple "#B-01010")))
   (signals invalid-reader-input-error (read-cl-string "#b013"))
 
   (signals invalid-reader-input-error (read-cl-string "#o"))
-  (is (equal (quote #o10)
-             (read-simple "#o010")))
-  (is (equal (quote #o-10)
-             (read-simple "#o-010")))
-  (is (equal (quote #o1010)
-             (read-simple "#O01010")))
+  (is (@equal (quote #o10)
+              (read-simple "#o010")))
+  (is (@equal (quote #o-10)
+              (read-simple "#o-010")))
+  (is (@equal (quote #o1010)
+              (read-simple "#O01010")))
   (signals invalid-reader-input-error (read-cl-string "#o013a"))
 
   (signals invalid-reader-input-error (read-cl-string "#x"))
-  (is (equal (quote #x010aaf)
-             (read-simple "#x010aAF")))
-  (is (equal (quote #x-010aaf)
-             (read-simple "#x-010aAF")))
-  (is (equal (quote #x010aaf)
-             (read-simple "#X010aAF")))
+  (is (@equal (quote #x010aaf)
+              (read-simple "#x010aAF")))
+  (is (@equal (quote #x-010aaf)
+              (read-simple "#x-010aAF")))
+  (is (@equal (quote #x010aaf)
+              (read-simple "#X010aAF")))
   (signals invalid-reader-input-error (read-cl-string "#x013aw"))
-  (is (equal (quote (el::test #x123))
-             (read-simple "(test #x123)")))
+  (is (@equal (quote (el::test #x123))
+              (read-simple "(test #x123)")))
   )
 
 (test test-read-hash-tables
@@ -1391,7 +1391,7 @@
   (let ((record (read-simple
                  #M"#s(test-rec abc 123 (1 2 3))")))
     (is (eq 'el::test-rec (type-of record)))
-    (is (equal record #(el::test-rec el::abc 123 (1 2 3))))
+    (is (@equal record #(el::test-rec el::abc 123 (1 2 3))))
 
 
     ))
@@ -1421,22 +1421,22 @@
                      8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8
                      slot0 slot1 slot2]"
              )))
-    (is (equal
+    (is (@equal
          '((0 79 8) (80 73859 3) (73860 4194303 8))
          (chartables:get-chartable-ranges ct)))
-    (is (equal '#(el::slot0 el::slot1 el::slot2)
-               (chartables:chartable-extra-slots ct)))
+    (is (@equal '#(el::slot0 el::slot1 el::slot2)
+                (chartables:chartable-extra-slots ct)))
     ))
 
 (test test-read-bool-vector ()
-  (is (equal #*1010
-             (read-simple "#&4\"\"")))
-  (is (equal #*10
-             (read-simple "#&2\"a\"")))
-  (is (equal #*
-             (read-simple "#&0\"\"")))
-  (is (equal #*01011110110001
-             (read-simple "#&14\"z#\"")))
+  (is (@equal #*1010
+              (read-simple "#&4\"\"")))
+  (is (@equal #*10
+              (read-simple "#&2\"a\"")))
+  (is (@equal #*
+              (read-simple "#&0\"\"")))
+  (is (@equal #*01011110110001
+              (read-simple "#&14\"z#\"")))
   )
 
 (test test-read-cl-string

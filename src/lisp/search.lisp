@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/search)
 (log-enable :cl-emacs/search :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* looking-at ()
   #M"Return t if text after point matches regular expression REGEXP.
 By default, this function modifies the match data that

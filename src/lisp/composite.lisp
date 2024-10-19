@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/composite)
 (log-enable :cl-emacs/composite :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* clear-composition-cache ()
   #M"Internal use only.
 Clear composition cache.

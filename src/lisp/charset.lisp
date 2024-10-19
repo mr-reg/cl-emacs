@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/charset)
 (log-enable :cl-emacs/charset :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* char-charset ()
   #M"Return the charset of highest priority that contains CH.
 ASCII characters are an exception: for them, this function always

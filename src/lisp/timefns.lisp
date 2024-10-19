@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/timefns)
 (log-enable :cl-emacs/timefns :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* current-cpu-time ()
   #M"Return the current CPU time along with its resolution.
 The return value is a pair (CPU-TICKS . TICKS-PER-SEC).

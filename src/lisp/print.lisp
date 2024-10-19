@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/print)
 (log-enable :cl-emacs/print :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* error-message-string ()
   #M"Convert an error value (ERROR-SYMBOL . DATA) to an error message.
 See Info anchor ‘(elisp)Definition of signal' for some details on how this

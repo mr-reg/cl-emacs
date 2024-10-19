@@ -18,20 +18,15 @@
 
 (cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/editfns
     (:use
-     :defstar
-     :cl-emacs/lib/log
      :alexandria
      :fiveam
-     :cl-emacs/textprop
-     :cl-emacs/eval
-     :cl-emacs/lib/commons)
-  (:export #:propertize)
+     )
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:pstrings #:cl-emacs/types/pstrings)
                     )  )
 (in-package :cl-emacs/editfns)
 (log-enable :cl-emacs/editfns :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (def-suite cl-emacs/editfns)
 (in-suite cl-emacs/editfns)
 

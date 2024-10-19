@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/frame)
 (log-enable :cl-emacs/frame :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* delete-frame ()
   #M"Delete FRAME, eliminating it from use.
 FRAME must be a live frame and defaults to the selected one.

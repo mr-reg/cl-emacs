@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/syntax)
 (log-enable :cl-emacs/syntax :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* backward-prefix-chars ()
   #M"Move point backward over any number of chars with prefix syntax.
 This includes chars with expression prefix syntax class (\\=') and those with

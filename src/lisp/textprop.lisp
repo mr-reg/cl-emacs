@@ -18,19 +18,15 @@
 
 (cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/textprop
     (:use
-     :defstar
-     :cl-emacs/lib/log
      :alexandria
      :fiveam
-     :cl-emacs/lib/commons
-     :cl-emacs/eval)
+     )
   (:local-nicknames (#:pstrings #:cl-emacs/types/pstrings)                    )
-  (:export #:set-text-properties
-           #:add-text-properties)
+  
   )
 (in-package :cl-emacs/textprop)
 (log-enable :cl-emacs/textprop :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (def-suite cl-emacs/textprop)
 (in-suite cl-emacs/textprop)
 

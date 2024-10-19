@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/filelock)
 (log-enable :cl-emacs/filelock :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* file-locked-p ()
   #M"Return a value indicating whether FILENAME is locked.
 The value is nil if the FILENAME is not locked,

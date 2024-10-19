@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/casefiddle)
 (log-enable :cl-emacs/casefiddle :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* capitalize ()
   #M"Convert argument to capitalized form and return that.
 This means that each word's first character is converted to either

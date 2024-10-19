@@ -16,14 +16,12 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/types/chartables
+(uiop:define-package :cl-emacs/types/chartables
     (:use
      :defstar
-     :cl-emacs/data
      :cl-emacs/lib/log
-     :cl-emacs/fns
-     :cl-emacs/eval
      :fiveam
+     :common-lisp
      :cl-emacs/lib/commons
      :cl-emacs/lib/errors
      )
@@ -50,7 +48,7 @@
   (:local-nicknames (#:el #:cl-emacs/elisp)))
 (in-package :cl-emacs/types/chartables)
 (log-enable :cl-emacs/types/chartables :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (def-suite cl-emacs/types/chartables)
 (in-suite cl-emacs/types/chartables)
 
@@ -65,8 +63,7 @@
   ())
 
 ;; 64/16/32/128
-(define-constant +chartab-size-bits+ #(6 4 5 7) :test 'equal)
-
+(define-constant +chartab-size-bits+ #(6 4 5 7) :test 'equalp)
 
 ;; Number of elements in Nth level chartable.
 (define-constant +chartab-size+
@@ -78,7 +75,7 @@
            (ash 1 (aref +chartab-size-bits+ 2))
            (ash 1 (aref +chartab-size-bits+ 3)))
      )
-  :test 'equal)
+  :test 'equalp)
 
 ;; Number of characters each element of Nth level chartable covers.
 (define-constant +chars-per-element+
@@ -92,7 +89,7 @@
                      (aref +chartab-size-bits+ 3)))
            (ash 1  (aref +chartab-size-bits+ 3))
            1))
-  :test 'equal)
+  :test 'equalp)
 
 ;; each chartable covers range (0 . 4194303)
 

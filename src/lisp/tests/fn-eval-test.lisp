@@ -16,15 +16,14 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/tests/fn-eval-test
+(uiop:define-package :cl-emacs/tests/fn-eval-test
     (:use
      :defstar
      :cl-emacs/lib/log
+     :common-lisp
      :fiveam
      :cl-emacs/lib/commons
      :cl-emacs/lib/errors
-     :cl-emacs/fn-eval
-     :cl-emacs/fns
      )
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:reader #:cl-emacs/lib/reader))
@@ -33,7 +32,7 @@
 (log-enable :cl-emacs/tests/fn-eval-test :debug2)
 (def-suite cl-emacs/tests/fn-eval-test)
 (in-suite cl-emacs/tests/fn-eval-test)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 
 (test test-fn-eval
   (is (equal 3 (eval (reader:read-simple "3"))))

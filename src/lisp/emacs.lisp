@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/emacs)
 (log-enable :cl-emacs/emacs :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* daemon-initialized ()
   #M"Mark the Emacs daemon as being initialized.
 This finishes the daemonization process by doing the other half of detaching

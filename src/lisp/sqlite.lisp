@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/sqlite)
 (log-enable :cl-emacs/sqlite :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* sqlite-available-p ()
   #M"Return t if sqlite3 support is available in this instance of Emacs.
 

@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/menu)
 (log-enable :cl-emacs/menu :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* menu-bar-menu-at-x-y ()
   #M"Return the menu-bar menu on FRAME at pixel coordinates X, Y.
 X and Y are frame-relative pixel coordinates, assumed to define

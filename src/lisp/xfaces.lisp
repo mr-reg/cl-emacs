@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/xfaces)
 (log-enable :cl-emacs/xfaces :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* bitmap-spec-p ()
   #M"Value is non-nil if OBJECT is a valid bitmap specification.
 A bitmap specification is either a string, a file name, or a list

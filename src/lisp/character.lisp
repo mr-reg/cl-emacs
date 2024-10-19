@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/character)
 (log-enable :cl-emacs/character :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* char-resolve-modifiers ()
   #M"Resolve modifiers in the character CHAR.
 The value is a character with modifiers resolved into the character

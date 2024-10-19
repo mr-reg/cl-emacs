@@ -16,29 +16,13 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/elisp
-  ;; (:import-from #:cl
-  ;;               #:in-package)
-  ;; (:import-from #:cl-emacs/lib/commons
-  ;;               #:reexport-symbols)
-  ;; (:use-reexport
-  ;;  :cl-emacs/lib/reader
-  ;;  ;; :cl-emacs/elisp/alloc
-  ;;  ;; :cl-emacs/elisp/data
-  ;;  ;; :cl-emacs/elisp/editfns
-  ;;  ;; :cl-emacs/elisp/fileio
-  ;;  ;; :cl-emacs/elisp/fns
-  ;;  ;; :cl-emacs/elisp/font
-  ;;  ;; :cl-emacs/elisp/xfns
-  ;;  )
-  ;; (:export #:rpc-apply)
-  )
+(uiop:define-package :cl-emacs/elisp)
 (cl:unuse-package :common-lisp :cl-emacs/elisp)
 (cl:do-symbols (symbol :cl-emacs/elisp)
   (cl:unintern symbol))
 (cl:in-package :cl-emacs/elisp)
 ;; (cl-user::package-use-list :cl-emacs/elisp)
-;; (named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable mstrings:mstring-syntax)
 ;; (log-enable :cl-emacs/elisp :debug1)
 ;; (def-suite cl-emacs/elisp)
 ;; (in-suite cl-emacs/elisp)

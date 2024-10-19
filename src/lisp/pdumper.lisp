@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/pdumper)
 (log-enable :cl-emacs/pdumper :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* dump-emacs-portable ()
   #M"Dump current state of Emacs into dump file FILENAME.
 If TRACK-REFERRERS is non-nil, keep additional debugging information

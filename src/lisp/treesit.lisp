@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/treesit)
 (log-enable :cl-emacs/treesit :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* treesit-available-p ()
   #M"Return non-nil if tree-sitter support is built-in and available.
 

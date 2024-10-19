@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/macros)
 (log-enable :cl-emacs/macros :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* call-last-kbd-macro ()
   #M"Call the last keyboard macro that you defined with \\[start-kbd-macro].
 

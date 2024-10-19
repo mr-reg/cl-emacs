@@ -16,18 +16,17 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/lib/printer
+(uiop:define-package :cl-emacs/lib/printer
     (:use
      :defstar
-     :cl-emacs/alloc
-     :cl-emacs/data
-     :cl-emacs/eval
-     :cl-emacs/fns
+     :common-lisp
      :cl-emacs/lib/log
+     :cl-emacs/lib/errors
      :cl-emacs/lib/reader-utils
-     :snakes
      :fiveam
      :cl-emacs/lib/commons)
+  (:import-from #:serapeum
+                #:memq)
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:pstrings #:cl-emacs/types/pstrings)
                     (#:chartables #:cl-emacs/types/chartables)
@@ -41,7 +40,7 @@
 (log-enable :cl-emacs/lib/printer :info)
 (def-suite cl-emacs/lib/printer)
 (in-suite cl-emacs/lib/printer)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 
 (defun check-if-obj-in-circle-refs (obj circle-refs)
   "return nil if obj not in circle refs, otherwise - number"
@@ -85,7 +84,7 @@
             )
            ((and (memq (car obj) '(el::|,| el::|,@|))
                  (> backquoted 0))
-            (print-to-cl-stream (symbol-name (car obj)) stream t (1- backquoted) circle-refs)
+            (print-to-cl-stream (@symbol-name (car obj)) stream t (1- backquoted) circle-refs)
             (print-to-cl-stream (car (cdr obj)) stream raw-mode (1- backquoted) circle-refs)
             )
            (t (setq processed nil))
@@ -110,7 +109,7 @@
                     (return)))))
      (cl:write-char #\) stream))
     ((or (symbolp obj) (null obj))
-     (let ((symbol-name (symbol-name obj)))
+     (let ((symbol-name (@symbol-name obj)))
        (when (pstrings:emptyp symbol-name)
          (cl:write-sequence "##" stream))
        (if raw-mode
@@ -140,7 +139,7 @@
                )))
       stream :escaped :string)
      )
-    ((recordp obj)
+    ((@recordp obj)
      (cl:write-sequence "#s(" stream)
      (loop for el across obj
            with first = t
@@ -168,7 +167,7 @@
         (cl:write-sequence "1.0e+INF" stream))
        ((and (float-features:float-infinity-p obj) (< obj 0))
         (cl:write-sequence "-1.0e+INF" stream))
-       ((isnan obj)
+       ((@isnan obj)
         (cl:write-sequence "0.0e+NaN" stream))
        (t (if el::float-output-format
               (cl:format stream el::float-output-format obj)
@@ -369,9 +368,9 @@
   )
 
 (test test-print-hash-table
-  (let ((hash (make-hash-table :test 'eq)))
-    (puthash 'el::a (pstrings:build-pstring "2") hash)
-    (puthash 'el::b 3 hash)
+  (let ((hash (@make-hash-table :test 'eq)))
+    (@puthash 'el::a (pstrings:build-pstring "2") hash)
+    (@puthash 'el::b 3 hash)
     (prin-test
         "#s(hash-table size 65 test eq rehash-size 1.5 rehash-threshold 0.8125 data (a 2 b 3))"
         "#s(hash-table size 65 test eq rehash-size 1.5 rehash-threshold 0.8125 data (a \"2\" b 3))"

@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/xselect)
 (log-enable :cl-emacs/xselect :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* x-disown-selection-internal ()
   #M"If we own the selection SELECTION, disown it.
 Disowning it means there is no such selection.

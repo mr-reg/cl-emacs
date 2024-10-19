@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/cmds)
 (log-enable :cl-emacs/cmds :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* backward-char ()
   #M"Move point N characters backward (forward if N is negative).
 On attempt to pass beginning or end of buffer, stop and signal error.

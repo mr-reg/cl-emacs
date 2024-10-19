@@ -17,16 +17,21 @@
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (uiop:define-package :cl-emacs/lib/commons
-    (:use :common-lisp :cl-emacs/lib/log :alexandria :fiveam
-          :defstar)
+    (:use 
+     :common-lisp 
+     :cl-emacs/lib/log 
+     :alexandria 
+     :fiveam
+     :defstar)
   (:shadow #:code-char)
   (:export
    #:safe-code-char
    #:reexport-symbols
    #:safe-code
+   #:elisp-function-syntax
    ))
 (in-package :cl-emacs/lib/commons)
-(log-enable :cl-emacs/lib/commons :debug1)
+(log-enable :cl-emacs/lib/commons :debug2)
 (named-readtables:in-readtable mstrings:mstring-syntax)
 
 (defvar *timer* 0)
@@ -50,3 +55,60 @@
      process them as cl:char, even if it will cause some side-effects..."
   (let ((safe-code (mod code cl-unicode:+code-point-limit+)))
     (cl:code-char safe-code)))
+
+(defun* (elisp-function-reader -> symbol) ((stream stream) arg)
+  (declare (ignore arg))
+  (let ((parsed
+          (str:upcase 
+           (with-output-to-string (str-stream)
+             (handler-case
+                 (loop for next-char = (peek-char nil stream)
+                       for next-code = (char-code next-char)
+                       ;; for x = (log-info "next-code ~s" next-code)
+                       until (not (or (<= (char-code #\A) next-code (char-code #\Z))
+                                      (<= (char-code #\a) next-code (char-code #\z))
+                                      (<= (char-code #\0) next-code (char-code #\9))
+                                      (serapeum:memq next-code 
+                                                     (list (char-code #\-)
+                                                           (char-code #\.)
+                                                           (char-code #\>)
+                                                           (char-code #\<)
+                                                           (char-code #\+)
+                                                           (char-code #\*)
+                                                           (char-code #\=)
+                                                           (char-code #\/)
+
+                                                           )
+                                                     )
+                                      ))
+                       do (write-char (read-char stream) str-stream))
+               (end-of-file ()))))))
+    (log-debug2 "parsed '~s'" parsed)
+    (let (fn-package fn-sym)
+      (loop 
+        for pkg in cl-emacs/lib/elisp-packages:*elisp-exports*
+        for pkg-name = (format nil "CL-EMACS/~a" (symbol-name (car pkg)))
+        for exports = (cadr pkg)
+        do (loop 
+             for sym in exports
+             do (when (string= (symbol-name sym) parsed)
+                  (log-debug2 "pkg-name:'~s'" pkg-name)
+                  (setq fn-package (find-package pkg-name))
+                  (log-debug2 "fn-package:'~s'" fn-package)
+                  (unless fn-package
+                    (error "can't find package ~s" pkg-name))
+                  (setq fn-sym (find-symbol parsed fn-package))
+                  (log-debug2 "fn-sym:'~s'" fn-sym)
+                  (unless fn-sym
+                    (error "can't find external symbol ~s in package ~s"
+                           parsed pkg-name))
+                  (return-from elisp-function-reader fn-sym)
+                  )))
+      (error "can't find symbol ~s definition in elisp-packages"
+             parsed)
+      
+      )))
+
+(named-readtables:defreadtable elisp-function-syntax
+  (:merge mstrings:mstring-syntax)
+  (:macro-char #\@ #'elisp-function-reader))

@@ -18,44 +18,17 @@
 
 (cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/eval
     (:use
-     :defstar
-     :cl-emacs/lib/log
      :alexandria
      :fiveam
-     :cl-emacs/lib/commons
      )
-  (:import-from #:cl
-                #:and
-                #:cond
-                #:defvar
-                #:funcall
-                #:if
-                #:let
-                #:let*
-                #:or
-                #:progn
-                #:quote
-                #:setq
-                )
-  (:export #:and
-           #:cond
-           #:defvar
-           #:funcall
-           #:if
-           #:let
-           #:let*
-           #:or
-           #:progn
-           #:quote
-           #:setq
-           )
+
   
   )
 (in-package :cl-emacs/eval)
 (log-enable :cl-emacs/eval :debug2)
 (def-suite cl-emacs/eval)
 (in-suite cl-emacs/eval)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 
 (defun* autoload ()
   #M"Define FUNCTION to autoload from FILE.

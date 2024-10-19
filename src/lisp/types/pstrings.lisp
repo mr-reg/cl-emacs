@@ -45,7 +45,7 @@
 (in-package :cl-emacs/types/pstrings)
 (log-enable :cl-emacs/types/pstrings :info)
 ;; (log-enable :cl-emacs/types/pstrings :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (def-suite cl-emacs/types/pstrings)
 (in-suite cl-emacs/types/pstrings)
 

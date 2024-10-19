@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/keyboard)
 (log-enable :cl-emacs/keyboard :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* abort-recursive-edit ()
   #M"Abort the command that requested this recursive edit or minibuffer input.
 

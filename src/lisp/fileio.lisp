@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/fileio)
 (log-enable :cl-emacs/fileio :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* access-file ()
   #M"Access file FILENAME, and get an error if that does not work.
 The second argument STRING is prepended to the error message.

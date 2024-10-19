@@ -18,23 +18,13 @@
 
 (cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/alloc
     (:use
-     :defstar
-     :cl-emacs/lib/log
      :alexandria
      :fiveam
-     :cl-emacs/lib/commons)
-  (:import-from #:cl
-                #:cons
-                #:list
-                )
-  (:export
-   #:cons
-   #:list
-   #:intern
-   #:make-symbol))
+     )
+  )
 (in-package :cl-emacs/alloc)
 (log-enable :cl-emacs/alloc :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* bool-vector ()
   #M"Return a new bool-vector with specified arguments as elements.
 Allows any number of arguments, including zero.

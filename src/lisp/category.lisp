@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/category)
 (log-enable :cl-emacs/category :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* category-docstring ()
   #M"Return the documentation string of CATEGORY, as defined in TABLE.
 TABLE should be a category table and defaults to the current buffer's

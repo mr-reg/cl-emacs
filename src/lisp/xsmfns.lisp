@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/xsmfns)
 (log-enable :cl-emacs/xsmfns :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* handle-save-session ()
   #M"Handle the save_yourself event from a session manager.
 A session manager can tell Emacs that the window system is shutting down

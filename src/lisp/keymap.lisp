@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/keymap)
 (log-enable :cl-emacs/keymap :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* accessible-keymaps ()
   #M"Find all keymaps accessible via prefix characters from KEYMAP.
 Returns a list of elements of the form (KEYS . MAP), where the sequence

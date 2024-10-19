@@ -26,12 +26,11 @@
      :cl-emacs/lib/commons
      :cl-emacs/lib/errors
      )
-  (:export #:apply)
   (:local-nicknames (#:el #:cl-emacs/elisp))
   )
 (in-package :cl-emacs/fn-apply)
 (log-enable :cl-emacs/fn-apply :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 
 (defun* apply (func &rest args)
   #M"Call FUNCTION with our remaining args, using our last arg as list of args.

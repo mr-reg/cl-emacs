@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/gnutls)
 (log-enable :cl-emacs/gnutls :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* gnutls-asynchronous-parameters ()
   #M"Mark this process as being a pre-init GnuTLS process.
 The second parameter is the list of parameters to feed to gnutls-boot

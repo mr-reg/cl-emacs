@@ -16,22 +16,21 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/lib/reader-utils
+(uiop:define-package :cl-emacs/lib/reader-utils
     (:use
      :cl-emacs/lib/log
      :alexandria
      :fiveam
-     :cl-emacs/data
-     :cl-emacs/eval
+     :common-lisp
      :defstar)
   (:export
    #:char-end-of-statement-p
    #:char-list-to-cl-string
    #:char-list-to-pstring
    #:char-whitespace-p
-   #:digit-char-p
    #:parse-elisp-number
    #:reversed-list-to-number
+   #:simple-digit-char-p
    )
   (:import-from #:serapeum
                 #:memq)
@@ -133,9 +132,12 @@
      special symbol that signals about new statement. "
   (or (char-whitespace-p char) (memq char '(#\( #\) #\[ #\] #\" #\' #\` #\, #\# #\;))))
 
-(defun* (digit-char-p -> (or integer null)) ((char character) &optional (radix 10))
+(defun* (simple-digit-char-p -> (or integer null)) ((char character) &optional (radix 10))
   #M"If char is a digit in the specified radix, returns the fixnum for which
-     that digit stands, else returns NIL."
+     that digit stands, else returns NIL.
+
+     We can't use CL standard function digit-char-p, because it is too clever 
+     and it understands some non-ascii symbols as digits"
   (let* ((code (char-code char))
          (digit (cond
                   ((<= (char-code #\0) code (char-code #\9))

@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/window)
 (log-enable :cl-emacs/window :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* coordinates-in-window-p ()
   #M"Return non-nil if COORDINATES are in WINDOW.
 WINDOW must be a live window and defaults to the selected one.

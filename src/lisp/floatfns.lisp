@@ -47,31 +47,10 @@
                 #:truncate
 
                 )
-  (:export
-   #:abs
-   #:acos
-   #:asin
-   #:atan
-   #:ceiling
-   #:cos
-   #:exp
-   #:expt
-   #:fceiling
-   #:ffloor
-   #:float
-   #:floor
-   #:fround
-   #:ftruncate
-   #:log
-   #:round
-   #:sin
-   #:sqrt
-   #:tan
-   #:truncate
-   )  )
+  )
 (in-package :cl-emacs/floatfns)
 (log-enable :cl-emacs/floatfns :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (def-suite cl-emacs/floatfns)
 (in-suite cl-emacs/floatfns)
 

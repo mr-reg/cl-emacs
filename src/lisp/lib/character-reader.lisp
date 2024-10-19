@@ -16,17 +16,16 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/lib/character-reader
+(uiop:define-package :cl-emacs/lib/character-reader
     (:use
+     :common-lisp
      :cl-emacs/lib/log
      :fiveam
      :defstar
-     :cl-emacs/data
-     :cl-emacs/eval
-     :cl-emacs/fns
      :cl-emacs/lib/reader-utils
      :cl-emacs/lib/commons)
-
+  (:import-from :serapeum
+                #:memq)
   (:export #:read-emacs-character
            #:read-string-character
            #:extra-symbols-in-character-spec-error
@@ -37,7 +36,7 @@
 ;; (log-enable :cl-emacs/lib/character-reader :debug2)
 (def-suite cl-emacs/lib/character-reader)
 (in-suite cl-emacs/lib/character-reader)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 
 (define-condition character-reader-error ()
   ((input :initarg :input
@@ -83,7 +82,7 @@
     (if (str:starts-with-p "U+" clean-name)
         (let ((hex-part (str:substring 2 t clean-name)))
           (loop for char across hex-part
-                do (unless (digit-char-p char 16)
+                do (unless (simple-digit-char-p char 16)
                      (error 'invalid-character-spec-error
                             :input raw-input
                             :details (cl:format nil "invalid character in hex notation ~a" char))))
@@ -279,9 +278,9 @@
                       (t (return-result (char-code char)))))
                    (special
                     (cond
-                      ((digit-char-p char 8)
+                      ((simple-digit-char-p char 8)
                        (change-mode 'octal)
-                       (push (digit-char-p char 8) octals))
+                       (push (simple-digit-char-p char 8) octals))
                       ((eq char #\A)
                        (if string-mode
                            (error 'invalid-character-spec-error
@@ -338,8 +337,8 @@
                     (cond
                       ((null char)
                        (return-result (reversed-list-to-number octals 3)))
-                      ((digit-char-p char 8)
-                       (push (digit-char-p char 8) octals))
+                      ((simple-digit-char-p char 8)
+                       (push (simple-digit-char-p char 8) octals))
                       ;; character is not octal
                       (t
                        (decf position)
@@ -349,8 +348,8 @@
                     (when (and char
                                (not (char-whitespace-p char))
                                (not (char-end-of-statement-p char)))
-                      (if (digit-char-p char 16)
-                          (push (digit-char-p char 16) hex)
+                      (if (simple-digit-char-p char 16)
+                          (push (simple-digit-char-p char 16) hex)
                           (if string-mode
                               (progn
                                 (decf position)
@@ -371,8 +370,8 @@
                         (return-result result))))
                    (4-unicode
                     (when char
-                      (if (digit-char-p char 16)
-                          (push (digit-char-p char 16) hex)
+                      (if (simple-digit-char-p char 16)
+                          (push (simple-digit-char-p char 16) hex)
                           (error 'invalid-character-spec-error
                                  :input input :position position
                                  :start-position start-position
@@ -387,8 +386,8 @@
                         (return-result result))))
                    (8-unicode
                     (when char
-                      (if (digit-char-p char 16)
-                          (push (digit-char-p char 16) hex)
+                      (if (simple-digit-char-p char 16)
+                          (push (simple-digit-char-p char 16) hex)
                           (error 'invalid-character-spec-error
                                  :input input :position position
                                  :start-position start-position

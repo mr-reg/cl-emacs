@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/buffer)
 (log-enable :cl-emacs/buffer :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* barf-if-buffer-read-only ()
   #M"Signal a ‘buffer-read-only' error if the current buffer is read-only.
 If the text under POSITION (which defaults to point) has the

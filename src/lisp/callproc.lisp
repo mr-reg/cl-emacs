@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/callproc)
 (log-enable :cl-emacs/callproc :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* call-process ()
   #M"Call PROGRAM synchronously in separate process.
 The remaining arguments are optional.

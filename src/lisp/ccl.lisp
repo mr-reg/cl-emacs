@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/ccl)
 (log-enable :cl-emacs/ccl :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* ccl-execute ()
   #M"Execute CCL-PROGRAM with registers initialized by REGISTERS.
 

@@ -25,11 +25,10 @@
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:pstrings #:cl-emacs/types/pstrings)
                     (#:reader #:cl-emacs/lib/reader))
-  (:export #:read)
   )
 (in-package :cl-emacs/lread)
 (log-enable :cl-emacs/lread :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* eval-buffer ()
   #M"Execute the accessible portion of current buffer as Lisp code.
 You can use \\[narrow-to-region] to limit the part of buffer to be evaluated.

@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/decompress)
 (log-enable :cl-emacs/decompress :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* zlib-available-p ()
   #M"Return t if zlib decompression is available in this instance of Emacs.
 

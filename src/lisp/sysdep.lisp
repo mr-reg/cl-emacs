@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/sysdep)
 (log-enable :cl-emacs/sysdep :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* get-internal-run-time ()
   #M"Return the current run time used by Emacs.
 The time is returned as in the style of ‘current-time'.

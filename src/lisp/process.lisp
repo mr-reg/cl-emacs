@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/process)
 (log-enable :cl-emacs/process :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* accept-process-output ()
   #M"Allow any pending output from subprocesses to be read by Emacs.
 It is given to their filter functions.

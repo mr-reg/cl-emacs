@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/xfns)
 (log-enable :cl-emacs/xfns :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* x-backspace-delete-keys-p ()
   #M"Check if both Backspace and Delete keys are on the keyboard of FRAME.
 FRAME nil means use the selected frame.

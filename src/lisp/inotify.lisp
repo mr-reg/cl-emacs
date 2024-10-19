@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/inotify)
 (log-enable :cl-emacs/inotify :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* inotify-add-watch ()
   #M"Add a watch for FILE-NAME to inotify.
 

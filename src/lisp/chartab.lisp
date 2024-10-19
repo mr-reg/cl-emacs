@@ -25,7 +25,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/chartab)
 (log-enable :cl-emacs/chartab :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* char-table-extra-slot ()
   #M"Return the value of CHAR-TABLE's extra-slot number N.
 

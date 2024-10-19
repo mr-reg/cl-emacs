@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/casetab)
 (log-enable :cl-emacs/casetab :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* case-table-p ()
   #M"Return t if OBJECT is a case table.
 See ‘set-case-table' for more information on these data structures.

@@ -16,12 +16,10 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/tests/read-print-test
+(uiop:define-package :cl-emacs/tests/read-print-test
     (:use
      :defstar
-     :cl-emacs/data
-     :cl-emacs/eval
-     :cl-emacs/fns
+     :common-lisp
      :cl-emacs/lib/commons
      :cl-emacs/lib/errors
      :cl-emacs/lib/log
@@ -39,7 +37,7 @@
 (log-enable :cl-emacs/tests/read-print-test :debug)
 (def-suite cl-emacs/lib/read-print-test)
 (in-suite cl-emacs/lib/read-print-test)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defparameter *test-cache-enabled* t)
 (defparameter *parse-errors-enabled* nil)
 (defun* read-emacs-file ())

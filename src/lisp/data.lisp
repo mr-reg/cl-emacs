@@ -18,81 +18,13 @@
 
 (cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/data
     (:use
-     :defstar
-     :cl-emacs/lib/log
      :fiveam
-     :cl-emacs/lib/commons
-     :cl-emacs/lib/errors
-     :cl-emacs/alloc
-     :cl-emacs/eval
      )
-  (:import-from #:cl
-                #:+
-                #:*
-                #:-
-                #:1+
-                #:1-
-                #:<
-                #:<=
-                #:>
-                #:>=
-                #:aref
-                #:ash
-                #:car
-                #:cdr
-                #:consp
-                #:floatp
-                #:integerp
-                #:listp
-                #:logand
-                #:logior
-                #:min
-                #:max
-                #:null
-                #:numberp
-                #:symbolp
-                #:vectorp
-                )
-  (:export
-   #:+
-   #:*
-   #:-
-   #:/
-   #:/=
-   #:1+
-   #:1-
-   #:<
-   #:<=
-   #:=
-   #:>
-   #:>=
-   #:aref
-   #:ash
-   #:eq
-   #:car
-   #:cdr
-   #:consp
-   #:floatp
-   #:integerp
-   #:isnan
-   #:listp
-   #:logand
-   #:logior
-   #:min
-   #:max
-   #:null
-   #:numberp
-   #:recordp
-   #:symbolp
-   #:symbol-name
-   #:type-of
-   #:vectorp
-   )
   (:local-nicknames (#:pstrings #:cl-emacs/types/pstrings)
                     (#:el #:cl-emacs/elisp)))
 (in-package :cl-emacs/data)
 (log-enable :cl-emacs/data :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (def-suite cl-emacs/data)
 (in-suite cl-emacs/data)
 
@@ -111,12 +43,12 @@
   (let ((result
           (float-features:with-float-traps-masked (:divide-by-zero :invalid)
             (if divisors
-                (let ((floatp-mode (floatp number))
+                (let ((floatp-mode (cl:floatp number))
                       (accum number))
                   (dolist (arg divisors)
                     (cond
-                      ((floatp arg) (setq floatp-mode t))
-                      ((integerp arg))
+                      ((cl:floatp arg) (setq floatp-mode t))
+                      ((cl:integerp arg))
                       (t (error 'arith-error :details
                                 (cl:format nil "unsupported number format: ~s" arg) ))))
                   (dolist (arg divisors)
@@ -128,17 +60,17 @@
                             (setq accum (cl:truncate accum arg)))))
                   accum)
                 (cond
-                  ((integerp number)
+                  ((cl:integerp number)
                    (when (cl:zerop number)
                      (error 'arith-error :details "integer division by zero not allowed"))
                    (cl:identity (cl:truncate 1 number)))
-                  ((floatp number)
+                  ((cl:floatp number)
                    (cl:/ 1.0 number))
                   (t (error 'arith-error :details
                             (cl:format nil "unsupported number format: ~s" number))))
                 ))))
     result
-    ;; (if (and (floatp result) (float-features:float-infinity-p result))
+    ;; (if (and (cl:floatp result) (float-features:float-infinity-p result))
     ;;     float-features:single-float-positive-infinity
     ;;     result)
     ))
@@ -153,9 +85,9 @@
   #M"Return non-nil if argument X is a NaN."
   (float-features:float-nan-p x))
 (test test-isnan
-  (is (isnan cl-emacs/data::*nan*))
-  (is-false (isnan 100.0))
-  (signals error (isnan 0)))
+  (is (@isnan cl-emacs/data::*nan*))
+  (is-false (@isnan 100.0))
+  (signals error (@isnan 0)))
 
 (test test-/
   (is (= 0 (/ 2)))
@@ -169,23 +101,23 @@
   (is (= 0 (/ 1 3)))
   (is-false (= 0 (/ 1.0 3)))
   (is-false (= 0 (/ 1 3.0)))
-  (is (floatp (/ 20.0 2)))
-  (is-true (isnan (/ 0.0 0.0)))
+  (is (cl:floatp (/ 20.0 2)))
+  (is-true (@isnan (/ 0.0 0.0)))
   (is (float-features:float-infinity-p (/ 1.0 0)))
   (is (float-features:float-infinity-p (/ -1.0 0)))
   (is (= 0 (/ 1 104323300000000000000000)))
   (signals arith-error (/ 104323300000000000000000 0))
   (is (float-features:float-infinity-p (/ 104323300000000000000000.1 0)))
-  (is (floatp (/ 104323300000000000000000 100.0)))
-  (is-true (isnan (/ (/ 0.0 0.0) (/ 0.0 0.0))))
+  (is (cl:floatp (/ 104323300000000000000000 100.0)))
+  (is-true (@isnan (/ (/ 0.0 0.0) (/ 0.0 0.0))))
   )
 
 (defun* (= -> boolean) (number &rest numbers)
   #M"Return t if args, all numbers or markers, are equal."
-  (when (and (floatp number) (isnan number) numbers)
+  (when (and (cl:floatp number) (@isnan number) numbers)
     (return-from = nil))
   (dolist (arg numbers)
-    (when (or (and (floatp number) (isnan arg)) (cl:/= number arg))
+    (when (or (and (cl:floatp number) (@isnan arg)) (cl:/= number arg))
       (return-from = nil)))
   t)
 
@@ -644,9 +576,9 @@ the position will be taken.
   #M"Return t if OBJECT is a record.
 
 (fn OBJECT)"
-  (when (and (vectorp object) (> (cl:length object) 0))
-    (let ((record-type (aref object 0)))
-      (and (symbolp record-type) (eq 'el::record (cl:get record-type 'el::type))))))
+  (when (and (cl:vectorp object) (cl:> (cl:length object) 0))
+    (let ((record-type (cl:aref object 0)))
+      (and (cl:symbolp record-type) (eq 'el::record (cl:get record-type 'el::type))))))
 (defun* remove-pos-from-symbol ()
   #M"If ARG is a symbol with position, return it without the position.
 Otherwise, return ARG unchanged.  Compare with ‘bare-symbol'.

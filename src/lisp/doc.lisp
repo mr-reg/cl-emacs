@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/doc)
 (log-enable :cl-emacs/doc :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* Snarf-documentation ()
   #M"Used during Emacs initialization to scan the ‘etc/DOC...' file.
 This searches the ‘etc/DOC...' file for doc strings and

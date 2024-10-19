@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/image)
 (log-enable :cl-emacs/image :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* clear-image-cache ()
   #M"Clear the image cache.
 FILTER nil or a frame means clear all images in the selected frame.

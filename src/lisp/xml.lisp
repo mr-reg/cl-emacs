@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/xml)
 (log-enable :cl-emacs/xml :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* libxml-available-p ()
   #M"Return t if libxml2 support is available in this instance of Emacs.
 

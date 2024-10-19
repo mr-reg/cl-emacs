@@ -24,14 +24,13 @@
      :cl-emacs/lib/commons
      :cl-emacs/lib/errors
      )
-  (:export #:substitute-in-file-name)
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:pstrings #:cl-emacs/types/pstrings)
                     )
   )
 (in-package :cl-emacs/fn-substitute-in-file-name)
 (log-enable :cl-emacs/fn-substitute-in-file-name :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 
 (defun* substitute-in-file-name ((filename pstrings:pstring))
   #M"Substitute environment variables referred to in FILENAME.

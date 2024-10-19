@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/fontset)
 (log-enable :cl-emacs/fontset :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* fontset-font ()
   #M"Return a font name pattern for character CH in fontset NAME.
 If NAME is t, find a pattern in the default fontset.

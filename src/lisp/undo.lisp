@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/undo)
 (log-enable :cl-emacs/undo :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* undo-boundary ()
   #M"Mark a boundary between units of undo.
 An undo command will stop at this point,

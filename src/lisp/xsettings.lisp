@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/xsettings)
 (log-enable :cl-emacs/xsettings :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* font-get-system-font ()
   #M"Get the system default fixed width font.
 The font is returned as either a font-spec or font name.

@@ -16,16 +16,14 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/tests/fn-apply-test
+(uiop:define-package :cl-emacs/tests/fn-apply-test
     (:use
      :defstar
      :cl-emacs/lib/log
      :fiveam
      :cl-emacs/lib/commons
      :cl-emacs/lib/errors
-     :cl-emacs/fn-apply
-     :cl-emacs/fns
-     :cl-emacs/alloc
+     :common-lisp
      )
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:reader #:cl-emacs/lib/reader))
@@ -34,7 +32,7 @@
 (log-enable :cl-emacs/tests/fn-apply-test :debug2)
 (def-suite cl-emacs/tests/fn-apply-test)
 (in-suite cl-emacs/tests/fn-apply-test)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 
 (test test-fn-apply
   (signals wrong-type-argument (apply 'el::+ 1))

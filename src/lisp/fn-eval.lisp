@@ -17,42 +17,33 @@
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/fn-eval
-    (:use
-     :defstar
-     :cl-emacs/lib/log
-     :cl-emacs/eval
-     :cl-emacs/data
-     :cl-emacs/fn-apply
-     :cl-emacs/lib/commons
-     :cl-emacs/lib/errors
-     )
-  (:export #:eval)
+    (:shadow #:eval)
   (:local-nicknames (#:el #:cl-emacs/elisp))
   )
 (in-package :cl-emacs/fn-eval)
 (log-enable :cl-emacs/fn-eval :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 
 
 (defconstant +eval-max-depth+ 1600)
 
 (defun* eval-impl (form &key lexical (depth 0))
-  (when (> depth +eval-max-depth+)
+  (when (@> depth +eval-max-depth+)
     (error 'evaluation-error :details (cl:format nil "evaluation depth can't be more than ~s" +eval-max-depth+)))
   (cl:cond
-    ((consp form)
-     (let ((func (car form))
-           (args (cdr form))
-           (ev-args nil))
+    ((@consp form)
+     (@let ((func (@car form))
+            (args (@cdr form))
+            (ev-args nil))
 
        (loop while args
-             do (unless (listp args)
+             do (unless (@listp args)
                   (error 'wrong-type-argument :details (cl:format nil "~s should be a list" args)))
-                (push (eval-impl (car args) :lexical lexical :depth (1+ depth)) ev-args)
-                (setq args (cdr args)))
-       (cond 
-         ((eq (type-of func) 'symbol)
-          (apply func ev-args)
+                (push (eval-impl (@car args) :lexical lexical :depth (@1+ depth)) ev-args)
+                (@setq args (@cdr args)))
+       (@cond 
+         ((@eq (@type-of func) 'symbol)
+          (@apply func ev-args)
           ;; (let ((cl-function (ignore-errors 
           ;;                     (cl:symbol-function func))))
           ;;   (if cl-function
@@ -61,11 +52,11 @@
           
           )
          (t 
-          (log-info "unknown function type:~s function:~s" (type-of func) func))
+          (log-info "unknown function type:~s function:~s" (@type-of func) func))
          )
        
        ))
-    ((symbolp form)
+    ((@symbolp form)
      (error "unimplemented")
      )
     (t form)
@@ -79,3 +70,5 @@
      alist mapping symbols to their value."
   (eval-impl form :lexical lexical)
   )
+
+

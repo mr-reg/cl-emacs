@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/term)
 (log-enable :cl-emacs/term :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* controlling-tty-p ()
   #M"Return non-nil if TERMINAL is the controlling tty of the Emacs process.
 

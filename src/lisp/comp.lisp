@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/comp)
 (log-enable :cl-emacs/comp :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* native-comp-available-p ()
   #M"Return non-nil if native compilation support is built-in.
 

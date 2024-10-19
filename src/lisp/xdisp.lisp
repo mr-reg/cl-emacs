@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/xdisp)
 (log-enable :cl-emacs/xdisp :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* bidi-find-overridden-directionality ()
   #M"Return position between FROM and TO where directionality was overridden.
 

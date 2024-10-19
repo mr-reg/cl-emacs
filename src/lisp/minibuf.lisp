@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/minibuf)
 (log-enable :cl-emacs/minibuf :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* abort-minibuffers ()
   #M"Abort the current minibuffer.
 If we are not currently in the innermost minibuffer, prompt the user to

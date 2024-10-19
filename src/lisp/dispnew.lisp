@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/dispnew)
 (log-enable :cl-emacs/dispnew :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* ding ()
   #M"Beep, or flash the screen.
 Also, unless an argument is given,

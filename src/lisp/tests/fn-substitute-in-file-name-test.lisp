@@ -16,16 +16,14 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/tests/fn-substitute-in-file-name-test
+(uiop:define-package :cl-emacs/tests/fn-substitute-in-file-name-test
     (:use
      :defstar
      :cl-emacs/lib/log
      :fiveam
      :cl-emacs/lib/commons
      :cl-emacs/lib/errors
-     :cl-emacs/fn-eval
-     :cl-emacs/fn-substitute-in-file-name
-     :cl-emacs/fns
+     :common-lisp
      )
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:reader #:cl-emacs/lib/reader))
@@ -34,7 +32,7 @@
 (log-enable :cl-emacs/tests/fn-substitute-in-file-name-test :debug2)
 (def-suite cl-emacs/tests/fn-substitute-in-file-name-test)
 (in-suite cl-emacs/tests/fn-substitute-in-file-name-test)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 
 (test test-fn-substitute-in-file-name-test
   (is (equal 
@@ -42,6 +40,37 @@
        (eval (reader:read-simple "(substitute-in-file-name \"loadup.el\")"))))
   
   )
+
+;; (with-environment-variables (("_test_cl-emacs_var1" "123")
+;;                              ("_test_cl-emacs var2" "456")
+;;                              ("_test_cl_emacs_var3" "7 8")
+;;                              ("_test_cl_emacs_var4" "abc$_test_cl_emacs_var3")
+;;                              ("_test_cl_emacs_var5" "abc${_test_cl_emacs_var3}")
+;;                              ("_test_cl_emacs_var6" "/test/dir")
+;;                              ("_test_cl_emacs_var7" "~/abc")
+;;                              ("_test_cl_emacs_var8" "~abc")
+;;                              )
+;;   (substitute-in-file-name "test$$test") ; test$test
+;;   (substitute-in-file-name "test$var3") ; test$var3
+;;   (substitute-in-file-name "test$_test_cl-emacs_var1") ; test$_test_cl-emacs_var1
+;;   (substitute-in-file-name "test${_test_cl-emacs_var1}") ; test123
+;;   (substitute-in-file-name "test$_test_cl_emacs_var3") ; test7 8
+;;   (substitute-in-file-name "test${var3}") ; test${var3}
+;;   (substitute-in-file-name "test$_test_cl_emacs_var4") ; "testabc$_test_cl_emacs_var3"
+;;   (substitute-in-file-name "test${_test_cl_emacs_var5}") ; "testabc${_test_cl_emacs_var3}"
+;;   (substitute-in-file-name "/test/dir//abc") ; "abc"
+;;   (substitute-in-file-name "/test/dir//abc//def") ; "/def"
+;;   (substitute-in-file-name "/test/dir//abc~/def") ; "/abc~/def"
+;;   (substitute-in-file-name "/test/dir//abc/~//def") "/def"
+;;   (substitute-in-file-name "/test/dir/~/abc//def/~/gh") "~/gh"
+;;   (substitute-in-file-name "/test/dir/~abc") ; "/test/dir/~abc"
+;;   (substitute-in-file-name "/test/dir/~/abc") ; "~/abc"
+;;   (substitute-in-file-name "/test/dir/~/abc/~/def") ; "~/def"
+;;   (substitute-in-file-name "/abc/def$_test_cl_emacs_var6") ; "/abc/def/test/dir"
+;;   (substitute-in-file-name "/abc/def/$_test_cl_emacs_var7") ; "~/abc"
+;;   (substitute-in-file-name "/abc/def/$_test_cl_emacs_var8") ; "/abc/def/~abc"
+
+;;   )
 
 (defun test-me ()
   (run! 'cl-emacs/tests/fn-substitute-in-file-name-test))

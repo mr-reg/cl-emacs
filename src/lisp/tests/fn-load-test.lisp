@@ -16,16 +16,14 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/tests/fn-load-test
+(uiop:define-package :cl-emacs/tests/fn-load-test
     (:use
      :defstar
      :cl-emacs/lib/log
      :fiveam
      :cl-emacs/lib/commons
      :cl-emacs/lib/errors
-     :cl-emacs/fn-eval
-     :cl-emacs/fn-load
-     :cl-emacs/fns
+     :common-lisp
      )
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:reader #:cl-emacs/lib/reader))
@@ -34,7 +32,7 @@
 (log-enable :cl-emacs/tests/fn-load-test :debug2)
 (def-suite cl-emacs/tests/fn-load-test)
 (in-suite cl-emacs/tests/fn-load-test)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 
 (defun loadup ()
   (eval (reader:read-simple "(load \"loadup.el\")"))

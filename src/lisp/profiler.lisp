@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/profiler)
 (log-enable :cl-emacs/profiler :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* function-equal ()
   #M"Return non-nil if F1 and F2 come from the same source.
 Used to determine if different closures are just different instances of

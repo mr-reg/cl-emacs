@@ -24,16 +24,14 @@
      :cl-emacs/lib/commons
      :cl-emacs/lib/errors
      )
-  (:export #:load
-           #:load-suffixes
-           #:load-path)
+  
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:pstrings #:cl-emacs/types/pstrings)
                     )
   )
 (in-package :cl-emacs/fn-load)
 (log-enable :cl-emacs/fn-load :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 
 (cl:defparameter load-suffixes (list (pstrings:build-pstring "el")))
 (cl:defparameter load-path (list (pstrings:build-pstring (cl:namestring (uiop/os:getcwd)))))

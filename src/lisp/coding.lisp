@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/coding)
 (log-enable :cl-emacs/coding :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* check-coding-system ()
   #M"Check validity of CODING-SYSTEM.
 If valid, return CODING-SYSTEM, else signal a ‘coding-system-error' error.

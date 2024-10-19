@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/indent)
 (log-enable :cl-emacs/indent :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* compute-motion ()
   #M"Scan through the current buffer, calculating screen position.
 Scan the current buffer forward from offset FROM,

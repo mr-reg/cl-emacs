@@ -26,7 +26,7 @@
      :cl-emacs/lib/commons))
 (in-package :cl-emacs/callint)
 (log-enable :cl-emacs/callint :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (defun* call-interactively ()
   #M"Call FUNCTION, providing args according to its interactive calling specs.
 Return the value FUNCTION returns.
