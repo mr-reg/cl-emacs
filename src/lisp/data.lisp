@@ -16,10 +16,30 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/data
+(cl-emacs/lib/elisp-packages:define-elisp-package #:cl-emacs/data
     (:use
-     :fiveam
-     )
+     :fiveam)
+  (:shadow #:/ #:= #:- #:/= 
+           #:arrayp 
+           #:atom
+           #:boundp
+           #:eq
+           #:fboundp
+           #:fmakunbound
+           #:keywordp
+           #:logcount
+           #:lognot
+           #:logxor
+           #:makunbound
+           #:mod
+           #:set
+           #:stringp
+           #:symbol-function
+           #:symbol-name
+           #:symbol-plist
+           #:symbol-value
+           #:type-of
+           )
   (:local-nicknames (#:pstrings #:cl-emacs/types/pstrings)
                     (#:el #:cl-emacs/elisp)))
 (in-package :cl-emacs/data)
@@ -85,7 +105,7 @@
   #M"Return non-nil if argument X is a NaN."
   (float-features:float-nan-p x))
 (test test-isnan
-  (is (@isnan cl-emacs/data::*nan*))
+  (is (@isnan @*nan*))
   (is-false (@isnan 100.0))
   (signals error (@isnan 0)))
 

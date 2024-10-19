@@ -17,15 +17,7 @@
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/fn-apply
-    (:use
-     :defstar
-     :cl-emacs/lib/log
-     :cl-emacs/data
-     :cl-emacs/eval
-     :cl-emacs/fns
-     :cl-emacs/lib/commons
-     :cl-emacs/lib/errors
-     )
+    (:shadow #:apply)
   (:local-nicknames (#:el #:cl-emacs/elisp))
   )
 (in-package :cl-emacs/fn-apply)

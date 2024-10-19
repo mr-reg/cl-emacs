@@ -27,8 +27,8 @@
 
 (test test-sxhash-eq
   (is (@= (@sxhash-eq 340) (@sxhash-eq 340)))
-  (is (@= (@sxhash-eq cl-emacs/data::*nan*)
-          (@sxhash-eq cl-emacs/data::*nan*)))
+  (is (@= (@sxhash-eq @*nan*)
+          (@sxhash-eq @*nan*)))
   (is (@= (@sxhash-eq '#:symbol) (@sxhash-eq '#:symbol)))
   (is-false (@= (@sxhash-eq 345) (@sxhash-eq 346))))
 
@@ -48,8 +48,8 @@
   (is-false (cl:eql 0.0 -0.0))
   (is-false (@= (@sxhash-eql 0.0) (@sxhash-eql -0.0)))
 
-  (is (@eql cl-emacs/data::*nan* (@/ 0.0 0.0)))
-  (is (@= (@sxhash-eql cl-emacs/data::*nan*)
+  (is (@eql @*nan* (@/ 0.0 0.0)))
+  (is (@= (@sxhash-eql @*nan*)
           (@sxhash-eql (@/ 0.0 0.0))))
   )
 (test test-equal
@@ -83,9 +83,9 @@
   (is (@equal (@sxhash-equal (pstrings:build-pstring "asdf"))
               (@sxhash-equal (@propertize (pstrings:build-pstring "asdf") 'asdf t))))
 
-  (is (@equal cl-emacs/data::*nan*
+  (is (@equal @*nan*
               (@/ 0.0 0.0)))
-  (is (@= (@sxhash-equal cl-emacs/data::*nan*)
+  (is (@= (@sxhash-equal @*nan*)
           (@sxhash-equal (@/ 0.0 0.0))))
 
   (is-false (@equal 0.0 -0.0))

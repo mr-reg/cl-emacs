@@ -18,12 +18,10 @@
 
 (cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/floatfns
     (:use
-     :defstar
-     :cl-emacs/lib/log
      :alexandria
      :fiveam
-     :cl-emacs/data
-     :cl-emacs/lib/commons)
+     
+     )
   (:import-from #:cl
                 #:abs
                 #:acos

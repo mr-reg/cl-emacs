@@ -22,6 +22,7 @@
      :cl-emacs/lib/log
      :common-lisp
      :fiveam
+     :cl-emacs/lib/elisp-packages
      :cl-emacs/lib/reader-utils
      :cl-emacs/lib/character-reader
      :cl-emacs/lib/commons
@@ -38,16 +39,6 @@
                     (#:textprop #:cl-emacs/textprop)
                     (#:creader #:cl-emacs/lib/character-reader)
                     )
-  ;; (:use-reexport
-  ;;  ;; :cl-emacs/elisp/alien-vars
-  ;;  ;; :cl-emacs/elisp/alloc
-  ;;  ;; :cl-emacs/elisp/data
-  ;;  ;; :cl-emacs/elisp/editfns
-  ;;  ;; :cl-emacs/elisp/fileio
-  ;;  ;; :cl-emacs/elisp/fns
-  ;;  ;; :cl-emacs/elisp/font
-  ;;  ;; :cl-emacs/elisp/xfns
-  ;;  )
   (:export #:read-cl-string
            #:eof-reader-error
            #:empty-reader-error
@@ -1087,14 +1078,14 @@
   (is (= 1500 (read-simple "15.0e+2")))
   (is (= 12.34d0 (read-simple "1.234e+01")))
   (is (= 1500 (read-simple ".15e4")))
-  (is (@equal cl-emacs/data::*nan* (read-simple "0.0e+NaN")))
-  (is (@equal cl-emacs/data::*nan* (read-simple "-4.5E+NaN")))
-  (is (@equal cl-emacs/data::*positive-infinity* (read-simple "1.0e+INF")))
-  (is (@equal cl-emacs/data::*negative-infinity* (read-simple "-4.0e+INF")))
+  (is (@equal @*nan* (read-simple "0.0e+NaN")))
+  (is (@equal @*nan* (read-simple "-4.5E+NaN")))
+  (is (@equal @*positive-infinity* (read-simple "1.0e+INF")))
+  (is (@equal @*negative-infinity* (read-simple "-4.0e+INF")))
   (is (= 425.19685d0 (read-simple "425.19685")))
   ;;; does not work for Android SBCL:
-  ;; (is (@equal cl-emacs/data::*positive-infinity* (read-simple "1.0e+309")))
-  ;; (is (@equal cl-emacs/data::*negative-infinity* (read-simple "-4.0e+309")))
+  ;; (is (@equal @*positive-infinity* (read-simple "1.0e+309")))
+  ;; (is (@equal @*negative-infinity* (read-simple "-4.0e+309")))
   )
 (test test-read-quotes
   (is (@equal (quote (el::quote el::test-symbol))

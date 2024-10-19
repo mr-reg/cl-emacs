@@ -22,6 +22,7 @@
      :cl-emacs/lib/log
      :fiveam
      :defstar
+     :cl-emacs/lib/elisp-packages
      :cl-emacs/lib/reader-utils
      :cl-emacs/lib/commons)
   (:import-from :serapeum

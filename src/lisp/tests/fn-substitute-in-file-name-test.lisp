@@ -16,17 +16,8 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/tests/fn-substitute-in-file-name-test
-    (:use
-     :defstar
-     :cl-emacs/lib/log
-     :fiveam
-     :cl-emacs/lib/commons
-     :cl-emacs/lib/errors
-     :common-lisp
-     )
-  (:local-nicknames (#:el #:cl-emacs/elisp)
-                    (#:reader #:cl-emacs/lib/reader))
+(cl-emacs/lib/elisp-packages:define-elisp-test-package :cl-emacs/tests/fn-substitute-in-file-name-test
+
   )
 (in-package :cl-emacs/tests/fn-substitute-in-file-name-test)
 (log-enable :cl-emacs/tests/fn-substitute-in-file-name-test :debug2)

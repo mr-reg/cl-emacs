@@ -16,17 +16,8 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/tests/fn-eval-test
-    (:use
-     :defstar
-     :cl-emacs/lib/log
-     :common-lisp
-     :fiveam
-     :cl-emacs/lib/commons
-     :cl-emacs/lib/errors
-     )
-  (:local-nicknames (#:el #:cl-emacs/elisp)
-                    (#:reader #:cl-emacs/lib/reader))
+(cl-emacs/lib/elisp-packages:define-elisp-test-package :cl-emacs/tests/fn-eval-test
+
   )
 (in-package :cl-emacs/tests/fn-eval-test)
 (log-enable :cl-emacs/tests/fn-eval-test :debug2)

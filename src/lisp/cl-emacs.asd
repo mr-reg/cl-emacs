@@ -1,5 +1,17 @@
 #-asdf3.3 (error "CL-EMACS requires ASDF 3.3 or later.")
 #-PACKAGE-LOCAL-NICKNAMES (error "CL-EMACS requires ASDF PACKAGE-LOCAL-NICKNAMES capability.")
+(asdf:defsystem :cl-emacs-prereq
+  :version "0.0.1"
+  :author "Gleb Borodulia <mr.reg@mail.ru>"
+  :license "GPLv3"
+  :long-name "cl-emacs-prereq"
+
+  :defsystem-depends-on (
+                         :mstrings
+                         :named-readtables
+                         )
+  )
+
 (load "lib/elisp-packages.lisp")
 
 (asdf:defsystem :cl-emacs
@@ -7,7 +19,7 @@
   :author "Gleb Borodulia <mr.reg@mail.ru>"
   :license "GPLv3"
   :long-name "cl-emacs"
-  :class :package-inferred-system
+  :class cl-emacs/lib/elisp-packages:cl-emacs-package-system
   :around-compile (lambda (next)
                     (proclaim '(optimize
                                 (safety 3)
@@ -55,10 +67,11 @@
                ;; :cl-emacs/elisp
                ;; :cl-emacs/elisp-tests
                ;; :cl-emacs/log
+               :cl-emacs/tests/fn-apply-test
+               :cl-emacs/data
                :cl-emacs/lib/commons
                :cl-emacs/types/pstrings
                :cl-emacs/elisp
-               :cl-emacs/data
                :cl-emacs/lib/reader
                :cl-emacs/lib/printer
                :cl-emacs/main

@@ -24,6 +24,7 @@
      :fiveam
      :cl-emacs/lib/commons
      :cl-emacs/lib/errors
+     :cl-emacs/lib/elisp-packages
      )
   (:import-from #:serapeum
                 #:memq)

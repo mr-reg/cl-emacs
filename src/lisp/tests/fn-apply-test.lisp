@@ -16,17 +16,8 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/tests/fn-apply-test
-    (:use
-     :defstar
-     :cl-emacs/lib/log
-     :fiveam
-     :cl-emacs/lib/commons
-     :cl-emacs/lib/errors
-     :common-lisp
-     )
-  (:local-nicknames (#:el #:cl-emacs/elisp)
-                    (#:reader #:cl-emacs/lib/reader))
+(cl-emacs/lib/elisp-packages:define-elisp-test-package :cl-emacs/tests/fn-apply-test
+
   )
 (in-package :cl-emacs/tests/fn-apply-test)
 (log-enable :cl-emacs/tests/fn-apply-test :debug2)
@@ -35,15 +26,17 @@
 (named-readtables:in-readtable elisp-function-syntax)
 
 (test test-fn-apply
-  (signals wrong-type-argument (apply 'el::+ 1))
-  (is (equal 3 (apply 'el::+ '(1 2))))
-  (is (equal 10 (apply 'el::+ 1 2 '(3 4))))
-  (signals wrong-type-argument (apply 'el::+ 1 '(3 4) 2))
-  (signals void-function (apply 'el::++ '(1)))
-  (is (equal '(1 2 (5) 3 4) (apply 'el::list 1 2 '(5) '(3 4))))
-  (signals wrong-type-argument (apply 'el::+))
-  (is (equal 0 (apply 'el::+ '())))
+  (signals wrong-type-argument (@apply 'el::+ 1))
+  (is (@equal 3 (@apply '@+ '(1 2))))
+  (is (@equal 10 (@apply 'el::+ 1 2 '(3 4))))
+  (signals wrong-type-argument (@apply 'el::+ 1 '(3 4) 2))
+  (signals void-function (@apply 'el::++ '(1)))
+  (is (@equal '(1 2 (5) 3 4) (@apply '@list 1 2 '(5) '(3 4))))
+  (signals wrong-type-argument (@apply 'el::+))
+  (is (@equal 0 (@apply 'el::+ '())))
   )
 
 (defun test-me ()
   (run! 'cl-emacs/tests/fn-apply-test))
+
+

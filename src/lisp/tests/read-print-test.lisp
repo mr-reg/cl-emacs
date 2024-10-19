@@ -23,6 +23,7 @@
      :cl-emacs/lib/commons
      :cl-emacs/lib/errors
      :cl-emacs/lib/log
+     :cl-emacs/lib/elisp-packages
      :fiveam
      )
   (:local-nicknames (#:el #:cl-emacs/elisp)

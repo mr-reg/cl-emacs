@@ -21,6 +21,10 @@
      :alexandria
      :fiveam
      )
+  (:shadow #:make-list
+           #:make-string
+           #:make-symbol
+           #:vector)
   )
 (in-package :cl-emacs/alloc)
 (log-enable :cl-emacs/alloc :debug2)
@@ -111,7 +115,8 @@ FUNCTION.  FUNCTION will be run once per finalizer object.
 
 (fn FUNCTION)"
   (error 'unimplemented-error))
-(defun* make-list ()
+
+(defun make-list ()
   #M"Return a newly created list of length LENGTH, with each element being INIT.
 
 (fn LENGTH INIT)"

@@ -19,6 +19,7 @@
 (uiop:define-package :cl-emacs/lib/reader-utils
     (:use
      :cl-emacs/lib/log
+     :cl-emacs/lib/elisp-packages
      :alexandria
      :fiveam
      :common-lisp
@@ -39,7 +40,7 @@
 (in-package :cl-emacs/lib/reader-utils)
 (log-enable :cl-emacs/lib/reader-utils :info)
 ;; (log-enable :cl-emacs/lib/reader-utils :debug2)
-(named-readtables:in-readtable mstrings:mstring-syntax)
+(named-readtables:in-readtable elisp-function-syntax)
 (def-suite cl-emacs/lib/reader-utils)
 (in-suite cl-emacs/lib/reader-utils)
 
@@ -68,9 +69,9 @@
                           (if (str:starts-with-p "-" to-parse) -1 1)))))
           ;; here we know that number notation is correct
           (cond
-            (has-nan cl-emacs/data::*nan*)
-            ((and has-inf (> parsed 0)) cl-emacs/data::*positive-infinity*)
-            ((and has-inf (< parsed 0)) cl-emacs/data::*negative-infinity*)
+            (has-nan @*nan*)
+            ((and has-inf (> parsed 0)) @*positive-infinity*)
+            ((and has-inf (< parsed 0)) @*negative-infinity*)
             (t parsed)))
       (error ()
         nil)

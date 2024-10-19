@@ -17,17 +17,10 @@
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (cl-emacs/lib/elisp-packages:define-elisp-package :cl-emacs/fn-load
-    (:use
-     :defstar
-     :cl-emacs/lib/log
-     :cl-emacs/fns
-     :cl-emacs/lib/commons
-     :cl-emacs/lib/errors
-     )
-  
-  (:local-nicknames (#:el #:cl-emacs/elisp)
-                    (#:pstrings #:cl-emacs/types/pstrings)
-                    )
+    
+    (:local-nicknames (#:el #:cl-emacs/elisp)
+                      (#:pstrings #:cl-emacs/types/pstrings)
+                      )
   )
 (in-package :cl-emacs/fn-load)
 (log-enable :cl-emacs/fn-load :debug2)

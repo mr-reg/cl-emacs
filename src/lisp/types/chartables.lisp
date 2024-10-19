@@ -24,6 +24,7 @@
      :common-lisp
      :cl-emacs/lib/commons
      :cl-emacs/lib/errors
+     :cl-emacs/lib/elisp-packages
      )
   (:import-from #:alexandria
                 #:define-constant)

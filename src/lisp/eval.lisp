@@ -21,7 +21,15 @@
      :alexandria
      :fiveam
      )
-
+  (:shadow #:catch 
+           #:function 
+           #:functionp
+           #:macroexpand
+           #:prog1
+           #:signal
+           #:throw
+           #:unwind-protect
+           )
   
   )
 (in-package :cl-emacs/eval)

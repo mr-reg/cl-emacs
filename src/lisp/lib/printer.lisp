@@ -23,6 +23,7 @@
      :cl-emacs/lib/log
      :cl-emacs/lib/errors
      :cl-emacs/lib/reader-utils
+     :cl-emacs/lib/elisp-packages
      :fiveam
      :cl-emacs/lib/commons)
   (:import-from #:serapeum

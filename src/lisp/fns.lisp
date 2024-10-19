@@ -21,6 +21,31 @@
      :fiveam
      :cl-custom-hash-table
      )
+  (:shadow #:append
+           #:assoc
+           #:delete
+           #:elt
+           #:eql
+           #:equal
+           #:get
+           #:length
+           #:make-hash-table
+           #:mapc
+           #:mapcan
+           #:mapcar
+           #:maphash
+           #:member
+           #:nconc
+           #:nthcdr
+           #:provide
+           #:random
+           #:rassoc
+           #:require
+           #:reverse
+           #:string-equal
+           #:string-lessp
+           #:yes-or-no-p
+           )
   (:import-from #:cl-user
                 #:hash-table-weak-p)
   (:import-from #:serapeum
