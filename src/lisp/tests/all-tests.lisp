@@ -24,6 +24,8 @@
      :cl-emacs/tests/fn-eval-test
      :cl-emacs/tests/fn-load-test
      :cl-emacs/tests/fn-substitute-in-file-name-test
+     :cl-emacs/tests/printer-test
+     :cl-emacs/tests/reader-test
      :fiveam)
   
   )

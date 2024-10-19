@@ -50,7 +50,7 @@
       require reverse string-equal string-lessp
       sxhash-eq sxhash-eql sxhash-equal sxhash-equal-including-properties
       sort yes-or-no-p))
-    (lread (read))
+    (lread (read nil t))
     (load (load load-suffixes load-path))
     (textprop (set-text-properties add-text-properties))
     (types 
@@ -210,6 +210,9 @@
                              (:local-nicknames (#:el #:cl-emacs/elisp)
                               (#:reader #:cl-emacs/lib/reader)
                               (#:pstrings #:cl-emacs/types/pstrings)
+                              (#:chartables #:cl-emacs/types/chartables)
+                              (#:textprop #:cl-emacs/textprop)
+                              
                               )
                              )))
     

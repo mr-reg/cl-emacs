@@ -191,9 +191,9 @@
 
 ;; container to store user-defined hash-table-test-functions
 (defparameter *hash-constructors*
-  '((eq . make-hash-table-eq)
-    (eql . make-hash-table-eql)
-    (equal . make-hash-table-equal)
+  '((el::eq . make-hash-table-eq)
+    (el::eql . make-hash-table-eql)
+    (el::equal . make-hash-table-equal)
     ))
 
 (define-condition hash-table-error (error-with-description)

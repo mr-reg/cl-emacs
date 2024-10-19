@@ -17,7 +17,7 @@
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (cl-emacs/lib/elisp-packages:define-elisp-test-package :cl-emacs/tests/fn-substitute-in-file-name-test
-
+    (:use #:cl-emacs/fn-substitute-in-file-name)
   )
 (in-package :cl-emacs/tests/fn-substitute-in-file-name-test)
 (log-enable :cl-emacs/tests/fn-substitute-in-file-name-test :debug2)
@@ -26,9 +26,9 @@
 (named-readtables:in-readtable elisp-function-syntax)
 
 (test test-fn-substitute-in-file-name-test
-  (is (equal 
+  (is (@equal
        (reader:read-simple "\"loadup.el\"")
-       (eval (reader:read-simple "(substitute-in-file-name \"loadup.el\")"))))
+       (@eval (reader:read-simple "(substitute-in-file-name \"loadup.el\")"))))
   
   )
 

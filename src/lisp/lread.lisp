@@ -22,6 +22,11 @@
      :cl-emacs/lib/log
      :fiveam
      :cl-emacs/lib/commons)
+  (:shadow #:intern
+           #:read
+           #:read-char
+           #:read-from-string
+           #:unintern)
   (:local-nicknames (#:el #:cl-emacs/elisp)
                     (#:pstrings #:cl-emacs/types/pstrings)
                     (#:reader #:cl-emacs/lib/reader))
@@ -270,3 +275,6 @@ OBARRAY, if nil, defaults to the value of the variable ‘obarray'.
 
 (fn NAME OBARRAY)"
   (error 'unimplemented-error))
+
+(in-package :cl-emacs/lread)
+(reexport-symbols :cl-emacs/lread)

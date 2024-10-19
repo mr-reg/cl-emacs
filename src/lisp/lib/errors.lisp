@@ -30,6 +30,9 @@
    #:unimplemented-error
    #:void-function
    #:wrong-type-argument
+   #:eof-reader-error
+   #:empty-reader-error
+   #:incomplete-reader-error
    ))
 (in-package :cl-emacs/lib/errors)
 (log-enable :cl-emacs/lib/errors :debug1)
@@ -83,4 +86,20 @@
   ())
 
 (define-condition void-function (evaluation-error)
+  ())
+
+(define-condition reader-signal (error-with-description)
+  ())
+
+(define-condition invalid-reader-input-error (reader-signal)
+  ())
+
+(define-condition eof-reader-error (reader-signal)
+  ())
+(define-condition incomplete-reader-error (eof-reader-error)
+  ())
+(define-condition empty-reader-error (eof-reader-error)
+  ())
+
+(define-condition reader-stopped-signal (reader-signal)
   ())

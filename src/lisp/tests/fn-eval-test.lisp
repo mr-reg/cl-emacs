@@ -26,13 +26,13 @@
 (named-readtables:in-readtable elisp-function-syntax)
 
 (test test-fn-eval
-  (is (equal 3 (eval (reader:read-simple "3"))))
-  (is (equal 0 (eval (reader:read-simple "(+)"))))
-  (is (equal 1 (eval (reader:read-simple "(+ 1)"))))
-  (is (equal 3 (eval (reader:read-simple "(+ 1 2)"))))
-  (signals wrong-type-argument (eval (reader:read-simple "(+ . 2)")))
-  (signals wrong-type-argument (eval (reader:read-simple "(+ 1 . 2)")))
-  (is (equal 9 (eval (reader:read-simple "(+ 1 (+ 3 3) 2)"))))
+  (is (@equal 3 (@eval (reader:read-simple "3"))))
+  (is (@equal 0 (@eval (reader:read-simple "(+)"))))
+  (is (@equal 1 (@eval (reader:read-simple "(+ 1)"))))
+  (is (@equal 3 (@eval (reader:read-simple "(+ 1 2)"))))
+  (signals wrong-type-argument (@eval (reader:read-simple "(+ . 2)")))
+  (signals wrong-type-argument (@eval (reader:read-simple "(+ 1 . 2)")))
+  (is (@equal 9 (@eval (reader:read-simple "(+ 1 (+ 3 3) 2)"))))
   )
 
 (defun test-me ()
