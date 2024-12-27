@@ -156,7 +156,7 @@
                      (push 'el::|.| result-list))
                     ((= idx 1)
                      (let ((last-element (car result-list)))
-                       (setq result-list (if (eq last-element 'el::nil)
+                       (setq result-list (if (eq last-element '@nil)
                                              nil
                                              last-element) )))
                     (t

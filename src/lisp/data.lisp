@@ -19,6 +19,9 @@
 (cl-emacs/lib/elisp-packages:define-elisp-package #:cl-emacs/data
     (:use
      :fiveam)
+  (:import-from #:common-lisp
+                #:nil
+                #:t)
   (:shadow #:/ #:= #:- #:/= 
            #:arrayp 
            #:atom

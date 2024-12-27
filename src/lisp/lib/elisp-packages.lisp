@@ -27,7 +27,7 @@
       max mod null numberp recordp set stringp
       symbolp symbol-function symbol-name symbol-plist
       symbol-value type-of vectorp *nan* *positive-infinity*
-      *negative-infinity*))
+      *negative-infinity* nil t))
     (editfns (char-equal format propertize))
     (eval 
      (and catch cond defvar funcall function functionp
@@ -50,7 +50,7 @@
       require reverse string-equal string-lessp
       sxhash-eq sxhash-eql sxhash-equal sxhash-equal-including-properties
       sort yes-or-no-p))
-    (lread (read nil t))
+    (lread (read))
     (load (load load-suffixes load-path))
     (textprop (set-text-properties add-text-properties))
     (types 
@@ -262,7 +262,8 @@
         for pkg in cl-emacs/lib/elisp-packages:*elisp-exports*
         for pkg-name = (format nil "CL-EMACS/~a" (symbol-name (car pkg)))
         for exports = (cadr pkg)
-        do (loop 
+        do ;; (format t "pkg-name:~s exports:~s~%" pkg-name exports)
+           (loop 
              for sym in exports
              do (when (string= (symbol-name sym) parsed)
                   ;; (log-debug2 "pkg-name:'~s'" pkg-name)
@@ -271,12 +272,18 @@
                   ;; (log-debug2 "fn-package:'~s'" fn-package)
                   (unless fn-package
                     (error "can't find package ~s" pkg-name))
-                  (setq fn-sym (find-symbol parsed fn-package))
+                  (multiple-value-bind (fn-sym sym-type) (find-symbol parsed fn-package)
+                    ;; (format t "find symbol ~a in package ~a: ~a ~a~%" parsed fn-package fn-sym sym-type)
+                    (unless (eq sym-type :external)
+                      (error "can't find external symbol ~s in package ~s"
+                             parsed pkg-name))
+                    (return-from elisp-function-reader fn-sym)
+                    )
+                  
+                  
                   ;; (log-debug2 "fn-sym:'~s'" fn-sym)
-                  (unless fn-sym
-                    (error "can't find external symbol ~s in package ~s"
-                           parsed pkg-name))
-                  (return-from elisp-function-reader fn-sym)
+
+                  
                   )))
       (error "can't find symbol ~s definition in elisp-packages"
              parsed)

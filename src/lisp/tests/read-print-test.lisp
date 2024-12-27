@@ -123,9 +123,9 @@
     (log-debug2 "raw-string: ~s" raw-string)
     (with-output-to-string (out-stream)
       (handler-case
-          (handler-bind ((reader:incomplete-reader-error #'(lambda (condition)
-                                                             (when *parse-errors-enabled*
-                                                               (error condition)))))
+          (handler-bind ((incomplete-reader-error #'(lambda (condition)
+                                                      (when *parse-errors-enabled*
+                                                        (error condition)))))
             (loop do (let ((read-result (reader:read-cl-string raw-string position)))
                        (log-debug2 "one read result ~s" read-result)
                        (printer:princ-to-cl-stream (car read-result) out-stream)
@@ -134,7 +134,7 @@
                        (log-debug2 "new read position ~s" position)))
 
             )
-        (reader:empty-reader-error ())))))
+        (empty-reader-error ())))))
 
 (defun* el-read-princ-file ((file pathname))
   (let* ((filename (cl:namestring file))

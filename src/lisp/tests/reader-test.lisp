@@ -42,7 +42,7 @@
                     (read-simple "foo")))
   (is (@equal (cl:quote el::_AB_CD)
               (read-simple "AbCd")))
-  (is (@equal (cl:quote el::nil)
+  (is (@equal (cl:quote @nil)
               (read-simple "nil")))
   (is (@equal (cl:quote el::|ABC, [/]'`|)
               (read-simple "a\\b\\c\\,\\ \\[\\/\\]\\'\\`")))

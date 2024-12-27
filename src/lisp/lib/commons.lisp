@@ -42,6 +42,7 @@
 
 (defun* reexport-symbols (package-from)
   (do-external-symbols (sym package-from)
+    (log-debug2 "reexport symbol ~s from ~s" sym package-from)
     (shadowing-import sym)
     (export sym)))
 

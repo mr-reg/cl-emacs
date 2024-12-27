@@ -33,6 +33,7 @@
    #:eof-reader-error
    #:empty-reader-error
    #:incomplete-reader-error
+   #:reader-stopped-signal
    ))
 (in-package :cl-emacs/lib/errors)
 (log-enable :cl-emacs/lib/errors :debug1)
