@@ -16,7 +16,8 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
-(uiop:define-package :cl-emacs/elisp)
+(uiop:define-package :cl-emacs/elisp
+    (:shadow #:nil))
 (cl:unuse-package :common-lisp :cl-emacs/elisp)
 (cl:do-symbols (symbol :cl-emacs/elisp)
   (cl:unintern symbol))
@@ -34,6 +35,9 @@
 ;; (unless t
 ;;   (do-symbols (symbol :cl-emacs/elisp)
 ;;     (format t "~s~%" symbol)))
+
+;;; for some reason nil can't be reexported by standard functions
+(cl:defconstant nil cl:nil)
 
 (cl:defparameter float-output-format cl:nil)
 ;; (cl:defparameter print-escape-multibyte cl:nil)

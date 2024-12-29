@@ -17,7 +17,11 @@
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (cl-emacs/lib/elisp-packages:define-elisp-test-package :cl-emacs/tests/reader-test
-    (:use cl-emacs/lib/reader)
+    (:use 
+     :cl-emacs/lib/reader
+     :cl-emacs/lib/errors
+     )
+
   )
 (in-package :cl-emacs/tests/reader-test)
 (log-enable :cl-emacs/tests/reader-test :debug2)

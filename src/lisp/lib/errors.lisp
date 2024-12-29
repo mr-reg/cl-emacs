@@ -24,16 +24,17 @@
      )
 
   (:export
+   #:empty-reader-error
+   #:eof-reader-error
    #:error-with-description
    #:evaluation-error
+   #:incomplete-reader-error
+   #:invalid-reader-input-error
+   #:reader-stopped-signal
    #:simple-print-condition-with-slots
    #:unimplemented-error
    #:void-function
    #:wrong-type-argument
-   #:eof-reader-error
-   #:empty-reader-error
-   #:incomplete-reader-error
-   #:reader-stopped-signal
    ))
 (in-package :cl-emacs/lib/errors)
 (log-enable :cl-emacs/lib/errors :debug1)
