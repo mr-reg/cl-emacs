@@ -287,7 +287,7 @@
 
 (test test-read-circles
   (cl:let ((sample (read-simple "#1=(a #1#)")))
-    (is (@eq sample (second sample))))
+    (is (@eq sample (cl:second sample))))
   (cl:let ((sample (read-simple "#1=[a #1#]")))
     (is (@eq sample (cl:aref sample 1))))
   (cl:let ((sample (read-simple "#1=[#1# a #1#]")))
@@ -330,8 +330,8 @@
             (first (cl:first sample))
             (second (cl:second sample)))
     (is (@eq first (cl:second first)))
-    (is (@eq 'el::b (nth 2 first)))
-    (is (@eq 'el::b (nth 3 first)))
+    (is (@eq 'el::b (cl:nth 2 first)))
+    (is (@eq 'el::b (cl:nth 3 first)))
     (is (@eq 'el::b second))
     )
 
@@ -390,22 +390,22 @@
                      rehash-size 1.3
                      rehash-threshold 0.6
                      data (a 2 b 3))")))
-    (is (@= 1000 (hash-table-size ht)))
-    (is (@eq 'el::eq (hash-table-test ht)))
-    (is (@= 1.3 (hash-table-rehash-size ht)))
-    (is (@= 0.6 (hash-table-rehash-threshold ht)))
-    (is (@= 2 (gethash 'el::a ht)))
-    (is (@= 3 (gethash 'el::b ht))))
+    (is (@= 1000 (@hash-table-size ht)))
+    (is (@eq 'el::eq (@hash-table-test ht)))
+    (is (@= 1.3 (@hash-table-rehash-size ht)))
+    (is (@= 0.6 (@hash-table-rehash-threshold ht)))
+    (is (@= 2 (@gethash 'el::a ht)))
+    (is (@= 3 (@gethash 'el::b ht))))
   (cl:let ((ht (read-simple
                 "#s(hash-table bad-parameter some-value test equal data)")))
-    (is (@eq 'el::equal (hash-table-test ht)))
-    (is (@= 0 (hash-table-count ht)))))
+    (is (@eq 'el::equal (@hash-table-test ht)))
+    (is (@= 0 (@hash-table-count ht)))))
 
 
 (test test-read-records
   (cl:let ((record (read-simple
                     #M"#s(test-rec abc 123 (1 2 3))")))
-    (is (@eq 'el::test-rec (type-of record)))
+    (is (@eq 'el::test-rec (@type-of record)))
     (is (@equal record #(el::test-rec el::abc 123 (1 2 3))))
 
 

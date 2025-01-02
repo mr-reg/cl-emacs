@@ -183,17 +183,17 @@
 ;;; hashtables
 
 (define-custom-hash-table-constructor make-hash-table-eq
-  :test eq :hash-function sxhash-eq)
+  :test @eq :hash-function sxhash-eq)
 (define-custom-hash-table-constructor make-hash-table-eql
-  :test eql :hash-function sxhash-eql)
+  :test @eql :hash-function sxhash-eql)
 (define-custom-hash-table-constructor make-hash-table-equal
-  :test equal :hash-function sxhash-equal)
+  :test @equal :hash-function sxhash-equal)
 
 ;; container to store user-defined hash-table-test-functions
 (defparameter *hash-constructors*
-  '((el::eq . make-hash-table-eq)
-    (el::eql . make-hash-table-eql)
-    (el::equal . make-hash-table-equal)
+  '((@eq . make-hash-table-eq)
+    (@eql . make-hash-table-eql)
+    (@equal . make-hash-table-equal)
     ))
 
 (define-condition hash-table-error (error-with-description)
