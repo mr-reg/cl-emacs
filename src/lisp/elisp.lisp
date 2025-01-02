@@ -17,10 +17,14 @@
 ;; along with cl-emacs. If not, see <https://www.gnu.org/licenses/>.
 
 (uiop:define-package :cl-emacs/elisp
-    (:shadow #:nil))
+    (:import-from #:cl
+                  #:nil))
 (cl:unuse-package :common-lisp :cl-emacs/elisp)
 (cl:do-symbols (symbol :cl-emacs/elisp)
-  (cl:unintern symbol))
+  (cl:format cl:t "sym ~a ~a~%" symbol (cl:symbol-name symbol))
+  (cl:unless (cl:string-equal (cl:symbol-name symbol) "NIL")
+    (cl:format cl:t "unintern ~%")
+    (cl:unintern symbol)))
 (cl:in-package :cl-emacs/elisp)
 ;; (cl-user::package-use-list :cl-emacs/elisp)
 (named-readtables:in-readtable mstrings:mstring-syntax)
@@ -37,7 +41,7 @@
 ;;     (format t "~s~%" symbol)))
 
 ;;; for some reason nil can't be reexported by standard functions
-(cl:defconstant nil cl:nil)
+;; (cl:defconstant nil cl:nil)
 
 (cl:defparameter float-output-format cl:nil)
 ;; (cl:defparameter print-escape-multibyte cl:nil)
