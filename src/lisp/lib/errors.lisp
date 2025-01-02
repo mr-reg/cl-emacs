@@ -28,8 +28,11 @@
    #:eof-reader-error
    #:error-with-description
    #:evaluation-error
+   #:extra-symbols-in-character-spec-error
    #:incomplete-reader-error
+   #:invalid-character-spec-error
    #:invalid-reader-input-error
+   #:parsed-code
    #:reader-stopped-signal
    #:simple-print-condition-with-slots
    #:unimplemented-error
@@ -105,3 +108,35 @@
 
 (define-condition reader-stopped-signal (reader-signal)
   ())
+
+(define-condition character-reader-error ()
+  ((input :initarg :input
+          :initform ""
+          :type string)
+   (start-position :initarg :start-position
+                   :initform 0
+                   :type fixnum)
+   (position :initarg :position
+             :initform -1
+             :type fixnum)
+   (details :initarg :details
+            :initform ""
+            :type string)))
+(defmethod print-object ((e character-reader-error) stream)
+  (with-slots (input details start-position position) e
+    (cl:format stream "#<~a details:~s, input:~s>"
+               (class-name (class-of e)) details
+               (str:substring
+                start-position
+                (if (= -1 position) t
+                    (min (+ 1 start-position position) (cl:length input)))
+                input)))
+  )
+(define-condition invalid-character-spec-error (character-reader-error)
+  ())
+
+(define-condition extra-symbols-in-character-spec-error (character-reader-error)
+  (
+   (parsed-code :initarg :parsed-code
+                :initform 0
+                :type (or null fixnum))))
