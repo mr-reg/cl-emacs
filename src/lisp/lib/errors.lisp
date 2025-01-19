@@ -31,6 +31,7 @@
    #:extra-symbols-in-character-spec-error
    #:incomplete-reader-error
    #:invalid-character-spec-error
+   #:invalid-chartable-operation
    #:invalid-reader-input-error
    #:parsed-code
    #:reader-stopped-signal
@@ -140,3 +141,6 @@
    (parsed-code :initarg :parsed-code
                 :initform 0
                 :type (or null fixnum))))
+
+(define-condition invalid-chartable-operation (error-with-description)
+  ())

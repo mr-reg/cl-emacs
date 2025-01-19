@@ -21,6 +21,7 @@
      :common-lisp
      :cl-emacs/lib/log
      :cl-emacs/tests/character-reader-test
+     :cl-emacs/tests/chartables-test
      :cl-emacs/tests/fn-apply-test
      :cl-emacs/tests/fn-eval-test
      :cl-emacs/tests/fn-load-test

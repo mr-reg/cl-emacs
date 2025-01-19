@@ -20,7 +20,6 @@
     (:use
      :defstar
      :cl-emacs/lib/log
-     :fiveam
      :common-lisp
      :cl-emacs/lib/commons
      :cl-emacs/lib/errors
@@ -50,8 +49,6 @@
 (in-package :cl-emacs/types/chartables)
 (log-enable :cl-emacs/types/chartables :debug2)
 (named-readtables:in-readtable elisp-function-syntax)
-(def-suite cl-emacs/types/chartables)
-(in-suite cl-emacs/types/chartables)
 
 ;;; sparse vector implementation with some business fields
 
@@ -60,8 +57,6 @@
 
 ;; https://stackoverflow.com/questions/32956033/is-there-a-straightforward-lisp-equivalent-of-pythons-generators
 
-(define-condition invalid-chartable-operation (error-with-description)
-  ())
 
 ;; 64/16/32/128
 (define-constant +chartab-size-bits+ #(6 4 5 7) :test 'equalp)
@@ -159,14 +154,6 @@
           do (cl:format stream " ~s" sub-table))
     (cl:format stream "]")))
 
-(test test-print-chartable
-  (setf (cl:get 'el::test-purpose 'el::char-table-extra-slots) 6)
-  (let ((ct (make-simple-chartable :purpose 'el::test-purpose :default 10)))
-    (setf (aref (chartable-extra-slots ct) 0) 310)
-    (setf (aref (chartable-extra-slots ct) 1) 311)
-    (is (string= "#^[10 nil test-purpose 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 310 311 10 10 10 10]"
-                 (cl:format nil "~s" ct)))))
-
 ;; chartables has no equality check, function will always set value without
 ;; content analysis. only structure matters
 (defun* set-sub-chartable-range (&key range-from range-to sub-ct-depth
@@ -252,52 +239,6 @@
                (setf (aref contents idx) (optimize-sub-chartable sub-ct test))))
     ))
 
-(test test-set-chartable-range
-  ;; simple set in ascii + big range + useless optimization
-  (is (string= (cl:format nil "~a~%~a~%~a"
-                          "#^[8 nil test "
-                          "#^^[3 0 8 8 8 3 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] #^^[1 0 #^^[2 0 "
-                          "#^^[3 0 8 8 8 3 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8]")
-               (let ((ct (make-simple-chartable :default 8 :purpose 'test)))
-                 (set-chartable-range ct 3 3 3)
-                 (optimize-chartable ct)
-                 (cl:format nil "~s" ct))))
-  ;; simple set with zero-length range, still causes array expansion
-  (is (string= (cl:format nil "~a~%~a~%~a"
-                          "#^[8 nil test "
-                          "#^^[3 0 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] #^^[1 0 #^^[2 0 "
-                          "#^^[3 0 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8]")
-               (let ((ct (make-simple-chartable :default 8 :purpose 'test)))
-                 (set-chartable-range ct 4 3 3)
-                 (cl:format nil "~s" ct))))
-  ;; simple set in big range only
-  (is (string= (cl:format nil "~a~%~a"
-                          "#^[8 nil test 8 #^^[1 0 #^^[2 0 8 "
-                          "#^^[3 128 3 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8]")
-               (let ((ct (make-simple-chartable :default 8 :purpose 'test)))
-                 (set-chartable-range ct 128 128 3)
-                 (cl:format nil "~s" ct))))
-  ;; complex set
-  (is (string= (cl:format nil "~a~%~a~%~a~%~a"
-                          "#^[8 nil test "
-                          "#^^[3 0 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3] #^^[1 0 #^^[2 0 "
-                          "#^^[3 0 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3] 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3] 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3] #^^[1 65536 3 3 #^^[2 73728 3 "
-                          "#^^[3 73856 3 3 3 3 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8] 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8]")
-               (let ((ct (make-simple-chartable :default 8 :purpose 'test)))
-                 (set-chartable-range ct 80 73859 3)
-                 (cl:format nil "~s" ct))))
-
-
-  ;; good optimization case
-  (is (string= "#^[8 nil test 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8 8]"
-               (let ((ct (make-simple-chartable :default 8 :purpose 'test)))
-                 (set-chartable-range ct 3 3 3)
-                 (set-chartable-range ct 3 3 8)
-                 (optimize-chartable ct)
-                 (cl:format nil "~s" ct))))
-
-  )
-
 
 (defun* get-sub-chartable-value ((sub-ct sub-chartable) (idx fixnum))
   "we are sure that idx is inside this sub-chartable"
@@ -339,23 +280,6 @@
         (if (and (null local-result) parent)
             (get-chartable-value parent idx)
             local-result)))))
-
-(test test-get-chartable-value
-  (let* ((ct1 (make-simple-chartable :purpose 'test :default 1))
-         (ct2 (make-simple-chartable :purpose 'test :parent ct1))
-         (ct3 (make-simple-chartable :purpose 'test :parent ct2)))
-
-    (set-chartable-range ct2 4 15000 2)
-    (set-chartable-range ct3 10 15 3)
-    (is (= 3 (get-chartable-value ct3 12)))
-    (is (= 2 (get-chartable-value ct3 9)))
-    (is (= 1 (get-chartable-value ct3 15001)))
-    (setf (chartable-parent ct2) nil)
-    (is (null (get-chartable-value ct3 15001)))
-    (signals invalid-chartable-operation (get-chartable-value ct3 -1))
-    (signals invalid-chartable-operation (get-chartable-value ct3 4194304))
-    )
-  )
 
 
 ;; mapping functions use EQ in emacs code, we use EQUAL for simplicity
@@ -483,35 +407,7 @@
               ))
       (nreverse result))))
 
-(test test-generate-ranges
-  (let* ((ct1 (make-simple-chartable :purpose 'test :default 1))
-         (ct2 (make-simple-chartable :purpose 'test :parent ct1))
-         (ct3 (make-simple-chartable :purpose 'test :parent ct2))
-         (ct4 (make-simple-chartable :purpose 'test :parent ct2 :default 4)))
-    (set-chartable-range ct2 4 15000 2)
-    (set-chartable-range ct3 10 15 3)
-    (set-chartable-range ct4 10 15 3)
 
-    (is (equal '((0 4194303 1))
-               (get-chartable-ranges ct1)))
-    (is (equal '((0 3 NIL) (4 15000 2) (15001 4194303 NIL))
-               (get-chartable-ranges-without-parents ct2)))
-    (is (equal '((0 3 1) (4 15000 2) (15001 4194303 1))
-               (get-chartable-ranges ct2)))
-    (is (equal '((0 9 4)
-                 (10 15 3)
-                 (16 4194303 4))
-               (get-chartable-ranges ct4)))
-    (is (equal '((0 3 1)
-                 (4 9 2)
-                 (10 15 3)
-                 (16 15000 2)
-                 (15001 4194303 1))
-               (get-chartable-ranges ct3)))
-    ))
-
-(defun test-me ()
-  (run! 'cl-emacs/types/chartables))
 
 ;; (defun profile ()
 ;;   (sb-profile:reset)
